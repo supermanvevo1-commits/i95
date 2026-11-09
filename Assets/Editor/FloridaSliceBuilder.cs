@@ -29,6 +29,7 @@ namespace SurviveI95.EditorTools
             var path = RoutePath.Load("florida_jupiter");
             var m = MakeMaterials();
 
+            placed.Clear();
             BuildEnvironment();
             var road = new GameObject("Road");
             Func<float, float> half = path.HalfWidth;
@@ -47,6 +48,7 @@ namespace SurviveI95.EditorTools
             var car = BuildCar(cam, m);
             car.Place(3000f);
 
+            WriteObstacles();
             EditorSceneManager.SaveScene(scene, Gen + "/FloridaSlice.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Gen + "/FloridaSlice.unity", true) };
             AssetDatabase.SaveAssets();
@@ -55,6 +57,19 @@ namespace SurviveI95.EditorTools
 
             var shots = ArgValue("-shotDir");
             if (shots != null) Screenshots(car, cam, path, shots);
+        }
+
+        // Everything solid is recorded as it is placed, so what you see and what you hit can never disagree.
+        static readonly List<RouteObstacle> placed = new List<RouteObstacle>();
+        static void Solid(float s, float lat, float halfS, float halfLat, string kind) =>
+            placed.Add(new RouteObstacle { s = s, lat = lat, halfS = halfS, halfLat = halfLat, kind = kind });
+
+        static void WriteObstacles()
+        {
+            const string file = "Assets/Resources/Data/Routes/florida_jupiter_obstacles.json";
+            File.WriteAllText(file, JsonUtility.ToJson(new RouteObstacleFile { items = placed.OrderBy(o => o.s).ToArray() }));
+            AssetDatabase.ImportAsset(file);
+            Debug.Log("[FloridaSlice] solid objects: " + placed.Count);
         }
 
         static string ArgValue(string name)
@@ -284,6 +299,7 @@ namespace SurviveI95.EditorTools
                 Box(g.transform, c + Vector3.up * 6.3f, rot, new Vector3(span, 1.2f, 14f), m.concrete, o.name).GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
                 foreach (var lat in new[] { p.HalfWidth(o.s) + 7f, -p.HalfWidth(o.s) - 7f, south(o.s) - p.HalfWidth(o.s) - 7f })
                     Box(g.transform, p.Point(o.s, lat) + Vector3.up * 2.9f, rot, new Vector3(1.2f, 5.8f, 10f), m.concrete, "Pier");
+                foreach (var lat in new[] { p.HalfWidth(o.s) + 7f, -p.HalfWidth(o.s) - 7f, south(o.s) - p.HalfWidth(o.s) - 7f }) Solid(o.s, lat, 5f, 0.6f, "pier");
             }
             Debug.Log("[FloridaSlice] overpasses " + count);
         }
@@ -306,6 +322,8 @@ namespace SurviveI95.EditorTools
             var mid = c + Vector3.up * (elevation + height / 2);
             Box(parent, mid, rot, new Vector3(width, height, .08f), panel, "Panel").GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
             var right = p.Right(s);
+            foreach (var d in new[] { -width * .32f, width * .32f })
+                Solid(s, p.HalfWidth(s) + lateralFromEdge + d, 0.12f, 0.12f, width > 10f ? "pole" : "post");
             foreach (var d in new[] { -width * .32f, width * .32f })
                 Box(parent, c + right * d + p.Tangent(s) * .14f + Vector3.up * (elevation + height) / 2, rot, new Vector3(.14f, elevation + height, .14f), m.post, "Post");
             Text(parent, mid - p.Tangent(s) * .06f, rot, text, textH, tc, m.text);
@@ -404,6 +422,7 @@ namespace SurviveI95.EditorTools
                 t.transform.localScale = Vector3.one * (.8f + (float)rnd.NextDouble() * .5f);
                 t.GetComponent<MeshFilter>().sharedMesh = palm ? palmMesh : pineMesh;
                 t.GetComponent<MeshRenderer>().sharedMaterials = new[] { bark, palm ? palmLeaf : pineLeaf };
+                Solid(s, lat, 0.3f, 0.3f, "tree");
             }
         }
 
@@ -441,9 +460,15 @@ namespace SurviveI95.EditorTools
             FixCarMaterials(inst);
             SplitWheels(root.transform, wheels);
             BuildSteeringPivot(holder.transform, inst);
+            MakeBodyDeformable(inst);
             BuildMirrors(holder.transform, inst);
             BuildShifter(holder.transform, inst);
             BuildGauges(holder.transform, m);
+            var smokeShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            var smokeMat = new Material(smokeShader); smokeMat.SetFloat("_Surface", 1f); smokeMat.SetFloat("_Blend", 0f); smokeMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); smokeMat.renderQueue = 3000;
+            smokeMat.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha); smokeMat.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha); smokeMat.SetInt("_ZWrite", 0);
+            smokeMat.SetTexture("_BaseMap", SoftDot());
+            player.smokeMaterial = Save(smokeMat, "Smoke");
             return player;
         }
 
@@ -703,6 +728,35 @@ namespace SurviveI95.EditorTools
                 moved += take.Count / 3;
             }
             Debug.Log("[FloridaSlice] shifter triangles moved: " + moved);
+        }
+
+        static Texture2D SoftDot()
+        {
+            const string file = Gen + "/Materials/SoftDot.png";
+            var tex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+            {
+                float d = Mathf.Clamp01(Vector2.Distance(new Vector2(x, y), new Vector2(31.5f, 31.5f)) / 31.5f);
+                tex.SetPixel(x, y, new Color(1, 1, 1, Mathf.Pow(1f - d, 1.6f)));
+            }
+            File.WriteAllBytes(file, tex.EncodeToPNG());
+            AssetDatabase.ImportAsset(file);
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(file);
+        }
+
+        // Crumple needs vertex access at runtime, which imported meshes do not allow in a built game.
+        static void MakeBodyDeformable(GameObject inst)
+        {
+            foreach (var r in inst.GetComponentsInChildren<MeshRenderer>().Where(x => x.name.Contains("_body_") || x.name.Contains("frontlights")))
+            {
+                var filter = r.GetComponent<MeshFilter>(); var src = filter.sharedMesh;
+                var copy = new Mesh { indexFormat = IndexFormat.UInt32 };
+                copy.SetVertices(src.vertices); copy.SetNormals(src.normals); copy.SetUVs(0, src.uv); copy.SetTriangles(src.triangles, 0);
+                copy.RecalculateTangents(); copy.RecalculateBounds();
+                var file = $"{Gen}/Meshes/Body_{meshCount++}.asset";
+                AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(copy, file);
+                filter.sharedMesh = copy;
+            }
         }
 
         static void BuildSteeringPivot(Transform holder, GameObject inst)

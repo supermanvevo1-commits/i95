@@ -16,6 +16,8 @@ Proposed game length: about 50 km, roughly 25 minutes at highway speed. Game len
 | 7 | Palm Coast and St. Augustine | 427-512 | 265-318 | 5 | Pines and marsh, tourists, historic-area billboards |
 | 8 | Into Jacksonville | 512-578 | 318-end | 7 | I-295 at km 544, Butler Blvd, downtown bridges, finish |
 
+The current test road is section 3 (Jupiter), which is why no city is visible there. Sections 1, 2 and 8 need skylines and dense buildings.
+
 ## Landmarks to keep, in order
 Downtown Miami, Port Everglades and FLL airport, Broward Blvd, Palm Beach airport, Jupiter, Stuart, Fort Pierce, Vero Beach, Melbourne, Cocoa, Titusville, I-4 at Daytona, Palm Coast, St. Augustine, I-295, Butler Blvd, downtown Jacksonville.
 

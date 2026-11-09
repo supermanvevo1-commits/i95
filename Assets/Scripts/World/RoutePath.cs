@@ -12,6 +12,9 @@ namespace SurviveI95.World
         public RoutePoint[] points; public RouteExit[] exits; public RouteOverpass[] overpasses;
     }
 
+    [Serializable] public class RouteObstacle { public float s, lat, halfS, halfLat; public string kind; }
+    [Serializable] public class RouteObstacleFile { public RouteObstacle[] items; }
+
     /// <summary>Smoothed centerline of one carriageway, built from real map data.</summary>
     public class RoutePath
     {
@@ -19,6 +22,8 @@ namespace SurviveI95.World
         readonly Vector3[] pos;
         readonly float[] lanes, bridge;
         public RouteFile File { get; }
+        /// <summary>Solid roadside objects, sorted by distance along the road.</summary>
+        public RouteObstacle[] Obstacles { get; private set; } = new RouteObstacle[0];
         public float Length => (pos.Length - 1) * Step;
 
         public RoutePath(RouteFile file)
@@ -113,7 +118,10 @@ namespace SurviveI95.World
         {
             var asset = Resources.Load<TextAsset>("Data/Routes/" + id);
             if (asset == null) throw new InvalidOperationException("Missing route: " + id);
-            return new RoutePath(JsonUtility.FromJson<RouteFile>(asset.text));
+            var path = new RoutePath(JsonUtility.FromJson<RouteFile>(asset.text));
+            var solids = Resources.Load<TextAsset>("Data/Routes/" + id + "_obstacles");
+            if (solids != null) path.Obstacles = JsonUtility.FromJson<RouteObstacleFile>(solids.text).items;
+            return path;
         }
     }
 }

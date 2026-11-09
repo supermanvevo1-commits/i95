@@ -21,15 +21,25 @@ One milestone at a time. Each step is tested live in the editor, then committed.
 
 Done when: creator approves the feel, and the car can be driven and lost.
 
-## M2 Crashes (current)
-- [ ] 2.1 Solid barriers, overpass piers, signs and trees
-- [ ] 2.2 Impact response: bounce, spin, speed loss by angle
-- [ ] 2.3 Damage value and what it affects (top speed, steering pull)
-- [ ] 2.4 Visible damage: smoke, loose parts, dents
-- [ ] 2.5 Crash camera shake and impact effects
-- [ ] 2.6 Reset or recover after a wreck
+## M2 Crashes (done)
+- [x] 2.1 Solid barriers, overpass piers, signs and trees
+- [x] 2.2 Impact response: bounce, spin, speed loss by angle
+- [x] 2.3 Damage value and what it affects (top speed, steering pull)
+- [x] 2.4 Visible damage: smoke, loose parts, dents
+- [x] 2.5 Crash camera shake and impact effects
+- [x] 2.6 Reset or recover after a wreck
 
 Done when: hits at 30, 70 and 120 mph all feel different, and damage changes how the car drives.
+
+## M2b Miami test road (current)
+Move testing to where the game starts, so traffic and police are tuned in the real setting.
+- [ ] Import Downtown Miami to Fort Lauderdale as the test road
+- [ ] Elevated highway sections and bridges with height
+- [ ] On and off ramps at interchanges
+- [ ] First-pass skyline and buildings from real map footprints
+- [ ] Sound walls and urban roadside
+
+Done when: it reads as Miami from the driver's seat and holds its frame rate.
 
 ## M3 Traffic
 - [ ] 3.1 Spawn and remove cars around the player
@@ -83,6 +93,7 @@ See FLORIDA_ROUTE.md for the map and section list.
 - [ ] 7.3 Bridges with height and water
 - [ ] 7.4 Build sections in route order, one at a time
 - [ ] 7.5 Regional scenery: palms, swamp, coastal, pine
+- [ ] 7.5a City skylines and roadside buildings from real map building data
 - [ ] 7.6 Florida events: gators, downpours, Florida Man
 - [ ] 7.7 Full NPC behavior list
 - [ ] 7.8 Art pass: fictional car designs, lighting, proper trees

@@ -44,26 +44,48 @@ namespace SurviveI95.Sim
         public float Speed, SideSpeed, YawRate, Steer, LateralAccel, LongAccel;
         public bool OffRoad, HitWall, Sliding, OnRumble;
         /// <summary>Automatic transmission selector: P, R, N or D.</summary>
+        /// <summary>Most recent solid hit: closing speed in m/s and what was struck.</summary>
+        public float LastImpact; public string LastHitKind = "";
+        /// <summary>0 is undamaged, 1 is disabled. FrontCrush is how far the nose has been pushed in, in meters.</summary>
+        public float Damage, FrontCrush;
+        public int ImpactCount, RepairCount;
+        public bool Disabled => Damage >= 1f;
+        float pullDirection = 1f;
+        bool wallContact, sideContact;
         public char Gear = 'P';
         public float Beta => Mathf.Atan2(SideSpeed, Mathf.Max(1f, Mathf.Abs(Speed)));
 
         public DriveSim(CarHandling car) { Car = car; }
-        public float TopSpeed => Car.topMph / MetersPerSecondToMph;
+        public float TopSpeed => Car.topMph / MetersPerSecondToMph * (1f - 0.45f * Damage);
 
         public void Reset(RoutePath path, float s)
         {
             S = s; Lateral = path.HalfWidth(s) - RoutePath.LaneWidth / 2f;
             Theta = Speed = SideSpeed = YawRate = Steer = LateralAccel = LongAccel = 0;
             Gear = 'P';
+            Damage = FrontCrush = 0f; crashDecel = crashTurn = stunned = 0f; pinS = float.PositiveInfinity; wallContact = sideContact = false;
+            RepairCount++;
+        }
+
+        void TakeDamage(float amount, float impact, float pull)
+        {
+            Damage = Mathf.Clamp01(Damage + amount);
+            LastImpact = impact; ImpactCount++;
+            if (Mathf.Abs(pull) > 0.05f) pullDirection = Mathf.Sign(pull);
         }
 
         public void Step(RoutePath path, DriveInput input, float dt)
         {
+            lastDt = dt;
+            if (stunned > 0f) { stunned -= dt; input.Throttle = 0f; input.Brake = 0f; }
+            if (Disabled) input.Throttle = 0f;
+            // Bent suspension pulls the car to one side.
+            if (Mathf.Abs(Speed) > 2f) input.Steer = Mathf.Clamp(input.Steer + pullDirection * Damage * 0.07f, -1f, 1f);
             float half = path.HalfWidth(S);
             OffRoad = Lateral > half + RightShoulder || Lateral < -half - LeftShoulder;
             float edge = Mathf.Abs(Lateral) - half + 0.9f;
             OnRumble = !OffRoad && edge > 0.4f && edge < 2.1f;
-            float mu = Car.gripG * (OffRoad ? 0.5f : 1f);
+            float mu = Car.gripG * (OffRoad ? 0.5f : 1f) * (1f - 0.2f * Damage);
             float before = Speed;
 
             UpdateSpeed(input, mu * G, dt);
@@ -94,7 +116,7 @@ namespace SurviveI95.Sim
             if (brake && Speed > 0.25f) a = -Mathf.Min(Car.brake, grip) * input.Brake - drag;
             else if (brake) a = Speed > -11f ? -4.5f * input.Brake : 0f; // reverse once stopped
             else if (throttle && Speed < -0.25f) a = Mathf.Min(Car.brake, grip) * input.Throttle;
-            else if (throttle && Speed < top) a = Car.accel * input.Throttle * (1f - Mathf.Pow(ratio, 2.4f)) - drag * (1f - input.Throttle);
+            else if (throttle && Speed < top) a = Car.accel * (1f - 0.4f * Damage) * input.Throttle * (1f - Mathf.Pow(ratio, 2.4f)) - drag * (1f - input.Throttle);
             else if (Speed > top) a = -14f;
             if (input.Handbrake) a -= Mathf.Sign(Speed) * 5f;
 
@@ -145,19 +167,116 @@ namespace SurviveI95.Sim
             Theta = Mathf.Repeat(Theta + (YawRate - k * sDot) * h + Mathf.PI, Mathf.PI * 2f) - Mathf.PI;
         }
 
+        const float CarHalfLength = 2.3f, CarHalfWidth = 0.9f;
+        readonly HashSet<int> broken = new HashSet<int>();
+        float crashDecel, crashTurn, stunned, lastDt = 1f / 60f, pinS = float.PositiveInfinity;
+        public int BrokenCount; public float LastBrokenS, LastBrokenLat;
+
+        // How far the front of the car crushes against each kind of object, per unit of the base distance.
+        static float CrushFactor(string kind) => kind == "tree" ? 1.25f : kind == "pole" ? 1.1f : 1f;
+
+        void HitObstacles(RoutePath path, float dt)
+        {
+            if (crashDecel > 0f)
+            {
+                Speed = Mathf.MoveTowards(Speed, 0f, crashDecel * dt);
+                Theta += crashTurn * dt;
+                if (Speed <= 0f) { crashDecel = 0f; crashTurn = 0f; }
+            }
+            var items = path.Obstacles;
+            int lo = 0, hi = items.Length;
+            while (lo < hi) { int mid = (lo + hi) / 2; if (items[mid].s < S - 8f) lo = mid + 1; else hi = mid; }
+            bool touching = false;
+            for (int i = lo; i < items.Length && items[i].s < S + 8f; i++)
+            {
+                if (broken.Contains(i)) continue;
+                var o = items[i];
+                float ds = S - o.s, dl = Lateral - o.lat;
+                float overS = CarHalfLength + o.halfS - Mathf.Abs(ds), overL = CarHalfWidth + o.halfLat - Mathf.Abs(dl);
+                if (overS <= 0 || overL <= 0) continue;
+                HitWall = true; LastHitKind = o.kind;
+
+                if (o.kind == "post" && Mathf.Abs(Speed) > 2f)
+                {
+                    // Light sign posts shear off; the car loses a little speed and carries on.
+                    for (int j = lo; j < items.Length && items[j].s < S + 8f; j++)
+                        if (Mathf.Abs(items[j].s - o.s) < 0.01f) broken.Add(j);
+                    TakeDamage(0.03f, Mathf.Abs(Speed), 0f);
+                    Speed *= 0.88f;
+                    BrokenCount++; LastBrokenS = o.s; LastBrokenLat = o.lat;
+                    continue;
+                }
+
+                touching = true;
+                if (overS < overL && ds < 0)
+                {
+                    if (float.IsPositiveInfinity(pinS))
+                    {
+                        float v = Mathf.Max(0f, Speed * Mathf.Cos(Theta));
+                        float crush = Mathf.Clamp(0.25f + v * 0.026f, 0.25f, 1.1f) * CrushFactor(o.kind);
+                        pinS = S + crush;
+                        if (v > 2f)
+                        {
+                            float severity = o.kind == "pier" ? 1f : o.kind == "pole" ? 0.8f : 0.85f;
+                            TakeDamage(Mathf.Pow(v / 31f, 2f) * 0.7f * severity, v, -dl);
+                            FrontCrush = Mathf.Min(0.55f, FrontCrush + crush * 0.55f);
+                            crashDecel = v * v / (2f * crush);
+                            // Off-center hits swing the car around the object.
+                            float offset = Mathf.Clamp(-dl / (CarHalfWidth + o.halfLat), -1f, 1f);
+                            crashTurn = offset * Mathf.Min(v, 30f) * 0.075f / Mathf.Max(0.05f, crush / v);
+                            crashTurn = Mathf.Clamp(crashTurn, -9f, 9f);
+                            stunned = v > 7f ? 0.8f : 0.2f;
+                        }
+                    }
+                    if (crashDecel <= 0f && Speed > 0f) Speed = 0f;
+                    S = Mathf.Min(S, pinS);
+                }
+                else if (overS < overL)
+                {
+                    S += overS; if (Speed < 0f) Speed = 0f;
+                }
+                else
+                {
+                    // Side contact scrapes along the object; only motion into it is removed, so the car is not straightened.
+                    float toward = SideSpeed * Mathf.Cos(Theta) + Speed * Mathf.Sin(Theta);
+                    Lateral += Mathf.Sign(dl) * overL;
+                    if (toward * dl < 0f)
+                    {
+                        if (!sideContact && Mathf.Abs(toward) > 2f) TakeDamage(0.2f * Mathf.Pow(Mathf.Abs(toward) / 15f, 2f), Mathf.Abs(toward), -dl);
+                        sideContact = true;
+                        SideSpeed = 0f; Speed *= 0.985f;
+                    }
+                }
+            }
+            if (!touching) { pinS = float.PositiveInfinity; sideContact = false; }
+        }
+
         void ApplyLimits(RoutePath path)
         {
+            bool wasHit = HitWall;
             HitWall = false;
             float half = path.HalfWidth(S);
+            if (!wasHit) wallContact = false;
             if (path.HasBarrier(S))
             {
                 float right = half + RoutePath.BarrierRight - 1.2f, left = -half - RoutePath.BarrierLeft + 1.2f;
-                if (Lateral > right || Lateral < left)
+                // Only a car actually at the barrier hits it; one already beyond it stays where it is.
+                if ((Lateral > right && Lateral < right + 2f) || (Lateral < left && Lateral > left - 2f))
                 {
                     Lateral = Mathf.Clamp(Lateral, left, right);
-                    Theta *= -0.25f; YawRate *= 0.2f; SideSpeed *= -0.2f; Speed *= 0.985f; HitWall = true;
+                    float into = Mathf.Abs(Speed * Mathf.Sin(Theta) + SideSpeed * Mathf.Cos(Theta));
+                    if (!wallContact)
+                    {
+                        if (into > 1f) TakeDamage(0.5f * Mathf.Pow(into / 20f, 2f), into, Lateral);
+                        Speed = Mathf.MoveTowards(Speed, 0f, into * 0.6f);
+                    }
+                    wallContact = true;
+                    Speed = Mathf.MoveTowards(Speed, 0f, 2f * lastDt); // rubbing friction while in contact
+                    Theta *= 0.82f; YawRate *= 0.3f; SideSpeed = 0f; HitWall = true;
+                    LastHitKind = "barrier";
                 }
             }
+            HitObstacles(path, lastDt);
             Lateral = Mathf.Clamp(Lateral, -WorldEdge, WorldEdge);
             if (S < 5f) { S = 5f; Speed = Mathf.Max(0, Speed); }
             if (S > path.Length - 60f) Reset(path, 150f);

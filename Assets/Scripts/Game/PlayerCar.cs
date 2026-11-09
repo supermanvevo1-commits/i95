@@ -12,6 +12,9 @@ namespace SurviveI95.Game
         public string handlingId = "sedan";
         public float startS = 300f;
         public Camera chaseCamera;
+        public Material smokeMaterial;
+        /// <summary>Test view from in front of the car, for inspecting crash damage.</summary>
+        public bool FrontView;
         public float cameraBack = 6.6f, cameraUp = 2.25f;
 
         /// <summary>When set, replaces the keyboard. Used by automated play tests.</summary>
@@ -41,7 +44,7 @@ namespace SurviveI95.Game
         int shownMph = -1;
         string shownGear = "";
         
-        void Awake() { Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); Sim.Reset(Path, startS); StorePrevious(); }
+        void Awake() { Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious(); }
 
         void Setup()
         {
@@ -143,6 +146,8 @@ namespace SurviveI95.Game
             rumbleShake = Mathf.Lerp(rumbleShake, Sim.OnRumble && Mathf.Abs(Sim.Speed) > 5f ? 1f : 0f, 1f - Mathf.Exp(-Time.deltaTime * 18f));
             ApplyVisuals(visualSteer);
             UpdateGauges();
+            UpdateDamageVisuals();
+            if (Sim.BrokenCount != shownBroken) { shownBroken = Sim.BrokenCount; KnockDownSign(); }
         }
 
         // Staggered gate: the lever steps sideways between detents as it travels P, R, N, D.
@@ -191,6 +196,105 @@ namespace SurviveI95.Game
             int best = 0;
             for (int i = 1; i < DetentNode.Length; i++) if (Mathf.Abs(NodeDistance(DetentNode[i]) - shifterTravel) < Mathf.Abs(NodeDistance(DetentNode[best]) - shifterTravel)) best = i;
             return DetentName[best];
+        }
+
+        int shownBroken, shownImpacts, shownRepairs;
+        float shake, appliedCrush;
+        ParticleSystem smoke, burst;
+        readonly System.Collections.Generic.List<(Mesh mesh, Vector3[] rest, Matrix4x4 toModel, Matrix4x4 fromModel)> crumple = new System.Collections.Generic.List<(Mesh, Vector3[], Matrix4x4, Matrix4x4)>();
+
+        void SetupDamageVisuals()
+        {
+            if (model == null) return;
+            foreach (var r in model.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (!r.name.Contains("_body_") && !r.name.Contains("frontlights")) continue;
+                var filter = r.GetComponent<MeshFilter>();
+                if (filter == null || !filter.sharedMesh.isReadable) continue;
+                var m = filter.mesh;
+                var toModel = model.worldToLocalMatrix * r.transform.localToWorldMatrix;
+                crumple.Add((m, m.vertices, toModel, toModel.inverse));
+            }
+            smoke = MakeParticles("HoodSmoke", new Vector3(0, 0.95f, 1.5f), 0.9f, 1.4f, 2.4f, new Color(.25f, .25f, .25f, .55f), 0);
+            burst = MakeParticles("ImpactBurst", new Vector3(0, 0.55f, 2.2f), 0.18f, 6f, 0.5f, new Color(.45f, .45f, .42f, .9f), 0);
+        }
+
+        ParticleSystem MakeParticles(string name, Vector3 at, float size, float speed, float life, Color color, float rate)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false); go.transform.localPosition = at;
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main; main.startSize = size; main.startSpeed = speed; main.startLifetime = life; main.startColor = color; main.simulationSpace = ParticleSystemSimulationSpace.World; main.maxParticles = 400; main.gravityModifier = name == "ImpactBurst" ? 1.2f : -0.05f;
+            var em = ps.emission; em.rateOverTime = rate;
+            var sh = ps.shape; sh.shapeType = ParticleSystemShapeType.Cone; sh.angle = name == "ImpactBurst" ? 55f : 12f; sh.radius = 0.25f; sh.rotation = name == "ImpactBurst" ? Vector3.zero : new Vector3(-90f, 0, 0);
+            if (smokeMaterial != null) go.GetComponent<ParticleSystemRenderer>().sharedMaterial = smokeMaterial;
+            ps.Play();
+            return ps;
+        }
+
+        void ApplyCrumple(float amount)
+        {
+            const float zoneStart = 1.15f, nose = 2.35f;
+            foreach (var part in crumple)
+            {
+                var v = new Vector3[part.rest.Length];
+                for (int i = 0; i < v.Length; i++)
+                {
+                    var w = part.toModel.MultiplyPoint3x4(part.rest[i]);
+                    if (w.z > zoneStart)
+                    {
+                        float k = (w.z - zoneStart) / (nose - zoneStart); k *= k;
+                        float ripple = 1f + 0.3f * Mathf.Sin(w.x * 9f + w.y * 6f);
+                        w.z -= amount * k * ripple;
+                        w.y -= 0.12f * amount * k * ripple;
+                    }
+                    v[i] = part.fromModel.MultiplyPoint3x4(w);
+                }
+                part.mesh.vertices = v;
+                part.mesh.RecalculateBounds();
+            }
+            appliedCrush = amount;
+        }
+
+        void UpdateDamageVisuals()
+        {
+            if (Sim.ImpactCount != shownImpacts)
+            {
+                shownImpacts = Sim.ImpactCount;
+                float force = Mathf.Clamp01(Sim.LastImpact / 30f);
+                shake = Mathf.Max(shake, force);
+                if (burst != null && Sim.LastImpact > 4f) burst.Emit(Mathf.RoundToInt(10f + force * 60f));
+            }
+            if (Sim.RepairCount != shownRepairs) { shownRepairs = Sim.RepairCount; if (smoke != null) smoke.Clear(); }
+            if (!Mathf.Approximately(appliedCrush, Sim.FrontCrush) && crumple.Count > 0) ApplyCrumple(Sim.FrontCrush);
+            if (smoke != null) { var em = smoke.emission; em.rateOverTime = Sim.Damage > 0.3f ? Mathf.Lerp(4f, 40f, (Sim.Damage - 0.3f) / 0.7f) : 0f; }
+            shake = Mathf.MoveTowards(shake, 0f, Time.deltaTime * 2.2f);
+        }
+
+        void KnockDownSign()
+        {
+            var signs = GameObject.Find("Signs");
+            if (signs == null) return;
+            var at = Path.Point(Sim.LastBrokenS, Sim.LastBrokenLat);
+            var hinge = new GameObject("BrokenSign").transform;
+            hinge.position = at; hinge.rotation = Quaternion.LookRotation(Path.Tangent(Sim.LastBrokenS), Vector3.up);
+            for (int i = signs.transform.childCount - 1; i >= 0; i--)
+            {
+                var c = signs.transform.GetChild(i);
+                var flat = c.position - at; flat.y = 0;
+                if (flat.magnitude < 5.5f) c.SetParent(hinge, true);
+            }
+            StartCoroutine(Fall(hinge));
+        }
+
+        System.Collections.IEnumerator Fall(Transform hinge)
+        {
+            for (float t = 0; t < 0.55f; t += Time.deltaTime)
+            {
+                hinge.localRotation *= Quaternion.Euler(Mathf.Lerp(40f, 230f, t / 0.55f) * Time.deltaTime, 0, 0);
+                yield return null;
+            }
         }
 
         void UpdateGauges()
@@ -256,9 +360,20 @@ namespace SurviveI95.Game
             SnapCamera();
         }
 
+        // The grass sits below the pavement, so a car off the road has to settle down onto it.
+        float GroundDrop(float s, float lateral)
+        {
+            float half = Path.HalfWidth(s);
+            float southCenter = -(2f * half + 26f);
+            float north = lateral > 0 ? lateral - (half + 3.05f) : -lateral - (half + 1.3f);
+            float south = lateral > southCenter ? (lateral - southCenter) - (half + 3.05f) : (southCenter - lateral) - (half + 1.3f);
+            float beyond = Mathf.Min(north, south);
+            return 0.25f * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(beyond / 0.8f));
+        }
+
         void Pose(float s, float lateral, float theta)
         {
-            transform.position = Path.Point(s, lateral);
+            transform.position = Path.Point(s, lateral) + Vector3.down * GroundDrop(s, lateral);
             var tan = Path.Tangent(s);
             transform.rotation = Quaternion.LookRotation(tan, Vector3.up) * Quaternion.Euler(0, theta * Mathf.Rad2Deg, 0);
         }
@@ -272,6 +387,7 @@ namespace SurviveI95.Game
             float ratio = Mathf.Clamp01(Sim.Speed / Sim.TopSpeed);
             float fov = Cockpit ? 72f + 5f * ratio : 60f + 15f * ratio * ratio;
             chaseCamera.fieldOfView = Mathf.Lerp(chaseCamera.fieldOfView, fov, 1f - Mathf.Exp(-Time.deltaTime * 4f));
+            if (shake > 0.01f) { chaseCamera.transform.position += UnityEngine.Random.insideUnitSphere * 0.22f * shake * shake; chaseCamera.transform.rotation *= Quaternion.Euler(UnityEngine.Random.insideUnitSphere * 2.5f * shake); }
             if (rumbleShake > 0.01f) chaseCamera.transform.position += UnityEngine.Random.insideUnitSphere * 0.022f * rumbleShake;
         }
 
@@ -300,6 +416,12 @@ namespace SurviveI95.Game
 
         void ApplyCamera()
         {
+            if (FrontView)
+            {
+                chaseCamera.transform.position = transform.position + transform.forward * 7.2f + transform.right * 2.6f + Vector3.up * 1.5f;
+                chaseCamera.transform.rotation = Quaternion.LookRotation(transform.position + transform.forward * 1.2f + Vector3.up * 0.65f - chaseCamera.transform.position);
+                return;
+            }
             if (Cockpit)
             {
                 var head = transform.TransformPoint(cockpitEye + new Vector3(Mathf.Sin(lookYaw * Mathf.Deg2Rad) * 0.1f, 0, 0));
@@ -324,6 +446,12 @@ namespace SurviveI95.Game
         {
             var style = new GUIStyle(GUI.skin.label) { fontSize = 32, fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
             GUI.Label(new Rect(Screen.width - 330, Screen.height - 70, 300, 56), Mathf.RoundToInt(Mathf.Abs(Sim.Speed) * DriveSim.MetersPerSecondToMph) + " MPH", style);
+            if (Sim.Damage > 0.01f)
+            {
+                var small = new GUIStyle(style) { fontSize = 22 };
+                GUI.Label(new Rect(Screen.width - 330, Screen.height - 108, 300, 40), "DAMAGE " + Mathf.RoundToInt(Sim.Damage * 100f) + "%", small);
+                if (Sim.Disabled) { var big = new GUIStyle(style) { alignment = TextAnchor.MiddleCenter, fontSize = 34 }; GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 60), "CAR DISABLED - PRESS R TO RECOVER", big); }
+            }
         }
     }
 }
