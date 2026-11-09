@@ -8,7 +8,7 @@ const UA = { 'User-Agent': 'SurviveI95-RouteTool/1.0' };
 const M_LAT = 111320;
 
 async function overpass() {
-  const q = `[out:json][timeout:90];(
+  const q = `[out:json][timeout:180];(
     way["highway"="motorway"]["ref"~"(^|;)\\\\s*I ?95"](${bbox});
     way["highway"="motorway_link"](${bbox});
     node["highway"="motorway_junction"](${bbox});
@@ -73,7 +73,7 @@ async function elevation(lat, lon) {
   }));
 
   const samples = [];
-  for (let d = 0; d <= dist + 400; d += 400) {
+  if (!process.env.NO_ELEVATION) for (let d = 0; d <= dist + 400; d += 400) {
     const p = pts.find(q => q.s >= d) || pts[pts.length - 1];
     const v = await elevation(p.lat, p.lon);
     if (v !== null) samples.push({ s: p.s, y: v });

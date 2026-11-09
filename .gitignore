@@ -21,3 +21,7 @@
 # Rebuild with menu: Survive I-95 > Build Florida Slice
 /Assets/Generated/
 /Assets/Generated.meta
+
+/TestReports/
+
+/.livebridge/

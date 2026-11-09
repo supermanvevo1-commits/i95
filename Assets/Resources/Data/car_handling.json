@@ -1,0 +1,7 @@
+{
+  "cars": [
+    { "id": "sedan",  "topMph": 124, "accel": 5.4, "brake": 12.0, "gripG": 1.0,  "wheelbase": 2.7, "steerIn": 2.6, "steerOut": 6.0, "mass": 1400, "frontWeight": 0.55 },
+    { "id": "muscle", "topMph": 165, "accel": 8.6, "brake": 13.0, "gripG": 0.95, "wheelbase": 2.8, "steerIn": 2.6, "steerOut": 6.0, "mass": 1700, "frontWeight": 0.53 },
+    { "id": "pickup", "topMph": 132, "accel": 5.8, "brake": 10.5, "gripG": 0.82, "wheelbase": 3.6, "steerIn": 2.2, "steerOut": 5.0, "mass": 2300, "frontWeight": 0.57 }
+  ]
+}

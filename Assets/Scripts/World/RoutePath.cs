@@ -93,6 +93,15 @@ namespace SurviveI95.World
         public float HalfWidth(float s) => Lanes(s) * LaneWidth * 0.5f;
         public bool IsBridge(float s) { int i = Index(s, out _); return bridge[i] > 0.5f; }
 
+        /// <summary>Barrier offsets measured outward from the lane edges.</summary>
+        public const float BarrierLeft = 2.2f, BarrierRight = 4.0f;
+        public bool HasBarrier(float s)
+        {
+            if (IsBridge(s)) return true;
+            foreach (var o in File.overpasses) if (Mathf.Abs(o.s - s) < 90f) return true;
+            return false;
+        }
+
         /// <summary>Signed curvature in 1/m; positive means the road bends right.</summary>
         public float Curvature(float s)
         {

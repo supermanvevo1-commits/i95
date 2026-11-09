@@ -44,12 +44,13 @@ namespace SurviveI95.EditorTools
 
             var cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
             cam.tag = "MainCamera"; cam.farClipPlane = 3000f; cam.fieldOfView = 62f;
-            var car = BuildCar(cam);
+            var car = BuildCar(cam, m);
             car.Place(3000f);
 
             EditorSceneManager.SaveScene(scene, Gen + "/FloridaSlice.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(Gen + "/FloridaSlice.unity", true) };
             AssetDatabase.SaveAssets();
+            SliceAutoRebuild.WriteStamp();
             Debug.Log("[FloridaSlice] built " + (path.Length / 1000f).ToString("F1") + " km");
 
             var shots = ArgValue("-shotDir");
@@ -65,19 +66,25 @@ namespace SurviveI95.EditorTools
 
         static void Screenshots(PlayerCar car, Camera cam, RoutePath path, string dir)
         {
-            var points = new Dictionary<string, float> { { "warmup", 500f }, { "overpass", 7890f }, { "exit", 10438f - 345f }, { "road", 3000f } }; // first capture in batch mode is unreliable
             ShaderUtil.allowAsyncCompilation = false;
             var rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32);
-            foreach (var p in points)
+            Action<string> shot = name =>
             {
-                car.Place(p.Value);
-                var req = new RenderPipeline.StandardRequest { destination = rt };
-                RenderPipeline.SubmitRenderRequest(cam, req);
+                RenderPipeline.SubmitRenderRequest(cam, new RenderPipeline.StandardRequest { destination = rt });
                 RenderTexture.active = rt;
                 var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
                 tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
-                File.WriteAllBytes(Path.Combine(dir, "slice_" + p.Key + ".png"), tex.EncodeToPNG());
-            }
+                File.WriteAllBytes(Path.Combine(dir, "view_" + name + ".png"), tex.EncodeToPNG());
+            };
+            car.Place(500f); car.SetCockpit(false); shot("warmup");
+            car.Place(3000f); car.SetTestView(0.8f, 0, 0); shot("chase_steer");
+            var c = car.transform;
+            cam.transform.position = c.position + c.right * 3.4f + c.forward * 1.2f + Vector3.up * 0.55f;
+            cam.transform.rotation = Quaternion.LookRotation(c.position + Vector3.up * 0.45f + c.forward * 0.6f - cam.transform.position);
+            shot("side_ground");
+            car.SetCockpit(true);
+            foreach (var v in new[] { ("ahead", 0f, 0f, 0f), ("left", -80f, -8f, 0f), ("right", 75f, -10f, 0f), ("rear", 130f, 0f, 0f), ("down", 0f, -34f, 1f) })
+            { car.SetTestView(v.Item4, v.Item2, v.Item3); shot("cockpit_" + v.Item1); }
             RenderTexture.active = null;
         }
 
@@ -408,7 +415,7 @@ namespace SurviveI95.EditorTools
             return b;
         }
 
-        static PlayerCar BuildCar(Camera cam)
+        static PlayerCar BuildCar(Camera cam, Mats m)
         {
             var root = new GameObject("PlayerCar");
             var player = root.AddComponent<PlayerCar>();
@@ -416,24 +423,304 @@ namespace SurviveI95.EditorTools
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(CarPath);
             if (model == null) { Debug.LogError("[FloridaSlice] car model missing"); return player; }
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(model);
-            inst.transform.position = Vector3.zero;
+            PrefabUtility.UnpackPrefabInstance(inst, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
             var holder = new GameObject("Model");
             holder.transform.SetParent(root.transform, false);
+            inst.transform.position = Vector3.zero;
             var b = Bounds(inst);
-            bool xLong = b.size.x > b.size.z;
-            float length = xLong ? b.size.x : b.size.z;
-            float scale = 4.63f / length;
-            inst.transform.localScale *= scale;
+            inst.transform.localScale *= 4.63f / Mathf.Max(b.size.x, b.size.z);
             b = Bounds(inst);
-            inst.transform.position -= new Vector3(b.center.x, b.min.y, b.center.z);
+
+            // Rest the car on its tires. Overall bounds are unreliable because some interior meshes overshoot.
+            var wheels = inst.GetComponentsInChildren<MeshRenderer>().Where(r => r.name.Contains("wheels")).ToList();
+            float ground = wheels.Min(r => r.bounds.min.y);
+            inst.transform.position -= new Vector3(b.center.x, ground, b.center.z);
             inst.transform.SetParent(holder.transform, true);
-            holder.transform.localRotation = Quaternion.Euler(0, (xLong ? 90f : 0f) + CarYawFix, 0);
-            Debug.Log($"[FloridaSlice] car xLong={xLong} size={b.size}");
+            Debug.Log($"[FloridaSlice] car lowered by {ground:F2} m onto its tires");
+
+            FixCarMaterials(inst);
+            SplitWheels(root.transform, wheels);
+            BuildSteeringPivot(holder.transform, inst);
+            BuildMirrors(holder.transform, inst);
+            BuildShifter(holder.transform, inst);
+            BuildGauges(holder.transform, m);
             return player;
+        }
+
+        // Corrects problems in the downloaded model: leaky roof shadows, heavy glass tint and broken paint normals.
+        static void FixCarMaterials(GameObject inst)
+        {
+            var copies = new Dictionary<Material, Material>();
+            foreach (var r in inst.GetComponentsInChildren<MeshRenderer>())
+            {
+                bool glass = r.name.Contains("windows");
+                r.shadowCastingMode = glass ? ShadowCastingMode.Off : ShadowCastingMode.TwoSided;
+                var mats = r.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var src = mats[i];
+                    bool paint = src.name.StartsWith("main_paint") || src.name.StartsWith("tyre");
+                    if (!glass && !paint) continue;
+                    if (!copies.TryGetValue(src, out var copy))
+                    {
+                        copy = new Material(src);
+                        if (paint && copy.HasProperty("normalTexture")) { copy.SetTexture("normalTexture", null); copy.DisableKeyword("_NORMALMAP"); }
+                        if (glass && copy.HasProperty("baseColorFactor")) { var c = copy.GetColor("baseColorFactor"); c.a *= 0.3f; copy.SetColor("baseColorFactor", c); }
+                        Debug.Log($"[Check] {src.name} shader {src.shader.name} hasNormal {src.HasProperty("normalTexture")} hasColor {src.HasProperty("baseColorFactor")}");
+                        Save(copy, "Car_" + src.name.Replace(".", "_"));
+                        copies[src] = copy;
+                    }
+                    mats[i] = copy;
+                }
+                r.sharedMaterials = mats;
+            }
+        }
+
+        static void SplitWheels(Transform root, List<MeshRenderer> wheels)
+        {
+            string[] names = { "FL", "FR", "RL", "RR" };
+            Func<Vector3, int> quadrant = p => (p.z > 0 ? 0 : 2) + (p.x < 0 ? 0 : 1);
+            var pivotMin = new Vector3[4]; var pivotMax = new Vector3[4]; var seen = new bool[4];
+            foreach (var r in wheels)
+            {
+                var mesh = r.GetComponent<MeshFilter>().sharedMesh; var m = r.transform.localToWorldMatrix;
+                foreach (var v in mesh.vertices)
+                {
+                    var w = m.MultiplyPoint3x4(v); int q = quadrant(w);
+                    if (!seen[q]) { pivotMin[q] = pivotMax[q] = w; seen[q] = true; }
+                    pivotMin[q] = Vector3.Min(pivotMin[q], w); pivotMax[q] = Vector3.Max(pivotMax[q], w);
+                }
+            }
+            for (int q = 0; q < 4; q++)
+            {
+                var pivot = (pivotMin[q] + pivotMax[q]) / 2f;
+                var node = new GameObject("Wheel_" + names[q]).transform;
+                node.SetParent(root, false); node.position = pivot;
+                var spin = new GameObject("Spin").transform;
+                spin.SetParent(node, false);
+                foreach (var r in wheels)
+                {
+                    var src = r.GetComponent<MeshFilter>().sharedMesh; var m = r.transform.localToWorldMatrix;
+                    var verts = src.vertices; var norms = src.normals; var uvs = src.uv; var tris = src.triangles;
+                    var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+                    var map = new Dictionary<int, int>();
+                    for (int i = 0; i < tris.Length; i += 3)
+                    {
+                        var c = (m.MultiplyPoint3x4(verts[tris[i]]) + m.MultiplyPoint3x4(verts[tris[i + 1]]) + m.MultiplyPoint3x4(verts[tris[i + 2]])) / 3f;
+                        if (quadrant(c) != q) continue;
+                        for (int j = 0; j < 3; j++)
+                        {
+                            int id = tris[i + j];
+                            if (!map.TryGetValue(id, out int ni))
+                            {
+                                ni = v.Count; map[id] = ni;
+                                v.Add(m.MultiplyPoint3x4(verts[id]) - pivot);
+                                n.Add(m.MultiplyVector(norms[id]).normalized);
+                                uv.Add(uvs[id]);
+                            }
+                            t.Add(ni);
+                        }
+                    }
+                    if (t.Count == 0) continue;
+                    var mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
+                    mesh.SetVertices(v); mesh.SetNormals(n); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0);
+                    mesh.RecalculateTangents(); mesh.RecalculateBounds();
+                    var file = $"{Gen}/Meshes/Wheel_{names[q]}_{meshCount++}.asset";
+                    AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(mesh, file);
+                    var go = new GameObject(r.sharedMaterial.name, typeof(MeshFilter), typeof(MeshRenderer));
+                    go.transform.SetParent(spin, false);
+                    go.GetComponent<MeshFilter>().sharedMesh = mesh;
+                    go.GetComponent<MeshRenderer>().sharedMaterials = r.sharedMaterials;
+                }
+            }
+            foreach (var r in wheels) UnityEngine.Object.DestroyImmediate(r.gameObject);
+        }
+
+        // Live instruments laid over the model's painted-on dials. Positions measured from the instrument panel.
+        static void BuildGauges(Transform holder, Mats m)
+        {
+            var root = new GameObject("Gauges").transform;
+            root.SetParent(holder, false); root.localPosition = new Vector3(0, 0, 0.872f);
+            var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+            Func<string, Color, Material> mat = (n, c) => { var x = new Material(unlit); x.SetColor("_BaseColor", c); return Save(x, n); };
+            var face = mat("GaugeFace", new Color(.035f, .04f, .05f));
+            var tick = mat("GaugeTick", new Color(.92f, .93f, .95f));
+            var needle = mat("GaugeNeedle", new Color(1f, .16f, .08f));
+            const float y = 0.95f, r = 0.058f;
+            string[] speed = { "0", "20", "40", "60", "80", "100", "120", "140" };
+            string[] tach = { "0", "1", "2", "3", "4", "5", "6", "7", "8" };
+            Dial(root, "Tach", -0.48f, y, r, tach, face, tick, needle, m);
+            Dial(root, "Speed", -0.28f, y, r, speed, face, tick, needle, m);
+
+            Part(root, "Screen", new Vector3(-0.38f, y, 0), Quaternion.identity, Quad(0.062f, 0.098f, false), face);
+            Label(root, "SpeedText", new Vector3(-0.38f, y + 0.012f, -0.001f), "0", 0.022f, m);
+            Label(root, "MphText", new Vector3(-0.38f, y - 0.008f, -0.001f), "MPH", 0.007f, m);
+            Label(root, "GearText", new Vector3(-0.38f, y - 0.03f, -0.001f), "P", 0.016f, m);
+        }
+
+        static void Dial(Transform root, string name, float x, float y, float r, string[] labels, Material face, Material tick, Material needle, Mats m)
+        {
+            var c = new Vector3(x, y, 0);
+            Part(root, name + "Face", c, Quaternion.identity, Disc(r), face);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                float a = 135f - 270f * i / (labels.Length - 1);
+                var rot = Quaternion.Euler(0, 0, a);
+                Part(root, name + "Tick", c + rot * Vector3.up * (r * .88f) + Vector3.back * .0006f, rot, Quad(.0022f, r * .17f, false), tick);
+                Label(root, name + "Label", c + rot * Vector3.up * (r * .62f) + Vector3.back * .0008f, labels[i], 0.0095f, m);
+            }
+            var pivot = new GameObject(name + "Needle").transform;
+            pivot.SetParent(root, false); pivot.localPosition = c + Vector3.back * .0014f;
+            Part(pivot, "Blade", Vector3.zero, Quaternion.identity, Quad(.003f, r * .84f, true), needle);
+            Part(root, name + "Hub", c + Vector3.back * .002f, Quaternion.identity, Disc(r * .1f), tick);
+        }
+
+        static void Part(Transform parent, string name, Vector3 pos, Quaternion rot, Mesh mesh, Material mat)
+        {
+            var file = $"{Gen}/Meshes/Gauge_{meshCount++}.asset";
+            AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(mesh, file);
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+            go.transform.SetParent(parent, false); go.transform.localPosition = pos; go.transform.localRotation = rot;
+            go.GetComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.GetComponent<MeshRenderer>(); r.sharedMaterial = mat; r.shadowCastingMode = ShadowCastingMode.Off;
+        }
+
+        static void Label(Transform parent, string name, Vector3 pos, string text, float height, Mats m)
+        {
+            Text(parent, Vector3.zero, Quaternion.identity, text, height, Color.white, m.text);
+            var go = parent.GetChild(parent.childCount - 1);
+            go.name = name; go.localPosition = pos; go.localRotation = Quaternion.identity;
+        }
+
+        static Mesh Disc(float r)
+        {
+            var v = new List<Vector3> { Vector3.zero }; var t = new List<int>();
+            const int n = 40;
+            for (int i = 0; i <= n; i++) { float a = i * Mathf.PI * 2 / n; v.Add(new Vector3(Mathf.Cos(a) * r, Mathf.Sin(a) * r, 0)); if (i > 0) t.AddRange(new[] { 0, i + 1, i }); }
+            return Plain(v, t);
+        }
+
+        static Mesh Quad(float w, float h, bool fromBase)
+        {
+            float lo = fromBase ? 0 : -h / 2, hi = fromBase ? h : h / 2;
+            return Plain(new List<Vector3> { new Vector3(-w / 2, lo), new Vector3(w / 2, lo), new Vector3(-w / 2, hi), new Vector3(w / 2, hi) }, new List<int> { 0, 2, 1, 1, 2, 3 });
+        }
+
+        static Mesh Plain(List<Vector3> v, List<int> t)
+        {
+            var mesh = new Mesh(); mesh.SetVertices(v); mesh.SetTriangles(t, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        // Rebuilds the mirror glass with UVs that map a whole camera image across each mirror.
+        static void BuildMirrors(Transform holder, GameObject inst)
+        {
+            var sources = inst.GetComponentsInChildren<MeshRenderer>().Where(r => r.name.Contains("_miror")).ToList();
+            foreach (var r in sources.Where(x => x.name.Contains("body_miror")))
+            {
+                MirrorPart(holder, "Mirror_L", r, c => c.x < 0, 0);
+                MirrorPart(holder, "Mirror_R", r, c => c.x >= 0, 0);
+            }
+            foreach (var r in sources.Where(x => x.name.Contains("interior1_miror"))) MirrorPart(holder, "Mirror_Rear", r, c => true, 0);
+            foreach (var r in sources) UnityEngine.Object.DestroyImmediate(r.gameObject);
+        }
+
+        static void MirrorPart(Transform holder, string name, MeshRenderer r, Func<Vector3, bool> keep, int unused)
+        {
+            var src = r.GetComponent<MeshFilter>().sharedMesh; var m = r.transform.localToWorldMatrix;
+            var verts = src.vertices; var tris = src.triangles;
+            var v = new List<Vector3>(); var t = new List<int>(); var map = new Dictionary<int, int>();
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                var c = (m.MultiplyPoint3x4(verts[tris[i]]) + m.MultiplyPoint3x4(verts[tris[i + 1]]) + m.MultiplyPoint3x4(verts[tris[i + 2]])) / 3f;
+                if (!keep(c)) continue;
+                for (int j = 0; j < 3; j++)
+                {
+                    int id = tris[i + j];
+                    if (!map.TryGetValue(id, out int ni)) { ni = v.Count; map[id] = ni; v.Add(m.MultiplyPoint3x4(verts[id])); }
+                    t.Add(ni);
+                }
+            }
+            if (v.Count == 0) { Debug.LogError("[FloridaSlice] empty mirror " + name); return; }
+            float minX = v.Min(p => p.x), maxX = v.Max(p => p.x), minY = v.Min(p => p.y), maxY = v.Max(p => p.y);
+            // A mirror flips left and right compared with the backward-looking camera.
+            var uv = v.Select(p => new Vector2(1f - (p.x - minX) / (maxX - minX), (p.y - minY) / (maxY - minY))).ToList();
+            var mesh = new Mesh(); mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetTriangles(t, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var file = $"{Gen}/Meshes/{name}.asset";
+            AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(mesh, file);
+            var go = new GameObject(name, typeof(MeshFilter), typeof(MeshRenderer));
+            go.transform.SetParent(holder, false);
+            go.GetComponent<MeshFilter>().sharedMesh = mesh;
+            go.GetComponent<MeshRenderer>().sharedMaterial = r.sharedMaterial;
+            go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
+        }
+
+        // The lever is fused into the dash meshes, so its pieces are found by position and moved to their own object.
+        static void BuildShifter(Transform holder, GameObject inst)
+        {
+            var pivot = new GameObject("Shifter").transform;
+            pivot.SetParent(holder, false); pivot.localPosition = new Vector3(0.01f, 0.55f, 0.62f);
+            Vector3 lo = new Vector3(-0.03f, 0.51f, 0.585f), hi = new Vector3(0.055f, 0.73f, 0.685f);
+            int moved = 0;
+            foreach (var r in inst.GetComponentsInChildren<MeshRenderer>().Where(x => x.name.Contains("_dashboard_")).ToList())
+            {
+                var filter = r.GetComponent<MeshFilter>(); var src = filter.sharedMesh; var m = r.transform.localToWorldMatrix;
+                var verts = src.vertices; var norms = src.normals; var uvs = src.uv; var tris = src.triangles;
+                var parent = Enumerable.Range(0, verts.Length).ToArray();
+                Func<int, int> find = x => { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+                for (int i = 0; i < tris.Length; i += 3) { parent[find(tris[i])] = find(tris[i + 1]); parent[find(tris[i])] = find(tris[i + 2]); }
+                var inside = new Dictionary<int, bool>();
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    var w = m.MultiplyPoint3x4(verts[i]); int g = find(i);
+                    bool ok = w.x > lo.x && w.x < hi.x && w.y > lo.y && w.y < hi.y && w.z > lo.z && w.z < hi.z;
+                    inside[g] = (!inside.ContainsKey(g) || inside[g]) && ok;
+                }
+                var keep = new List<int>(); var take = new List<int>();
+                for (int i = 0; i < tris.Length; i += 3) (inside[find(tris[i])] ? take : keep).AddRange(new[] { tris[i], tris[i + 1], tris[i + 2] });
+                if (take.Count == 0) continue;
+
+                var v = new List<Vector3>(); var n = new List<Vector3>(); var uv = new List<Vector2>(); var t2 = new List<int>(); var map = new Dictionary<int, int>();
+                foreach (int id in take)
+                {
+                    if (!map.TryGetValue(id, out int ni)) { ni = v.Count; map[id] = ni; v.Add(m.MultiplyPoint3x4(verts[id]) - pivot.position); n.Add(m.MultiplyVector(norms[id]).normalized); uv.Add(uvs[id]); }
+                    t2.Add(ni);
+                }
+                var part = new Mesh { indexFormat = IndexFormat.UInt32 };
+                part.SetVertices(v); part.SetNormals(n); part.SetUVs(0, uv); part.SetTriangles(t2, 0); part.RecalculateTangents(); part.RecalculateBounds();
+                var file = $"{Gen}/Meshes/Shifter_{meshCount++}.asset";
+                AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(part, file);
+                var go = new GameObject(r.sharedMaterial.name, typeof(MeshFilter), typeof(MeshRenderer));
+                go.transform.SetParent(pivot, false);
+                go.GetComponent<MeshFilter>().sharedMesh = part;
+                go.GetComponent<MeshRenderer>().sharedMaterials = r.sharedMaterials;
+
+                var rest = UnityEngine.Object.Instantiate(src);
+                rest.SetTriangles(keep, 0);
+                var restFile = $"{Gen}/Meshes/DashRest_{meshCount++}.asset";
+                AssetDatabase.DeleteAsset(restFile); AssetDatabase.CreateAsset(rest, restFile);
+                filter.sharedMesh = rest;
+                moved += take.Count / 3;
+            }
+            Debug.Log("[FloridaSlice] shifter triangles moved: " + moved);
+        }
+
+        static void BuildSteeringPivot(Transform holder, GameObject inst)
+        {
+            var parts = inst.GetComponentsInChildren<MeshRenderer>().Where(r => r.name.Contains("steering_wheel")).ToList();
+            if (parts.Count == 0) { Debug.LogError("[FloridaSlice] no steering wheel found"); return; }
+            var rim = parts.OrderByDescending(r => r.bounds.size.sqrMagnitude).First();
+            var pivot = new GameObject("SteeringPivot").transform;
+            pivot.SetParent(holder, false); pivot.position = rim.bounds.center;
+            foreach (var r in parts) r.transform.SetParent(pivot, true);
         }
 
         static void BuildEnvironment()
         {
+            // Mipmaps make a visible vertical seam where the panorama's edges meet.
+            const string skyFile = PH + "/Skies/citrus_orchard_road_puresky.hdr";
+            if (AssetImporter.GetAtPath(skyFile) is TextureImporter skyImp && (skyImp.mipmapEnabled || skyImp.wrapMode != TextureWrapMode.Repeat))
+            { skyImp.mipmapEnabled = false; skyImp.wrapMode = TextureWrapMode.Repeat; skyImp.SaveAndReimport(); }
             var sky = new Material(Shader.Find("Skybox/Panoramic"));
             sky.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture>(PH + "/Skies/citrus_orchard_road_puresky.hdr"));
             sky.SetFloat("_Exposure", 1f);
