@@ -65,7 +65,7 @@ namespace SurviveI95.EditorTools
 
         static void Screenshots(PlayerCar car, Camera cam, RoutePath path, string dir)
         {
-            var points = new Dictionary<string, float> { { "road", 3000f }, { "overpass", 7890f }, { "exit", 10438f - 345f } };
+            var points = new Dictionary<string, float> { { "warmup", 500f }, { "overpass", 7890f }, { "exit", 10438f - 345f }, { "road", 3000f } }; // first capture in batch mode is unreliable
             ShaderUtil.allowAsyncCompilation = false;
             var rt = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32);
             foreach (var p in points)
