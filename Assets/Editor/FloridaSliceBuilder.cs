@@ -47,6 +47,7 @@ namespace SurviveI95.EditorTools
             BuildBuildings(path, south, m);
             BuildLamps(path);
             BuildPillars(road, path, south, m);
+            BuildRamps(road, path, m);
             BuildSoundWalls(road, path, south, m);
             BuildTrees(path, south);
 
@@ -638,6 +639,64 @@ namespace SurviveI95.EditorTools
             return chunk;
         }
 
+        static bool Inside(List<Vector2> poly, Vector2 q)
+        {
+            bool inside = false;
+            for (int i = 0, j = poly.Count - 1; i < poly.Count; j = i++)
+                if ((poly[i].y > q.y) != (poly[j].y > q.y) && q.x < (poly[j].x - poly[i].x) * (q.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x) inside = !inside;
+            return inside;
+        }
+
+        static void BuildRamps(GameObject root, RoutePath p, Mats m)
+        {
+            var file = $"Tools/Data/{RouteId}_ramps.json";
+            if (!File.Exists(file)) { Debug.LogError("[FloridaSlice] no ramp data"); return; }
+            var data = JsonUtility.FromJson<GroundFile>(File.ReadAllText(file));
+            var mats = new[] { Lit("RampAsphalt", new Color(.6f, .6f, .59f), .15f, "asphalt_02"), m.white };
+            var map = new Dictionary<(int, int), Bucket>();
+            var pillars = new GameObject("RampPillars"); pillars.transform.SetParent(root.transform);
+            int kept = 0, posts = 0;
+            foreach (var r in data.roads)
+            {
+                var pts = new List<Vector2>(); var ys = new List<float>(); float sum = 0;
+                for (int i = 0; i + 1 < r.p.Length; i += 2)
+                {
+                    var q = new Vector2(r.p[i], r.p[i + 1]);
+                    if (!Locate(q, out var s, out var lat)) { ys.Add(-.15f); pts.Add(q); continue; }
+                    float k = Mathf.Clamp01((lat - p.HalfWidth(s)) / 70f);
+                    ys.Add(Mathf.Lerp(p.Center(s).y + .02f, -.15f, Mathf.SmoothStep(0, 1, k)));
+                    pts.Add(q); sum += lat;
+                }
+                // Northbound ramps only: the southbound road here is a stand-in, so its real ramps would not line up.
+                if (pts.Count < 2 || sum / pts.Count < 0f) continue;
+                kept++;
+                for (int i = 0; i + 1 < pts.Count; i++)
+                {
+                    var a = pts[i]; var b = pts[i + 1]; var mid = (a + b) / 2f;
+                    if (OnRoad(mid, 1f)) continue;
+                    var bk = Get(map, mid, 1200f);
+                    var n = new Vector2(-(b - a).normalized.y, (b - a).normalized.x);
+                    StripSloped(bk, 0, a, b, n * 2.8f, ys[i], ys[i + 1], 5.6f);
+                    StripSloped(bk, 1, a + n * 2.5f, b + n * 2.5f, n * .07f, ys[i] + .012f, ys[i + 1] + .012f, 1f);
+                    StripSloped(bk, 1, a - n * 2.5f, b - n * 2.5f, n * .07f, ys[i] + .012f, ys[i + 1] + .012f, 1f);
+                    float y = (ys[i] + ys[i + 1]) / 2f;
+                    if (y > 2.4f && (b - a).magnitude > 3f && i % 2 == 0)
+                    { Box(pillars.transform, new Vector3(mid.x, y / 2f - .4f, mid.y), Quaternion.identity, new Vector3(1.2f, y - .8f, 1.2f), m.concrete, "Pillar"); posts++; }
+                }
+            }
+            Flush(map, "Ramps", mats, 2, true);
+            Debug.Log($"[FloridaSlice] ramps {kept}, ramp pillars {posts}");
+        }
+
+        static void StripSloped(Bucket bk, int slot, Vector2 a, Vector2 b, Vector2 half, float ya, float yb, float uvW)
+        {
+            var v = bk.v[slot]; var uv = bk.uv[slot]; int n = v.Count; float len = (b - a).magnitude;
+            v.Add(new Vector3(a.x - half.x, ya, a.y - half.y)); v.Add(new Vector3(a.x + half.x, ya, a.y + half.y));
+            v.Add(new Vector3(b.x - half.x, yb, b.y - half.y)); v.Add(new Vector3(b.x + half.x, yb, b.y + half.y));
+            uv.Add(new Vector2(0, 0)); uv.Add(new Vector2(uvW / 7f, 0)); uv.Add(new Vector2(0, len / 7f)); uv.Add(new Vector2(uvW / 7f, len / 7f));
+            bk.t[slot].AddRange(new[] { n, n + 1, n + 2, n + 2, n + 1, n + 3 });
+        }
+
         static void BuildBuildings(RoutePath p, Func<float, float> south, Mats m)
         {
             occupied.Clear();
@@ -687,15 +746,18 @@ namespace SurviveI95.EditorTools
                 }
                 float minX = pts.Min(q => q.x), maxX = pts.Max(q => q.x), minZ = pts.Min(q => q.y), maxZ = pts.Max(q => q.y);
                 for (int ix = (int)(minX / 30f); ix <= (int)(maxX / 30f); ix++) for (int iz = (int)(minZ / 30f); iz <= (int)(maxZ / 30f); iz++) occupied.Add((ix, iz));
-                if (Locate(mid, out var cs, out var clat) && Mathf.Abs(clat) < 800f)
+                if (Locate(mid, out var cs, out var clat) && Mathf.Abs(clat) < 500f)
                 {
-                    var tan = p.Tangent(cs); var right = p.Right(cs); float hs = 0, hl = 0;
-                    foreach (var q in pts)
+                    // Small blocks that follow the real footprint; one box around an angled building can span the highway.
+                    var tan = p.Tangent(cs); var right = p.Right(cs);
+                    for (float gx = minX + 4f; gx < maxX; gx += 9f) for (float gz = minZ + 4f; gz < maxZ; gz += 9f)
                     {
-                        var d = new Vector3(q.x - mid.x, 0, q.y - mid.y);
-                        hs = Mathf.Max(hs, Mathf.Abs(Vector3.Dot(d, tan))); hl = Mathf.Max(hl, Mathf.Abs(Vector3.Dot(d, right)));
+                        if (!Inside(pts, new Vector2(gx, gz))) continue;
+                        var d = new Vector3(gx - mid.x, 0, gz - mid.y);
+                        float bs = cs + Vector3.Dot(d, tan), bl = clat + Vector3.Dot(d, right);
+                        if (bl - 5f < p.HalfWidth(bs) + 5f && bl + 5f > south(bs) - p.HalfWidth(bs) - 5f) continue;
+                        Solid(bs, bl, 5f, 5f, "building"); solid++;
                     }
-                    if (hs < 130f) { Solid(cs, clat, hs * .88f, hl * .88f, "building"); solid++; }
                 }
                 built++;
             }

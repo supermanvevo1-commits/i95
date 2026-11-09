@@ -33,11 +33,12 @@ Done when: hits at 30, 70 and 120 mph all feel different, and damage changes how
 
 ## M2b Miami test road (current)
 Move testing to where the game starts, so traffic and police are tuned in the real setting.
-- [ ] Import Downtown Miami to Fort Lauderdale as the test road
-- [ ] Elevated highway sections and bridges with height
-- [ ] On and off ramps at interchanges
-- [ ] First-pass skyline and buildings from real map footprints
-- [ ] Sound walls and urban roadside
+- [x] Import Downtown Miami to Fort Lauderdale as the test road
+- [x] Elevated highway sections and bridges with height
+- [x] Scenery on and off ramps from real map data
+- [ ] Drivable exits: leave I-95 and rejoin (road network that traffic will also use)
+- [x] First-pass skyline and buildings from real map footprints
+- [x] Sound walls and urban roadside
 
 Done when: it reads as Miami from the driver's seat and holds its frame rate.
 

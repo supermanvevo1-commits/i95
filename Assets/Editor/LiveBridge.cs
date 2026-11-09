@@ -65,6 +65,7 @@ namespace SurviveI95.EditorTools
             switch (a[1])
             {
                 case "ping": return "ok";
+                case "laneaudit": return LaneAudit.Run(Path.Combine(Dir, "audit.txt"));
                 case "bench": DriveSmokeTest.Run(); return "bench done";
                 case "islands": return Islands();
                 case "refresh": AssetDatabase.Refresh(); return "refreshing";
@@ -94,7 +95,7 @@ namespace SurviveI95.EditorTools
                 case "launch": car.Place(F(a, 2)); car.Sim.Lateral = car.Path.HalfWidth(F(a, 2)) + F(a, 3); car.Sim.Speed = F(a, 4) / DriveSim.MetersPerSecondToMph; car.Sim.Theta = F(a, 5) * Mathf.Deg2Rad; return "launched";
                 case "launchat":
                     foreach (var o in car.Path.Obstacles)
-                        if (o.kind == a[2] && o.s > 3000f && o.halfS > (a[2] == "building" ? 6f : -1f)) { car.Place(o.s - o.halfS - 25f); car.Sim.Lateral = o.lat + F(a, 3); car.Sim.Speed = F(a, 4) / DriveSim.MetersPerSecondToMph; return "launched at " + o.kind; }
+                        if (o.kind == a[2] && o.s > 3000f && o.halfS > -1f) { car.Place(o.s - o.halfS - 25f); car.Sim.Lateral = o.lat + F(a, 3); car.Sim.Speed = F(a, 4) / DriveSim.MetersPerSecondToMph; return "launched at " + o.kind; }
                     return "ERROR none found";
                 case "repair": car.Sim.Reset(car.Path, car.Sim.S); return "repaired";
                 case "setdamage": car.Sim.Damage = F(a, 2); return "damage set";
