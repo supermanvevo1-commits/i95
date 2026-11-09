@@ -35,9 +35,8 @@ Done when: hits at 30, 70 and 120 mph all feel different, and damage changes how
 Move testing to where the game starts, so traffic and police are tuned in the real setting.
 - [x] Import Downtown Miami to Fort Lauderdale as the test road
 - [x] Elevated highway sections and bridges with height
-- [x] Scenery on and off ramps from real map data
-- [x] Drivable exits: 8 exits that leave I-95 and rejoin (road network that traffic will also use)
-- [ ] Clean up exits 0 to 2 and add matching exit signs
+- [x] 12 drivable exits with one engineered shape: speed-change lanes, clean splits, wide curves and merges (road network that traffic will also use)
+- [x] Exit cues: road arrows, striped split areas, advance, split, merge, ramp speed and speed limit signs
 - [x] First-pass skyline and buildings from real map footprints
 - [x] Sound walls and urban roadside
 
@@ -64,19 +63,19 @@ Done when: 40 cars run smoothly, no crashes happen without a cause, and a camper
 - [ ] 4.6 Busted and escaped outcomes
 - [ ] 4.7 Per-state police profiles
 
-Done when: a chase can be won or lost, and 5 minutes on the Jupiter stretch is fun.
+Done when: a chase can be won or lost, and 5 minutes on the Miami test road is fun.
 
 ## M5 Run loop
 - [ ] 5.1 HUD
 - [ ] 5.2 Gas and refueling
 - [ ] 5.3 Money, fines and repairs
 - [ ] 5.4 Fatigue and rest
-- [ ] 5.5 Stops with pull-off ramps
+- [ ] 5.5 Stops with pull-off ramps, their signs, and exits that reach city streets
 - [ ] 5.6 Main menu, pause and car select
 - [ ] 5.7 Save and load
 - [ ] 5.8 Scenarios: why you're on the highway
 
-Done when: one complete run works from menu to finish on the Jupiter stretch.
+Done when: one complete run works from menu to finish on the Miami test road.
 
 ## M6 Weather and time
 - [ ] 6.1 Day and night, with a Miami night look: lit street lamps, lit building windows, neon
@@ -98,7 +97,7 @@ See FLORIDA_ROUTE.md for the map and section list.
 - [ ] 7.5a City skylines and roadside buildings from real map building data
 - [ ] 7.6 Florida events: gators, downpours, Florida Man
 - [ ] 7.7 Full NPC behavior list
-- [ ] 7.8 Art pass: fictional car designs, lighting, proper trees
+- [ ] 7.8 Art pass: fictional car designs with no real badges, roadside clutter and variety, lighting, proper trees
 - [ ] 7.9 Driver model in the cockpit with arms that steer and shift
 - [ ] 7.10 Audio pass
 - [ ] 7.11 Whole-run balance

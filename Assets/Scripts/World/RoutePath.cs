@@ -32,11 +32,19 @@ namespace SurviveI95.World
         public bool IsRamp { get; }
         /// <summary>Drivable exits leaving this road.</summary>
         public System.Collections.Generic.List<RouteJunction> Junctions { get; } = new System.Collections.Generic.List<RouteJunction>();
-        public const float GateLength = 110f;
+        public const float GateLength = 150f;
+        /// <summary>Shape shared by the exit builder and the driving sim, so what you see is what you hit.</summary>
+        public const float ExitSpan = 720f, ExitSwing = 260f, ExitReach = 36f, ExitEdge = 3f, ExitHalf = 2.745f, ExitWallGap = 1.5f, ExitOpen = 135f, ExitHold = 90f, ExitTaper = 80f;
+
+        /// <summary>How far the exit lane's center sits outside the highway's lane edge, a given distance past the split.</summary>
+        public static float ExitOffset(float d) => ExitEdge + (ExitReach - ExitEdge) * ExitBlend(d);
+
+        /// <summary>0 while running beside the highway as a speed-change lane, 1 once fully away from it.</summary>
+        public static float ExitBlend(float d) => Mathf.Min(Mathf.SmoothStep(0f, 1f, (d - ExitHold) / ExitSwing), Mathf.SmoothStep(0f, 1f, (ExitSpan - d - ExitHold) / ExitSwing));
 
         public bool InGate(float s)
         {
-            foreach (var j in Junctions) if ((s > j.divergeS - 5f && s < j.divergeS + GateLength) || (s > j.mergeS - 70f && s < j.mergeS + 5f)) return true;
+            foreach (var j in Junctions) if ((s > j.divergeS - 5f && s < j.divergeS + GateLength) || (s > j.mergeS - GateLength && s < j.mergeS + 40f)) return true;
             return false;
         }
 
@@ -51,7 +59,7 @@ namespace SurviveI95.World
                 file.points[i] = new RoutePoint { x = pts[i].x, y = pts[i].y, z = pts[i].z, s = s, lanes = 1.5f };
             }
             file.length = s;
-            return new RoutePath(file, 7, 10, true);
+            return new RoutePath(file, 1, 1, true); // already a smooth curve; more averaging would pull it off the pavement it joins
         }
         public float Length => (pos.Length - 1) * Step;
 
@@ -140,6 +148,7 @@ namespace SurviveI95.World
         public bool HasSoundWall(float s)
         {
             if (IsBridge(s) || Center(s).y > 1.5f || (int)(s / 1200f) % 3 == 0) return false;
+            foreach (var j in Junctions) if (s > j.divergeS - 30f && s < j.mergeS + 60f) return false;
             foreach (var e in File.exits) if (Mathf.Abs(e.s - s) < 430f) return false;
             return true;
         }

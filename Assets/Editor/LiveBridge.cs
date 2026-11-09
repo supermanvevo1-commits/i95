@@ -19,6 +19,7 @@ namespace SurviveI95.EditorTools
         static readonly string Dir = Path.GetFullPath(".livebridge");
         static double nextPoll, nextBeat;
         static float slowest;
+        static int fpsFrames; static float fpsTime;
         static LaneBot bot;
 
         static LiveBridge()
@@ -106,7 +107,7 @@ namespace SurviveI95.EditorTools
                     var j = car.Path.Junctions[(int)F(a, 2)];
                     car.Place(j.divergeS - 260f);
                     car.Sim.Speed = 27f;
-                    bot = new LaneBot { SpeedMph = F(a, 3), TargetLaneFromRight = 0, ExitAtS = j.divergeS + 4f };
+                    bot = new LaneBot { SpeedMph = F(a, 3), TargetLaneFromRight = 0, ExitAtS = j.divergeS - 120f };
                     PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
                     return $"exit {a[2]} at s={j.divergeS:F0} merge {j.mergeS:F0} length {j.road.Length:F0} of {car.Path.Junctions.Count}";
                 case "release": PlayerCar.AutoDriver = null; return "released";
@@ -118,6 +119,10 @@ namespace SurviveI95.EditorTools
                     string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} onRamp={s.Current != null} rampS={(s.Current != null ? s.S : 0f):F0} roadY={(s.Current ?? car.Path).Center(s.S).y:F1} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph");
                     slowest = 0;
                     return r;
+                case "fps":
+                    float fpsDt = Time.realtimeSinceStartup - fpsTime; int fpsN = Time.frameCount - fpsFrames;
+                    fpsTime = Time.realtimeSinceStartup; fpsFrames = Time.frameCount;
+                    return $"fps={fpsN / Mathf.Max(.001f, fpsDt):F1} frames={fpsN} seconds={fpsDt:F1}";
                 case "shot": return Shot(a[2]);
             }
             return "ERROR unknown command " + a[1];

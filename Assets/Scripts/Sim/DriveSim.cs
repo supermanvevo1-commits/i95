@@ -273,19 +273,28 @@ namespace SurviveI95.Sim
                             float d = (j.road.Center(q) - world).sqrMagnitude;
                             if (d < bestD) { bestD = d; bestS = q; }
                         }
+                        // Only a car actually on the exit lane joins it; anywhere else it stays on the highway.
+                        float onRamp = Vector3.Dot(world - j.road.Center(bestS), j.road.Right(bestS));
+                        if (Mathf.Abs(onRamp) > j.road.HalfWidth(bestS) + 0.3f) return;
                         Current = j.road; CurrentJunction = j; S = bestS;
-                        Lateral = Vector3.Dot(world - j.road.Center(bestS), j.road.Right(bestS));
+                        Lateral = onRamp;
                         Theta = HeadingFrom(j.road.Tangent(bestS), forward);
                         RoadSwitches++;
                         return;
                     }
                 return;
             }
-            if (S >= Current.Length - 3f)
+            bool atEnd = S >= Current.Length - 3f;
+            bool inOpening = S < RoutePath.ExitOpen || S > Current.Length - RoutePath.ExitOpen;
+            bool inTaper = S < RoutePath.ExitTaper || S > Current.Length - RoutePath.ExitTaper;
+            if (atEnd || (inOpening && Lateral < -Current.HalfWidth(S) - 0.4f) || (inTaper && Lateral > Current.HalfWidth(S) + 0.4f))
             {
+                // Hand back at the exact same world position, so joining the highway has no jump.
                 var forward = Rotate(Current.Tangent(S), Theta);
+                var world = Current.Point(S, Lateral);
                 var j = CurrentJunction;
-                S = j.mergeS; Lateral = main.HalfWidth(S) + 1f;
+                float mainS = atEnd ? j.mergeS : S < RoutePath.ExitOpen ? j.divergeS + S : j.mergeS - (Current.Length - S);
+                S = mainS; Lateral = Vector3.Dot(world - main.Center(S), main.Right(S));
                 Theta = HeadingFrom(main.Tangent(S), forward);
                 Current = null; CurrentJunction = null; RoadSwitches++;
             }
@@ -317,11 +326,21 @@ namespace SurviveI95.Sim
             }
             {
                 // The concrete median runs the whole road; the right-hand barrier only exists on structures.
-                float right = path.HasBarrier(S) ? half + RoutePath.BarrierRight - 1.2f : path.HasSoundWall(S) ? half + RoutePath.SoundWallOffset - 1.2f : float.PositiveInfinity, left = -half - RoutePath.BarrierLeft + 1.2f;
+                float right = path.HasBarrier(S) && !path.InGate(S) ? half + RoutePath.BarrierRight - 1.2f : path.HasSoundWall(S) ? half + RoutePath.SoundWallOffset - 1.2f : float.PositiveInfinity, left = -half - RoutePath.BarrierLeft + 1.2f;
                 // Only a car actually at the barrier hits it; one already beyond it stays where it is.
-                if ((Lateral > right && Lateral < right + 2f) || (Lateral < left && Lateral > left - 2f))
+                float? wallAt = null;
+                foreach (var j in path.Junctions)
                 {
-                    Lateral = Mathf.Clamp(Lateral, left, right);
+                    if (S <= j.divergeS + RoutePath.ExitTaper || S >= j.mergeS - RoutePath.ExitTaper) continue;
+                    bool leftWall = S > j.divergeS + RoutePath.ExitOpen && S < j.mergeS - RoutePath.ExitOpen;
+                    float c = half + RoutePath.ExitOffset(S - j.divergeS), span = RoutePath.ExitHalf + RoutePath.ExitWallGap, near = c - span, far = c + span;
+                    if (leftWall && Lateral > near - 1.1f && Lateral < near + 1.5f) wallAt = near - 1.1f;
+                    else if (Lateral < far + 1.1f && Lateral > far - 1.5f) wallAt = far + 1.1f;
+                    break;
+                }
+                if (wallAt != null || (Lateral > right && Lateral < right + 4f) || (Lateral < left && Lateral > left - 2f))
+                {
+                    Lateral = wallAt ?? Mathf.Clamp(Lateral, left, right);
                     float into = Mathf.Abs(Speed * Mathf.Sin(Theta) + SideSpeed * Mathf.Cos(Theta));
                     if (!wallContact)
                     {

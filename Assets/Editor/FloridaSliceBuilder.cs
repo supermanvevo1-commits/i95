@@ -49,7 +49,6 @@ namespace SurviveI95.EditorTools
             BuildBuildings(path, south, m);
             BuildLamps(path);
             BuildPillars(road, path, south, m);
-            BuildRamps(road, path, m);
             BuildExitRoads(road, path, m);
             BuildSoundWalls(road, path, south, m);
             BuildTrees(path, south);
@@ -267,17 +266,60 @@ namespace SurviveI95.EditorTools
             r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
         }
 
+        // Distance from each end of an exit, or -1 outside one.
+        static float ExitEnd(RoutePath p, float s, out float d)
+        {
+            d = 0f;
+            foreach (var j in p.Junctions) if (s >= j.divergeS && s <= j.mergeS) { d = s - j.divergeS; return Mathf.Min(d, j.mergeS - s); }
+            return -1f;
+        }
+
+        // Beside the highway the exit lane IS the highway's own pavement widening, so there is only ever one surface.
+        static float AuxLane(RoutePath p, float s)
+        {
+            float e = ExitEnd(p, s, out var d);
+            if (e < 0f || e > RoutePath.ExitHold) return 0f;
+            return (RoutePath.ExitOffset(d) + RoutePath.ExitHalf + RoutePath.ExitWallGap) * Mathf.SmoothStep(0f, 1f, e / RoutePath.ExitTaper);
+        }
+
+        // Past the split the shoulder stops exactly where the exit road starts, then widens back out as the road leaves.
+        static float ShoulderWidth(RoutePath p, float s, float normal)
+        {
+            float e = ExitEnd(p, s, out var d);
+            if (e < RoutePath.ExitHold - 15f) return normal; // the widened pavement hides the shoulder until then
+            float left = RoutePath.ExitOffset(d) - RoutePath.ExitHalf - Mathf.Lerp(.2f, RoutePath.ExitWallGap, Mathf.InverseLerp(RoutePath.ExitOpen, RoutePath.ExitOpen + 20f, e));
+            return Mathf.Clamp(left - .05f, .05f, normal);
+        }
+
+        // A white arrow painted on the road; a positive angle leans it to the right.
+        static void RoadArrow(List<Vector3> v, List<Vector2> uv, List<int> t, RoutePath p, float s, float lat, float angle)
+        {
+            float r = angle * Mathf.Deg2Rad, c = Mathf.Cos(r), n = Mathf.Sin(r);
+            Func<float, float, Vector3> at = (u, w) => p.Point(s + u * c - w * n, lat + u * n + w * c) + Vector3.up * .03f;
+            const float shaft = .18f, body = 4.2f, head = .62f, tip = 6.2f;
+            int a = v.Count;
+            v.Add(at(0f, -shaft)); v.Add(at(0f, shaft)); v.Add(at(body, -shaft)); v.Add(at(body, shaft));
+            t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 });
+            v.Add(at(body, -head)); v.Add(at(body, head)); v.Add(at(tip, 0f));
+            t.AddRange(new[] { a + 4, a + 6, a + 5 });
+            for (int i = 0; i < 7; i++) uv.Add(Vector2.zero);
+        }
+
         static void BuildCarriageway(GameObject root, string name, RoutePath p, Func<float, float> c, Mats m)
         {
+            bool main = Mathf.Abs(c(0f)) < .01f;
+            Func<float, float> aux = s => main ? AuxLane(p, s) : 0f;
+            Func<float, float> shoulder = s => main ? ShoulderWidth(p, s, 3.05f) : 3.05f;
+            Func<float, bool> plainEdge = s => aux(s) <= 0f && shoulder(s) >= 1.3f;
             var g = new GameObject(name); g.transform.SetParent(root.transform);
             Func<float, float> h = p.HalfWidth;
             const float rightShoulder = 3.05f, leftShoulder = 1.3f;
-            Add(g, "Shoulder", Ribbon(p, s => c(s) - h(s) - leftShoulder, s => c(s) + h(s) + rightShoulder, 0.0f, 5, 5), m.shoulder);
-            Add(g, "Lanes", Ribbon(p, s => c(s) - h(s), s => c(s) + h(s), 0.012f, 7, 7), m.asphalt);
+            Add(g, "Shoulder", Ribbon(p, s => c(s) - h(s) - leftShoulder, s => c(s) + h(s) + shoulder(s), 0.0f, 5, 5, step: 5f), m.shoulder);
+            Add(g, "Lanes", Ribbon(p, s => c(s) - h(s), s => c(s) + h(s) + aux(s), 0.012f, 7, 7, step: 5f), m.asphalt);
             Add(g, "RumbleLeft", Ribbon(p, s => c(s) - h(s) - .95f, s => c(s) - h(s) - .4f, 0.02f, 1, .6f, step: 10f), m.rumble);
-            Add(g, "RumbleRight", Ribbon(p, s => c(s) + h(s) + .4f, s => c(s) + h(s) + .95f, 0.02f, 1, .6f, step: 10f), m.rumble);
+            Add(g, "RumbleRight", Ribbon(p, s => c(s) + h(s) + .4f, s => c(s) + h(s) + (plainEdge(s) ? .95f : .4f), 0.02f, 1, .6f, step: 5f), m.rumble);
             Add(g, "EdgeLeft", Ribbon(p, s => c(s) - h(s) - .08f, s => c(s) - h(s) + .08f, 0.03f, 1, 1), m.yellow);
-            Add(g, "EdgeRight", Ribbon(p, s => c(s) + h(s) - .08f, s => c(s) + h(s) + .08f, 0.03f, 1, 1), m.white);
+            Add(g, "EdgeRight", Ribbon(p, s => c(s) + h(s) - .08f, s => c(s) + h(s) + (aux(s) > 0f ? -.08f : .08f), 0.03f, 1, 1, step: 5f), m.white);
 
             // US standard broken lane line: 10 ft painted, 30 ft gap.
             var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
@@ -294,8 +336,43 @@ namespace SurviveI95.EditorTools
                     t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 });
                 }
             }
+            // The speed-change lane is separated from the through lanes by a broken line.
+            if (main)
+                foreach (var j in p.Junctions)
+                    foreach (var from in new[] { j.divergeS, j.mergeS - RoutePath.ExitHold })
+                        for (float s = from; s < from + RoutePath.ExitHold - 3f; s += 9f)
+                        {
+                            float x = h(s); int a = v.Count;
+                            v.Add(p.Point(s, x - .1f) + Vector3.up * .03f); v.Add(p.Point(s, x + .1f) + Vector3.up * .03f);
+                            v.Add(p.Point(s + 3f, x - .1f) + Vector3.up * .03f); v.Add(p.Point(s + 3f, x + .1f) + Vector3.up * .03f);
+                            uv.Add(Vector2.zero); uv.Add(Vector2.right); uv.Add(Vector2.up); uv.Add(Vector2.one);
+                            t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 });
+                        }
+            if (main)
+                foreach (var j in p.Junctions)
+                {
+                    float gap = RoutePath.ExitWallGap, hold = RoutePath.ExitHold;
+                    Func<float, float> edge = s => h(s) + Mathf.Max(0f, aux(s) - gap);
+                    Add(g, "AuxEdgeOut", Ribbon(p, s => edge(s) - .08f, s => edge(s) + .08f, 0.035f, 1, 1, j.divergeS, j.divergeS + hold, 3f), m.white);
+                    Add(g, "AuxEdgeIn", Ribbon(p, s => edge(s) - .08f, s => edge(s) + .08f, 0.035f, 1, 1, j.mergeS - hold, j.mergeS, 3f), m.white);
+                    RoadArrow(v, uv, t, p, j.divergeS + 62f, h(j.divergeS + 62f) + RoutePath.ExitEdge, 16f);
+                    RoadArrow(v, uv, t, p, j.mergeS - 66f, h(j.mergeS - 66f) + RoutePath.ExitEdge, -16f);
+                    // Painted stripes fill the wedge where the two roads part.
+                    foreach (var dir in new[] { 1f, -1f })
+                        for (float e = hold + 8f; e < hold + 118f; e += 5f)
+                        {
+                            float s = dir > 0f ? j.divergeS + e : j.mergeS - e, d = s - j.divergeS;
+                            float w = Mathf.Min(RoutePath.ExitOffset(d) - RoutePath.ExitHalf - .4f, 3f);
+                            if (w < .7f) continue;
+                            float x0 = h(s) + .2f, x1 = h(s) + w, run = dir * Mathf.Min(3f, w * 1.2f); int a = v.Count;
+                            v.Add(p.Point(s, x0) + Vector3.up * .03f); v.Add(p.Point(s + run, x1) + Vector3.up * .03f);
+                            v.Add(p.Point(s + .4f, x0) + Vector3.up * .03f); v.Add(p.Point(s + run + .4f, x1) + Vector3.up * .03f);
+                            uv.Add(Vector2.zero); uv.Add(Vector2.right); uv.Add(Vector2.up); uv.Add(Vector2.one);
+                            t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 });
+                        }
+                }
             Add(g, "Dashes", Finish(v, uv, t), m.white);
-            Add(g, "SkirtR", WallStrip(p, s => c(s) + h(s) + rightShoulder, 0f, p.Length, -1.6f, 0f), m.concrete);
+            Add(g, "SkirtR", WallStrip(p, s => c(s) + h(s) + Mathf.Max(shoulder(s), aux(s)), 0f, p.Length, -1.6f, 0f), m.concrete);
             Add(g, "SkirtL", WallStrip(p, s => c(s) - h(s) - leftShoulder, 0f, p.Length, -1.6f, 0f), m.concrete);
         }
 
@@ -379,39 +456,78 @@ namespace SurviveI95.EditorTools
             go.GetComponent<MeshRenderer>().sharedMaterial = mat;
         }
 
-        static void Sign(Transform parent, RoutePath p, float s, float lateralFromEdge, float width, float height, float elevation, string text, float textH, Material panel, Color tc, Mats m)
+        static void Sign(Transform parent, RoutePath p, float s, float lateralFromEdge, float width, float height, float elevation, string text, float textH, Material panel, Color tc, Mats m, bool solid = true, bool placedForExit = false)
         {
+            if (!placedForExit) foreach (var j in p.Junctions) if (s > j.divergeS - 2f && s < j.mergeS + 10f) return; // would stand in the exit lane
             var rot = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
             var c = p.Point(s, p.HalfWidth(s) + lateralFromEdge);
             var mid = c + Vector3.up * (elevation + height / 2);
             Box(parent, mid, rot, new Vector3(width, height, .08f), panel, "Panel").GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
             var right = p.Right(s);
-            foreach (var d in new[] { -width * .32f, width * .32f })
+            if (solid) foreach (var d in new[] { -width * .32f, width * .32f })
                 Solid(s, p.HalfWidth(s) + lateralFromEdge + d, 0.12f, 0.12f, width > 10f ? "pole" : "post");
             foreach (var d in new[] { -width * .32f, width * .32f })
                 { var foot = c + right * d + p.Tangent(s) * .14f; float top = c.y + elevation + height; foot.y = top / 2f; Box(parent, foot, rot, new Vector3(.14f, top, .14f), m.post, "Post"); }
             Text(parent, mid - p.Tangent(s) * .06f, rot, text, textH, tc, m.text);
         }
 
+        static readonly Color SignInk = new Color(.06f, .06f, .05f);
+
+        static void Diamond(Transform parent, RoutePath p, float s, float lateralFromEdge, string text, Mats m, bool solid)
+        {
+            const float size = 1.7f, elevation = 2.3f;
+            var rot = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
+            var c = p.Point(s, p.HalfWidth(s) + lateralFromEdge);
+            var mid = c + Vector3.up * (elevation + size * .71f);
+            Box(parent, mid, rot * Quaternion.Euler(0f, 0f, 45f), new Vector3(size, size, .08f), m.yellow, "Panel").GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
+            var foot = c + p.Tangent(s) * .14f; float top = mid.y; foot.y = top / 2f;
+            Box(parent, foot, rot, new Vector3(.14f, top, .14f), m.post, "Post");
+            if (solid) Solid(s, p.HalfWidth(s) + lateralFromEdge, .12f, .12f, "post");
+            Text(parent, mid - p.Tangent(s) * .06f, rot, text, .32f, SignInk, m.text);
+        }
+
+        static string CleanRef(string r) => r == null ? "" : System.Text.RegularExpressions.Regex.Replace(r, "[^0-9A-Z]", "");
+
         static void BuildSigns(RoutePath p, Mats m)
         {
             var g = new GameObject("Signs");
+            // Yellow signs mark the exits you can actually drive.
+            foreach (var j in p.Junctions)
+            {
+                var real = p.File.exits.Where(e => !string.IsNullOrEmpty(e.@ref)).OrderBy(e => Mathf.Abs(e.s - j.divergeS)).FirstOrDefault();
+                string name = real != null && Mathf.Abs(real.s - j.divergeS) < 300f ? "EXIT " + CleanRef(real.@ref) : "EXIT";
+                string label = name + "\nKEEP RIGHT";
+                Sign(g.transform, p, Mathf.Max(5f, j.divergeS - 805f), 7.5f, 6.5f, 2.6f, 2.6f, name + "\n1/2 MILE", .55f, m.signGreen, Color.white, m);
+                foreach (float back in new[] { 420f, 130f })
+                    Sign(g.transform, p, Mathf.Max(5f, j.divergeS - back), 7f, 6.5f, 2.6f, 2.6f, label, .5f, m.yellow, SignInk, m);
+                Sign(g.transform, p, j.divergeS + 175f, 3.8f, 2.8f, 1.5f, 1.7f, name + "\n>>>", .42f, m.signGreen, Color.white, m, placedForExit: true);
+                Diamond(g.transform, p, j.mergeS - 310f, 7f, "MERGING\nTRAFFIC", m, true);
+                Sign(g.transform, j.road, 235f, 3.2f, 2.2f, 1.5f, 1.5f, "RAMP\n45 MPH", .38f, m.yellow, SignInk, m, solid: false);
+                Diamond(g.transform, j.road, j.road.Length - 250f, 3.4f, "MERGE", m, false);
+            }
             float? baseMile = null;
             foreach (var e in p.File.exits)
             {
                 if (string.IsNullOrEmpty(e.@ref)) continue;
                 var digits = new string(e.@ref.TakeWhile(char.IsDigit).ToArray());
                 if (baseMile == null && digits.Length > 0) baseMile = float.Parse(digits) - e.s / 1609.34f;
-                var label = "EXIT " + e.@ref + "\n" + Wrap(e.name);
+                var label = "EXIT " + CleanRef(e.@ref) + "\n" + Wrap(e.name);
                 Sign(g.transform, p, e.s - 340f, 8f, 7.5f, 3.8f, 2.4f, label, .62f, m.signGreen, Color.white, m);
-                Sign(g.transform, p, Mathf.Max(5, e.s - 15f), 10f, 4.5f, 1.7f, 2.4f, "EXIT\n" + e.@ref, .55f, m.signGreen, Color.white, m);
+                Sign(g.transform, p, Mathf.Max(5, e.s - 15f), 10f, 4.5f, 1.7f, 2.4f, "EXIT\n" + CleanRef(e.@ref), .55f, m.signGreen, Color.white, m);
             }
             if (baseMile != null)
                 for (int mile = Mathf.CeilToInt(baseMile.Value); (mile - baseMile.Value) * 1609.34f < p.Length; mile++)
                     Sign(g.transform, p, Mathf.Max(5, (mile - baseMile.Value) * 1609.34f), 5.2f, .55f, 1.0f, 1.3f, "MILE\n" + mile, .17f, m.signGreen, Color.white, m);
+            for (float s = 620f; s < p.Length - 300f; s += 2400f)
+                Sign(g.transform, p, s, 6.5f, 1.7f, 2.2f, 1.6f, "SPEED\nLIMIT\n65", .42f, m.white, SignInk, m);
             string[] ads = { "HURT ON I-95?\nCALL BIG RICK", "GATOR WORLD\nNEXT EXIT", "FIREWORKS\nFIREWORKS\nFIREWORKS", "EARLY BIRD\nBUFFET 3:45PM" };
             for (int i = 0; i < 9; i++)
-                Sign(g.transform, p, 1400f + i * 2500f, 22f, 15f, 6f, 6f, ads[i % ads.Length], 1.15f, m.billboard, new Color(.08f, .08f, .08f), m);
+            {
+                // Billboards keep clear of exit signs, so nothing competes with them.
+                float at = 1400f + i * 2500f;
+                while (p.Junctions.Any(j => at > j.divergeS - 900f && at < j.mergeS + 40f)) at += 100f;
+                Sign(g.transform, p, at, 22f, 15f, 6f, 6f, ads[i % ads.Length], 1.15f, m.billboard, new Color(.08f, .08f, .08f), m);
+            }
         }
 
         static string Wrap(string name) => string.IsNullOrEmpty(name) ? "" : name.Replace(";", "\n").ToUpperInvariant();
@@ -650,75 +766,52 @@ namespace SurviveI95.EditorTools
             return inside;
         }
 
-        class Chain { public List<Vector2> pts; public float edgeS; }
+        static readonly List<Vector2> exitCorridor = new List<Vector2>();
 
-        // Stitches the map's ramp fragments into exits, pairing each off-ramp with the next on-ramp.
+        static bool NearExit(Vector2 q, float margin)
+        {
+            float m2 = margin * margin;
+            foreach (var c in exitCorridor) if ((c - q).sqrMagnitude < m2) return true;
+            return false;
+        }
+
+        // Every exit has the same engineered shape, placed at a real exit: a lane peeling off the shoulder, a wide sweep down to street level, and a merge lane back on.
         static void ComputeExits(RoutePath p)
         {
-            var file = $"Tools/Data/{RouteId}_ramps.json";
+            const float minGap = 1900f, first = 900f, clearOverpass = 60f, streetY = .35f;
             var rows = new List<RouteExitRow>();
-            if (File.Exists(file))
+            float last = -9999f;
+            foreach (var e in p.File.exits.Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.@ref ?? "", "^[0-9]+[A-Z]?$")).OrderBy(x => x.s))
             {
-                var ways = JsonUtility.FromJson<GroundFile>(File.ReadAllText(file)).roads.Select(r => { var l = new List<Vector2>(); for (int i = 0; i + 1 < r.p.Length; i += 2) l.Add(new Vector2(r.p[i], r.p[i + 1])); return l; }).ToList();
-                Func<Vector2, string> key = q => Mathf.RoundToInt(q.x) + "," + Mathf.RoundToInt(q.y);
-                var starts = new Dictionary<string, List<List<Vector2>>>(); var ends = new Dictionary<string, List<List<Vector2>>>();
-                foreach (var w in ways)
+                if (rows.Count >= 12) break;
+                float at = -1f;
+                for (int n = 0; n <= 12 && at < 0f; n++)
                 {
-                    var a = key(w[0]); var b = key(w[w.Count - 1]);
-                    if (!starts.ContainsKey(a)) starts[a] = new List<List<Vector2>>(); starts[a].Add(w);
-                    if (!ends.ContainsKey(b)) ends[b] = new List<List<Vector2>>(); ends[b].Add(w);
+                    float c = e.s + (n % 2 == 0 ? n : -n - 1) * 20f;
+                    if (c < first || c - last < minGap || c + RoutePath.ExitSpan > p.Length - 200f) continue;
+                    if (!p.File.overpasses.Any(o => o.s > c - clearOverpass && o.s < c + RoutePath.ExitSpan + clearOverpass)) at = c;
                 }
-                Func<Vector2, bool> nearEdge = q => Locate(q, out var s, out var lat) && lat > p.HalfWidth(s) - 9f && lat < p.HalfWidth(s) + 28f;
-                var offs = new List<Chain>(); var ons = new List<Chain>();
-                foreach (var w in ways)
+                if (at < 0f) continue;
+                var xyz = new List<float>();
+                int steps = Mathf.RoundToInt(RoutePath.ExitSpan / 5f);
+                for (int i = 0; i <= steps; i++)
                 {
-                    if (nearEdge(w[0]) && Locate(w[w.Count - 1], out var es, out var el) && el > p.HalfWidth(es) + 4f )
-                    {
-                        var c = new List<Vector2>(w); var cur = w;
-                        for (int g = 0; g < 8 && c.Count < 80; g++) { if (!starts.TryGetValue(key(cur[cur.Count - 1]), out var nx)) break; cur = nx[0]; c.AddRange(cur.Skip(1)); }
-                        Locate(c[0], out var cs, out _); offs.Add(new Chain { pts = c, edgeS = cs });
-                    }
-                    if (nearEdge(w[w.Count - 1]) && Locate(w[0], out var ss, out var sl) && sl > p.HalfWidth(ss) + 4f )
-                    {
-                        var c = new List<Vector2>(w); var cur = w;
-                        for (int g = 0; g < 8 && c.Count < 80; g++) { if (!ends.TryGetValue(key(cur[0]), out var pv)) break; cur = pv[0]; c.InsertRange(0, cur.Take(cur.Count - 1)); }
-                        Locate(c[c.Count - 1], out var cs, out _); ons.Add(new Chain { pts = c, edgeS = cs });
-                    }
+                    float d = RoutePath.ExitSpan * i / steps, s = at + d;
+                    var q = p.Point(s, p.HalfWidth(s) + RoutePath.ExitOffset(d));
+                    float k = RoutePath.ExitBlend(d);
+                    xyz.Add(q.x); xyz.Add(Mathf.Lerp(q.y, streetY, k)); xyz.Add(q.z);
                 }
-                float lastDiverge = -9999f;
-                foreach (var o in offs.OrderBy(x => x.edgeS))
-                {
-                    if (o.edgeS < 900f || o.edgeS - lastDiverge < 1100f || rows.Count >= 8) continue;
-                    var on = ons.Where(x => x.edgeS > o.edgeS + 250f && x.edgeS < o.edgeS + 1800f && (x.pts[0] - o.pts[o.pts.Count - 1]).magnitude < 800f).OrderBy(x => (x.pts[0] - o.pts[o.pts.Count - 1]).magnitude).FirstOrDefault();
-                    if (on == null) continue;
-                    var flat = new List<Vector2>();
-                    var d0 = p.Point(o.edgeS, p.HalfWidth(o.edgeS) + 2f); flat.Add(new Vector2(d0.x, d0.z));
-                    flat.AddRange(o.pts.Where((q, i) => i > 0 && !OnRoad(q, -1f)));
-                    var a = flat[flat.Count - 1]; var b = on.pts[0];
-                    // A curved connecting street, leaving and arriving in line with the ramps.
-                    var inDir = (a - flat[Mathf.Max(0, flat.Count - 2)]).normalized; var outDir = (on.pts[Mathf.Min(1, on.pts.Count - 1)] - b).normalized;
-                    float reach = (b - a).magnitude * .5f; var c1 = a + inDir * reach; var c2 = b - outDir * reach;
-                    int steps = Mathf.Max(6, Mathf.RoundToInt((b - a).magnitude / 12f));
-                    for (int i = 1; i < steps; i++) { float u = i / (float)steps, w = 1f - u; flat.Add(w * w * w * a + 3f * w * w * u * c1 + 3f * w * u * u * c2 + u * u * u * b); }
-                    flat.AddRange(on.pts.Where((q, i) => i < on.pts.Count - 1 && !OnRoad(q, -1f)));
-                    var d1 = p.Point(on.edgeS, p.HalfWidth(on.edgeS) + 1f); flat.Add(new Vector2(d1.x, d1.z));
-                    var xyz = new List<float>();
-                    for (int i = 0; i < flat.Count; i++)
-                    {
-                        float y = -.12f;
-                        if (i == 0) y = d0.y; else if (i == flat.Count - 1) y = d1.y;
-                        else if (Locate(flat[i], out var s, out var lat)) y = Mathf.Lerp(p.Center(s).y, -.12f, Mathf.SmoothStep(0, 1, Mathf.Clamp01((lat - p.HalfWidth(s)) / 70f)));
-                        xyz.Add(flat[i].x); xyz.Add(y); xyz.Add(flat[i].y);
-                    }
-                    rows.Add(new RouteExitRow { divergeS = o.edgeS, mergeS = on.edgeS, xyz = xyz.ToArray() });
-                    lastDiverge = o.edgeS;
-                }
+                rows.Add(new RouteExitRow { divergeS = at, mergeS = at + RoutePath.ExitSpan, xyz = xyz.ToArray() });
+                last = at;
             }
             var data = new RouteExitFile { items = rows.ToArray() };
             string outFile = $"Assets/Resources/Data/Routes/{RouteId}_exits.json";
             File.WriteAllText(outFile, JsonUtility.ToJson(data));
             AssetDatabase.ImportAsset(outFile);
             p.LoadJunctions(data);
+            exitCorridor.Clear();
+            foreach (var j in p.Junctions)
+                for (float s = 0f; s < j.road.Length; s += 8f) { var c = j.road.Center(s); exitCorridor.Add(new Vector2(c.x, c.z)); }
             Debug.Log("[FloridaSlice] drivable exits " + rows.Count + ": " + string.Join(", ", rows.Select(r => Mathf.RoundToInt(r.divergeS))));
         }
 
@@ -727,12 +820,15 @@ namespace SurviveI95.EditorTools
             var g = new GameObject("DrivableExits"); g.transform.SetParent(root.transform);
             foreach (var j in p.Junctions)
             {
-                var r = j.road; Func<float, float> h = r.HalfWidth;
-                Add(g, "Road", Ribbon(r, s => -h(s) - 1f, s => h(s) + 1f, 0.05f, 7, 7, step: 3f), m.asphalt);
-                Add(g, "EdgeL", Ribbon(r, s => -h(s) - .08f, s => -h(s) + .08f, 0.07f, 1, 1, step: 3f), m.yellow);
-                Add(g, "EdgeR", Ribbon(r, s => h(s) - .08f, s => h(s) + .08f, 0.07f, 1, 1, step: 3f), m.white);
-                Add(g, "WallL", WallStrip(r, s => -h(s) - 1.5f, 14f, r.Length - 14f, -0.1f, 0.9f), m.concrete, true);
-                Add(g, "WallR", WallStrip(r, s => h(s) + 1.5f, 14f, r.Length - 14f, -0.1f, 0.9f), m.concrete, true);
+                var r = j.road; Func<float, float> h = r.HalfWidth; float open = RoutePath.ExitOpen, gap = RoutePath.ExitWallGap;
+                // Stays on the shoulder at both ends, so it never paints over the highway's lanes.
+                Func<float, float> leftEdge = s => -h(s) - Mathf.Lerp(.2f, gap, Mathf.Min(Mathf.InverseLerp(open, open + 20f, s), Mathf.InverseLerp(open, open + 20f, r.Length - s)));
+                float pave = RoutePath.ExitHold; // beside the highway the pavement belongs to the highway
+                Add(g, "Road", Ribbon(r, leftEdge, s => h(s) + gap, 0.05f, 7, 7, pave - 12f, r.Length - pave + 12f, 3f), m.asphalt);
+                Add(g, "EdgeL", Ribbon(r, s => -h(s) - .08f, s => -h(s) + .08f, 0.07f, 1, 1, pave, r.Length - pave, 3f), m.yellow);
+                Add(g, "EdgeR", Ribbon(r, s => h(s) - .08f, s => h(s) + .08f, 0.07f, 1, 1, pave, r.Length - pave, 3f), m.white);
+                Add(g, "WallL", WallStrip(r, s => -h(s) - gap, open, r.Length - open, -0.1f, 0.9f), m.concrete, true);
+                Add(g, "WallR", WallStrip(r, s => h(s) + gap, RoutePath.ExitTaper, r.Length - RoutePath.ExitTaper, -0.1f, 0.9f), m.concrete, true);
                 for (float s = 15f; s < r.Length; s += 24f)
                 {
                     float y = r.Center(s).y; if (y < 2.4f) continue;
@@ -740,56 +836,6 @@ namespace SurviveI95.EditorTools
                     Box(g.transform, new Vector3(at.x, y / 2f - .4f, at.z), Quaternion.identity, new Vector3(1.3f, y - .8f, 1.3f), m.concrete, "Pillar");
                 }
             }
-        }
-
-        static void BuildRamps(GameObject root, RoutePath p, Mats m)
-        {
-            var file = $"Tools/Data/{RouteId}_ramps.json";
-            if (!File.Exists(file)) { Debug.LogError("[FloridaSlice] no ramp data"); return; }
-            var data = JsonUtility.FromJson<GroundFile>(File.ReadAllText(file));
-            var mats = new[] { Lit("RampAsphalt", new Color(.6f, .6f, .59f), .15f, "asphalt_02"), m.white };
-            var map = new Dictionary<(int, int), Bucket>();
-            var pillars = new GameObject("RampPillars"); pillars.transform.SetParent(root.transform);
-            int kept = 0, posts = 0;
-            foreach (var r in data.roads)
-            {
-                var pts = new List<Vector2>(); var ys = new List<float>(); float sum = 0;
-                for (int i = 0; i + 1 < r.p.Length; i += 2)
-                {
-                    var q = new Vector2(r.p[i], r.p[i + 1]);
-                    if (!Locate(q, out var s, out var lat)) { ys.Add(-.15f); pts.Add(q); continue; }
-                    float k = Mathf.Clamp01((lat - p.HalfWidth(s)) / 70f);
-                    ys.Add(Mathf.Lerp(p.Center(s).y + .02f, -.15f, Mathf.SmoothStep(0, 1, k)));
-                    pts.Add(q); sum += lat;
-                }
-                // Northbound ramps only: the southbound road here is a stand-in, so its real ramps would not line up.
-                if (pts.Count < 2 || sum / pts.Count < 0f) continue;
-                kept++;
-                for (int i = 0; i + 1 < pts.Count; i++)
-                {
-                    var a = pts[i]; var b = pts[i + 1]; var mid = (a + b) / 2f;
-                    if (OnRoad(mid, 1f)) continue;
-                    var bk = Get(map, mid, 1200f);
-                    var n = new Vector2(-(b - a).normalized.y, (b - a).normalized.x);
-                    StripSloped(bk, 0, a, b, n * 2.8f, ys[i], ys[i + 1], 5.6f);
-                    StripSloped(bk, 1, a + n * 2.5f, b + n * 2.5f, n * .07f, ys[i] + .012f, ys[i + 1] + .012f, 1f);
-                    StripSloped(bk, 1, a - n * 2.5f, b - n * 2.5f, n * .07f, ys[i] + .012f, ys[i + 1] + .012f, 1f);
-                    float y = (ys[i] + ys[i + 1]) / 2f;
-                    if (y > 2.4f && (b - a).magnitude > 3f && i % 2 == 0)
-                    { Box(pillars.transform, new Vector3(mid.x, y / 2f - .4f, mid.y), Quaternion.identity, new Vector3(1.2f, y - .8f, 1.2f), m.concrete, "Pillar"); posts++; }
-                }
-            }
-            Flush(map, "Ramps", mats, 2, true);
-            Debug.Log($"[FloridaSlice] ramps {kept}, ramp pillars {posts}");
-        }
-
-        static void StripSloped(Bucket bk, int slot, Vector2 a, Vector2 b, Vector2 half, float ya, float yb, float uvW)
-        {
-            var v = bk.v[slot]; var uv = bk.uv[slot]; int n = v.Count; float len = (b - a).magnitude;
-            v.Add(new Vector3(a.x - half.x, ya, a.y - half.y)); v.Add(new Vector3(a.x + half.x, ya, a.y + half.y));
-            v.Add(new Vector3(b.x - half.x, yb, b.y - half.y)); v.Add(new Vector3(b.x + half.x, yb, b.y + half.y));
-            uv.Add(new Vector2(0, 0)); uv.Add(new Vector2(uvW / 7f, 0)); uv.Add(new Vector2(0, len / 7f)); uv.Add(new Vector2(uvW / 7f, len / 7f));
-            bk.t[slot].AddRange(new[] { n, n + 1, n + 2, n + 2, n + 1, n + 3 });
         }
 
         static void BuildBuildings(RoutePath p, Func<float, float> south, Mats m)
@@ -820,7 +866,7 @@ namespace SurviveI95.EditorTools
             {
                 var pts = new List<Vector2>();
                 for (int i = 0; i + 1 < b.p.Length; i += 2) pts.Add(new Vector2(b.p[i], b.p[i + 1]));
-                if (pts.Count < 3 || pts.Any(q => OnRoad(q))) { dropped++; continue; }
+                if (pts.Count < 3 || pts.Any(q => OnRoad(q) || NearExit(q, 12f)) || exitCorridor.Any(c => Inside(pts, c))) { dropped++; continue; }
                 float area = 0;
                 for (int i = 0; i < pts.Count; i++) { var a = pts[i]; var c = pts[(i + 1) % pts.Count]; area += a.x * c.y - c.x * a.y; }
                 if (area < 0) pts.Reverse();
@@ -896,7 +942,7 @@ namespace SurviveI95.EditorTools
             {
                 var pts = new List<Vector2>();
                 for (int i = 0; i + 1 < l.p.Length; i += 2) pts.Add(new Vector2(l.p[i], l.p[i + 1]));
-                if (pts.Any(q => OnRoad(q, 3f))) continue;
+                if (pts.Any(q => OnRoad(q, 3f) || NearExit(q, 8f))) continue;
                 float area = 0;
                 for (int i = 0; i < pts.Count; i++) { var a = pts[i]; var c = pts[(i + 1) % pts.Count]; area += a.x * c.y - c.x * a.y; }
                 if (area < 0) pts.Reverse();
@@ -1030,7 +1076,7 @@ namespace SurviveI95.EditorTools
                 bool right = rnd.NextDouble() < .55;
                 float lat = right ? p.HalfWidth(s) + off : south(s) - p.HalfWidth(s) - off;
                 var spot = p.Point(s, lat);
-                if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) || OnRoad(new Vector2(spot.x, spot.z), 11f)) continue;
+                if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) || OnRoad(new Vector2(spot.x, spot.z), 11f) || NearExit(new Vector2(spot.x, spot.z), 8f)) continue;
                 var t = new GameObject("Palm", typeof(MeshFilter), typeof(MeshRenderer));
                 t.transform.SetParent(g.transform);
                 t.transform.position = new Vector3(spot.x, -.25f, spot.z);
@@ -1047,7 +1093,7 @@ namespace SurviveI95.EditorTools
                 bool right = rnd.NextDouble() < .5;
                 float lat = right ? p.HalfWidth(s) + off : south(s) - p.HalfWidth(s) - off;
                 var spot = p.Point(s, lat);
-                if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) || OnRoad(new Vector2(spot.x, spot.z), 9f)) continue;
+                if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) || OnRoad(new Vector2(spot.x, spot.z), 9f) || NearExit(new Vector2(spot.x, spot.z), 8f)) continue;
                 var t = new GameObject("Shrub", typeof(MeshFilter), typeof(MeshRenderer));
                 t.transform.SetParent(sg.transform);
                 t.transform.position = new Vector3(spot.x, -.25f, spot.z);
