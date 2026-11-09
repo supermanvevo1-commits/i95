@@ -77,7 +77,7 @@ Done when: a chase can be won or lost, and 5 minutes on the Jupiter stretch is f
 Done when: one complete run works from menu to finish on the Jupiter stretch.
 
 ## M6 Weather and time
-- [ ] 6.1 Day and night
+- [ ] 6.1 Day and night, with a Miami night look: lit street lamps, lit building windows, neon
 - [ ] 6.2 Headlights
 - [ ] 6.3 Rain, wipers and windshield drops
 - [ ] 6.4 Wet grip, hydroplaning and spray

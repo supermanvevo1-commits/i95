@@ -185,9 +185,9 @@ namespace SurviveI95.Sim
             }
             var items = path.Obstacles;
             int lo = 0, hi = items.Length;
-            while (lo < hi) { int mid = (lo + hi) / 2; if (items[mid].s < S - 8f) lo = mid + 1; else hi = mid; }
+            while (lo < hi) { int mid = (lo + hi) / 2; if (items[mid].s < S - 8f - path.MaxObstacleHalfS) lo = mid + 1; else hi = mid; }
             bool touching = false;
-            for (int i = lo; i < items.Length && items[i].s < S + 8f; i++)
+            for (int i = lo; i < items.Length && items[i].s < S + 8f + path.MaxObstacleHalfS; i++)
             {
                 if (broken.Contains(i)) continue;
                 var o = items[i];
@@ -257,9 +257,9 @@ namespace SurviveI95.Sim
             HitWall = false;
             float half = path.HalfWidth(S);
             if (!wasHit) wallContact = false;
-            if (path.HasBarrier(S))
             {
-                float right = half + RoutePath.BarrierRight - 1.2f, left = -half - RoutePath.BarrierLeft + 1.2f;
+                // The concrete median runs the whole road; the right-hand barrier only exists on structures.
+                float right = path.HasBarrier(S) ? half + RoutePath.BarrierRight - 1.2f : path.HasSoundWall(S) ? half + RoutePath.SoundWallOffset - 1.2f : float.PositiveInfinity, left = -half - RoutePath.BarrierLeft + 1.2f;
                 // Only a car actually at the barrier hits it; one already beyond it stays where it is.
                 if ((Lateral > right && Lateral < right + 2f) || (Lateral < left && Lateral > left - 2f))
                 {

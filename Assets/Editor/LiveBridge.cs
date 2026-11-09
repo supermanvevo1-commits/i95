@@ -94,18 +94,20 @@ namespace SurviveI95.EditorTools
                 case "launch": car.Place(F(a, 2)); car.Sim.Lateral = car.Path.HalfWidth(F(a, 2)) + F(a, 3); car.Sim.Speed = F(a, 4) / DriveSim.MetersPerSecondToMph; car.Sim.Theta = F(a, 5) * Mathf.Deg2Rad; return "launched";
                 case "launchat":
                     foreach (var o in car.Path.Obstacles)
-                        if (o.kind == a[2] && o.s > 3000f) { car.Place(o.s - 25f); car.Sim.Lateral = o.lat + F(a, 3); car.Sim.Speed = F(a, 4) / DriveSim.MetersPerSecondToMph; return "launched at " + o.kind; }
+                        if (o.kind == a[2] && o.s > 3000f && o.halfS > (a[2] == "building" ? 6f : -1f)) { car.Place(o.s - o.halfS - 25f); car.Sim.Lateral = o.lat + F(a, 3); car.Sim.Speed = F(a, 4) / DriveSim.MetersPerSecondToMph; return "launched at " + o.kind; }
                     return "ERROR none found";
                 case "repair": car.Sim.Reset(car.Path, car.Sim.S); return "repaired";
                 case "setdamage": car.Sim.Damage = F(a, 2); return "damage set";
                 case "frontview": car.FrontView = a[2] == "on"; return "front view " + a[2];
+                case "topview": car.TopView = F(a, 2); return "top view";
+                case "findwall": for (float q = F(a, 2); q < car.Path.Length; q += 50f) if (car.Path.HasSoundWall(q) && car.Path.HasSoundWall(q + 300f)) { car.Place(q); car.Sim.Speed = 25f; return "wall at " + q; } return "ERROR no wall";
                 case "release": PlayerCar.AutoDriver = null; return "released";
                 case "cockpit": car.SetCockpit(a[2] == "on"); return "cockpit " + a[2];
                 case "look": car.ScriptedLook = new Vector2(F(a, 2), F(a, 3)); return "looking";
                 case "place": car.Place(F(a, 2)); return "placed";
                 case "status":
                     var s = car.Sim;
-                    string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph");
+                    string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} roadY={car.Path.Center(s.S).y:F1} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph");
                     slowest = 0;
                     return r;
                 case "shot": return Shot(a[2]);

@@ -14,6 +14,7 @@ namespace SurviveI95.EditorTools
     /// <summary>Generates the Florida test stretch from route data. Safe to re-run at any time.</summary>
     public static class FloridaSliceBuilder
     {
+        public const string RouteId = "miami_ftl";
         const string Gen = "Assets/Generated", PH = "Assets/ThirdParty/PolyHaven";
         const string CarPath = "Assets/ThirdParty/Sketchfab/corolla/scene.gltf";
         const float CarYawFix = 0f; // degrees, corrects the imported model's facing
@@ -26,21 +27,27 @@ namespace SurviveI95.EditorTools
             Directory.CreateDirectory(Gen + "/Meshes");
             AssetDatabase.Refresh();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var path = RoutePath.Load("florida_jupiter");
+            var path = RoutePath.Load(RouteId);
             var m = MakeMaterials();
 
             placed.Clear();
             BuildEnvironment();
             var road = new GameObject("Road");
             Func<float, float> half = path.HalfWidth;
-            Func<float, float> south = s => -(2 * path.HalfWidth(s) + 26f);
+            Func<float, float> south = s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap);
 
-            Add(road, "Ground", Ribbon(path, s => -650, s => 650, -0.25f, 12, 12), m.grass);
+            Add(road, "Ground", GroundPlane(path, 3200f, -0.25f, 12f), m.grass);
             BuildCarriageway(road, "Northbound", path, s => 0, m);
             BuildCarriageway(road, "Southbound", path, south, m);
             BuildBarriers(road, path, m);
             BuildOverpasses(road, path, south, m);
             BuildSigns(path, m);
+            PrepareLookup(path, south);
+            BuildGroundDetail(path, m);
+            BuildBuildings(path, south, m);
+            BuildLamps(path);
+            BuildPillars(road, path, south, m);
+            BuildSoundWalls(road, path, south, m);
             BuildTrees(path, south);
 
             var cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
@@ -66,7 +73,7 @@ namespace SurviveI95.EditorTools
 
         static void WriteObstacles()
         {
-            const string file = "Assets/Resources/Data/Routes/florida_jupiter_obstacles.json";
+            string file = $"Assets/Resources/Data/Routes/{RouteId}_obstacles.json";
             File.WriteAllText(file, JsonUtility.ToJson(new RouteObstacleFile { items = placed.OrderBy(o => o.s).ToArray() }));
             AssetDatabase.ImportAsset(file);
             Debug.Log("[FloridaSlice] solid objects: " + placed.Count);
@@ -138,14 +145,52 @@ namespace SurviveI95.EditorTools
             return mat;
         }
 
+        static Material Textured(string name, Texture2D tex, float smooth)
+        {
+            var mat = Lit(name, Color.white, smooth);
+            mat.SetTexture("_BaseMap", tex);
+            return mat;
+        }
+
+        // Light concrete with soft blotches; panels > 0 adds the vertical joints of a sound wall.
+        static Texture2D MakeConcrete(string name, Color baseColor, int panels)
+        {
+            const int size = 256;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            var rnd = new System.Random(name.Length * 97);
+            var blotch = new float[17, 17];
+            for (int a = 0; a < 17; a++) for (int b = 0; b < 17; b++) blotch[a, b] = (float)rnd.NextDouble();
+            for (int a = 0; a < 17; a++) { blotch[a, 16] = blotch[a, 0]; blotch[16, a] = blotch[0, a]; }
+            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++)
+            {
+                float gx = x / 16f, gy = y / 16f; int ix = (int)gx, iy = (int)gy; float fx = gx - ix, fy = gy - iy;
+                float soft = Mathf.Lerp(Mathf.Lerp(blotch[ix, iy], blotch[ix + 1, iy], fx), Mathf.Lerp(blotch[ix, iy + 1], blotch[ix + 1, iy + 1], fx), fy);
+                float shade = .93f + soft * .12f + (float)(rnd.NextDouble() - .5) * .04f;
+                if (panels > 0)
+                {
+                    int cell = size / panels, px = x % cell, py = y % (size / 3);
+                    if (px < 4) shade *= .62f; else if (px < 7) shade *= 1.08f;
+                    if (py < 2) shade *= .82f;
+                }
+                var c = baseColor * shade; c.a = 1f;
+                tex.SetPixel(x, y, c);
+            }
+            tex.Apply();
+            string file = $"{Gen}/Materials/{name}.png";
+            Directory.CreateDirectory(Gen + "/Materials");
+            File.WriteAllBytes(file, tex.EncodeToPNG());
+            AssetDatabase.ImportAsset(file);
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(file);
+        }
+
         static Mats MakeMaterials()
         {
             var m = new Mats
             {
                 asphalt = Lit("Asphalt", new Color(.62f, .62f, .62f), .18f, "asphalt_02"),
                 shoulder = Lit("Shoulder", new Color(.9f, .9f, .88f), .12f, "asphalt_02"),
-                grass = Lit("Grass", new Color(.62f, .9f, .48f), .08f, "grass_ground"),
-                concrete = Lit("Concrete", new Color(.86f, .85f, .81f), .2f, "brushed_concrete"),
+                grass = Lit("Grass", new Color(.66f, .94f, .5f), .08f, "grass_ground"),
+                concrete = Textured("Concrete", MakeConcrete("ConcreteTex", new Color(.74f, .73f, .7f), 0), .18f),
                 white = Lit("PaintWhite", new Color(.95f, .95f, .92f), .3f),
                 yellow = Lit("PaintYellow", new Color(.95f, .72f, .1f), .3f),
                 signGreen = Lit("SignGreen", new Color(.02f, .3f, .16f), .45f),
@@ -168,7 +213,7 @@ namespace SurviveI95.EditorTools
         }
 
         // ---------- geometry ----------
-        static Mesh Ribbon(RoutePath p, Func<float, float> left, Func<float, float> right, float y, float uTile, float vTile, float from = 0, float to = -1, float step = 10f)
+        static Mesh Ribbon(RoutePath p, Func<float, float> left, Func<float, float> right, float y, float uTile, float vTile, float from = 0, float to = -1, float step = 10f, bool flat = false)
         {
             if (to < 0) to = p.Length;
             var v = new List<Vector3>(); var uv = new List<Vector2>(); var tris = new List<int>();
@@ -176,11 +221,24 @@ namespace SurviveI95.EditorTools
             for (int r = 0; r <= rows; r++)
             {
                 float s = from + (to - from) * r / rows, l = left(s), rr = right(s);
-                v.Add(p.Point(s, l) + Vector3.up * y); v.Add(p.Point(s, rr) + Vector3.up * y);
+                var pl = p.Point(s, l) + Vector3.up * y; var pr = p.Point(s, rr) + Vector3.up * y;
+                if (flat) { pl.y = y; pr.y = y; }
+                v.Add(pl); v.Add(pr);
                 uv.Add(new Vector2(l / uTile, s / vTile)); uv.Add(new Vector2(rr / uTile, s / vTile));
                 if (r > 0) { int a = (r - 1) * 2; tris.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 }); }
             }
             return Finish(v, uv, tris);
+        }
+
+        // A single flat sheet: a ribbon this wide would fold over itself on the inside of curves.
+        static Mesh GroundPlane(RoutePath p, float margin, float y, float tile)
+        {
+            float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
+            for (float s = 0; s < p.Length; s += 50f) { var c = p.Center(s); x0 = Mathf.Min(x0, c.x); x1 = Mathf.Max(x1, c.x); z0 = Mathf.Min(z0, c.z); z1 = Mathf.Max(z1, c.z); }
+            x0 -= margin; x1 += margin; z0 -= margin; z1 += margin;
+            var v = new List<Vector3> { new Vector3(x0, y, z0), new Vector3(x0, y, z1), new Vector3(x1, y, z0), new Vector3(x1, y, z1) };
+            var uv = v.Select(q => new Vector2(q.x / tile, q.z / tile)).ToList();
+            return Finish(v, uv, new List<int> { 0, 1, 2, 2, 1, 3 });
         }
 
         static Mesh Finish(List<Vector3> v, List<Vector2> uv, List<int> tris)
@@ -233,6 +291,8 @@ namespace SurviveI95.EditorTools
                 }
             }
             Add(g, "Dashes", Finish(v, uv, t), m.white);
+            Add(g, "SkirtR", WallStrip(p, s => c(s) + h(s) + rightShoulder, 0f, p.Length, -1.6f, 0f), m.concrete);
+            Add(g, "SkirtL", WallStrip(p, s => c(s) - h(s) - leftShoulder, 0f, p.Length, -1.6f, 0f), m.concrete);
         }
 
         static Mesh Extrude(RoutePath p, float lateral, float from, float to)
@@ -264,15 +324,15 @@ namespace SurviveI95.EditorTools
             float start = -1;
             for (float s = 0; s < p.Length; s += 5)
             {
-                bool on = p.IsBridge(s) || p.File.overpasses.Any(o => Mathf.Abs(o.s - s) < 90);
+                bool on = p.HasBarrier(s); // must match the collision rule exactly, or walls become invisible
                 if (on && start < 0) start = s;
                 if (!on && start >= 0) { spans.Add((start, s)); start = -1; }
             }
             foreach (var (a, b) in spans)
             {
-                Add(g, "Left", Extrude(p, -2.2f, a, b), m.concrete, true);
                 Add(g, "Right", Extrude(p, 4.0f, a, b), m.concrete, true);
             }
+            Add(g, "Median", Extrude(p, -RoutePath.BarrierLeft, 0, p.Length), m.concrete, true);
             Debug.Log("[FloridaSlice] barrier spans " + spans.Count);
         }
 
@@ -297,9 +357,9 @@ namespace SurviveI95.EditorTools
                 float mid = south(o.s) / 2f, span = -south(o.s) + 2 * p.HalfWidth(o.s) + 30f;
                 var c = p.Point(o.s, mid);
                 Box(g.transform, c + Vector3.up * 6.3f, rot, new Vector3(span, 1.2f, 14f), m.concrete, o.name).GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
-                foreach (var lat in new[] { p.HalfWidth(o.s) + 7f, -p.HalfWidth(o.s) - 7f, south(o.s) - p.HalfWidth(o.s) - 7f })
+                foreach (var lat in new[] { p.HalfWidth(o.s) + 7f, -p.HalfWidth(o.s) - RoutePath.BarrierLeft, south(o.s) - p.HalfWidth(o.s) - 7f })
                     Box(g.transform, p.Point(o.s, lat) + Vector3.up * 2.9f, rot, new Vector3(1.2f, 5.8f, 10f), m.concrete, "Pier");
-                foreach (var lat in new[] { p.HalfWidth(o.s) + 7f, -p.HalfWidth(o.s) - 7f, south(o.s) - p.HalfWidth(o.s) - 7f }) Solid(o.s, lat, 5f, 0.6f, "pier");
+                foreach (var lat in new[] { p.HalfWidth(o.s) + 7f, -p.HalfWidth(o.s) - RoutePath.BarrierLeft, south(o.s) - p.HalfWidth(o.s) - 7f }) Solid(o.s, lat, 5f, 0.6f, "pier");
             }
             Debug.Log("[FloridaSlice] overpasses " + count);
         }
@@ -325,7 +385,7 @@ namespace SurviveI95.EditorTools
             foreach (var d in new[] { -width * .32f, width * .32f })
                 Solid(s, p.HalfWidth(s) + lateralFromEdge + d, 0.12f, 0.12f, width > 10f ? "pole" : "post");
             foreach (var d in new[] { -width * .32f, width * .32f })
-                Box(parent, c + right * d + p.Tangent(s) * .14f + Vector3.up * (elevation + height) / 2, rot, new Vector3(.14f, elevation + height, .14f), m.post, "Post");
+                { var foot = c + right * d + p.Tangent(s) * .14f; float top = c.y + elevation + height; foot.y = top / 2f; Box(parent, foot, rot, new Vector3(.14f, top, .14f), m.post, "Post"); }
             Text(parent, mid - p.Tangent(s) * .06f, rot, text, textH, tc, m.text);
         }
 
@@ -365,64 +425,478 @@ namespace SurviveI95.EditorTools
             }
         }
 
-        static void Frond(List<Vector3> v, List<int> t, Vector3 top, float angle)
+        static Mesh PalmMesh(int variant)
         {
-            var dir = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
-            var side = new Vector3(-dir.z, 0, dir.x);
-            int start = v.Count;
-            for (int i = 0; i <= 6; i++)
+            var v = new List<Vector3>(); var uv = new List<Vector2>(); var bark = new List<int>(); var leaf = new List<int>();
+            var rnd = new System.Random(40 + variant);
+            float bend = 0.35f + variant * 0.28f;
+            Func<float, Vector3> spine = k => new Vector3(bend * k * k, 10f * k, 0);
+            const int rings = 9, sides = 7;
+            for (int r = 0; r <= rings; r++)
             {
-                float k = i / 6f, w = .55f * Mathf.Sin(Mathf.PI * Mathf.Min(.96f, k + .08f));
-                var p = top + dir * (4.6f * k) + Vector3.up * (1.1f * k - 3.4f * k * k);
-                v.Add(p - side * w); v.Add(p + side * w);
-                if (i > 0) { int q = start + (i - 1) * 2; t.AddRange(new[] { q, q + 1, q + 2, q + 2, q + 1, q + 3, q, q + 2, q + 1, q + 2, q + 3, q + 1 }); }
+                float k = r / (float)rings, rad = Mathf.Lerp(.27f, .15f, k) * (1f + 0.06f * Mathf.Sin(r * 2.7f));
+                for (int s = 0; s <= sides; s++) { float a = s * Mathf.PI * 2 / sides; v.Add(spine(k) + new Vector3(Mathf.Cos(a) * rad, 0, Mathf.Sin(a) * rad)); uv.Add(new Vector2(s / (float)sides, k * 6f)); }
+                if (r > 0) for (int s = 0; s < sides; s++) { int q = (r - 1) * (sides + 1) + s, w = sides + 1; bark.AddRange(new[] { q, q + w, q + 1, q + 1, q + w, q + w + 1 }); }
             }
-        }
-
-        static Mesh TreeMesh(bool palm)
-        {
-            var v = new List<Vector3>(); var bark = new List<int>(); var leaf = new List<int>();
-            if (palm)
+            var top = spine(1f);
+            int fronds = 15 + variant * 2;
+            for (int f = 0; f < fronds; f++)
             {
-                Cone(v, bark, Vector3.zero, .24f, .15f, 9.5f, 6);
-                for (int i = 0; i < 11; i++) Frond(v, leaf, Vector3.up * 9.4f, i * 2.4f);
-            }
-            else
-            {
-                Cone(v, bark, Vector3.zero, .28f, .08f, 18f, 6);
-                for (int i = 0; i < 4; i++) Cone(v, leaf, Vector3.up * (9f + i * 2.4f), 3.2f - i * .62f, .25f, 4.6f, 8);
+                float az = f * 2.4f + (float)rnd.NextDouble() * .4f;
+                float lift = (f % 3 == 0 ? 1.7f : f % 3 == 1 ? .9f : .25f) + (float)rnd.NextDouble() * .3f;
+                float reach = 4.4f + (float)rnd.NextDouble() * 1.5f;
+                var dir = new Vector3(Mathf.Cos(az), 0, Mathf.Sin(az)); var side = new Vector3(-dir.z, 0, dir.x);
+                int start = v.Count; const int seg = 8;
+                for (int i = 0; i <= seg; i++)
+                {
+                    float k = i / (float)seg, w = 0.68f * Mathf.Sin(Mathf.PI * Mathf.Min(.97f, k * .9f + .08f));
+                    var c = top + dir * (reach * k) + Vector3.up * (lift * k - (lift + 2.7f) * k * k);
+                    var droop = Vector3.down * w * .28f;
+                    v.Add(c - side * w + droop); uv.Add(new Vector2(0, k)); v.Add(c + side * w + droop); uv.Add(new Vector2(1, k));
+                    if (i > 0) { int q = start + (i - 1) * 2; leaf.AddRange(new[] { q, q + 2, q + 1, q + 1, q + 2, q + 3 }); }
+                }
             }
             var mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
-            mesh.SetVertices(v); mesh.subMeshCount = 2; mesh.SetTriangles(bark, 0); mesh.SetTriangles(leaf, 1);
+            mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.subMeshCount = 2; mesh.SetTriangles(bark, 0); mesh.SetTriangles(leaf, 1);
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
-            var file = Gen + "/Meshes/Tree_" + (palm ? "Palm" : "Pine") + ".asset";
+            var file = Gen + "/Meshes/Palm_" + variant + ".asset";
             AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(mesh, file);
             return mesh;
         }
 
+        static Material FrondMaterial()
+        {
+            var tex = new Texture2D(128, 256, TextureFormat.RGBA32, true);
+            var rnd = new System.Random(7);
+            var tones = new Color[32];
+            for (int i = 0; i < 32; i++) tones[i] = Color.Lerp(new Color(.27f, .5f, .13f), new Color(.56f, .72f, .22f), (float)rnd.NextDouble());
+            for (int y = 0; y < 256; y++) for (int x = 0; x < 128; x++)
+            {
+                float d = Mathf.Abs(x - 63.5f) / 63.5f, k = y / 255f;
+                float env = Mathf.Lerp(1f, .25f, k * k);
+                float slant = y + d * 46f;
+                bool blade = d < env && Mathf.Repeat(slant, 9f) < 5.2f;
+                bool rib = d < .05f;
+                var c = rib ? new Color(.42f, .45f, .18f) : tones[(int)(slant / 9f) & 31];
+                c.a = blade || rib ? 1f : 0f;
+                tex.SetPixel(x, y, c);
+            }
+            tex.Apply();
+            const string file = Gen + "/Materials/Frond.png";
+            File.WriteAllBytes(file, tex.EncodeToPNG());
+            AssetDatabase.ImportAsset(file);
+            var imp = (TextureImporter)AssetImporter.GetAtPath(file);
+            imp.alphaIsTransparency = true; imp.mipMapsPreserveCoverage = true; imp.alphaTestReferenceValue = 0.4f; imp.SaveAndReimport();
+            var mat = Lit("PalmFrond", Color.white, .25f);
+            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(file));
+            mat.SetFloat("_AlphaClip", 1f); mat.SetFloat("_Cutoff", .4f); mat.EnableKeyword("_ALPHATEST_ON");
+            mat.SetFloat("_Cull", 0f); mat.renderQueue = 2450; mat.enableInstancing = true;
+            return mat;
+        }
+
+        [Serializable] class BuildingRow { public float h; public string k; public float[] p; }
+        [Serializable] class BuildingFile { public BuildingRow[] items; }
+        static readonly HashSet<(int, int)> occupied = new HashSet<(int, int)>();
+
+        static Material Facade(string name, Color wall, Color glass, int kind, int seed, float smooth)
+        {
+            const int size = 256, cells = 8, cw = size / cells;
+            var rnd = new System.Random(seed);
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            var pane = new Color[cells * cells];
+            for (int i = 0; i < pane.Length; i++)
+            {
+                double roll = rnd.NextDouble();
+                float spread = kind == 0 ? .1f : .32f, blindChance = kind == 0 ? .03f : .16f;
+                pane[i] = roll < blindChance ? Color.Lerp(glass, new Color(.72f, .7f, .62f), kind == 0 ? .25f : .55f) : glass * (float)(1f - spread / 2f + rnd.NextDouble() * spread);
+                pane[i].a = 1f;
+            }
+            var missing = new bool[cells * cells];
+            for (int i = 0; i < missing.Length; i++) missing[i] = kind == 3 && rnd.NextDouble() < .22;
+            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++)
+            {
+                int ix = x / cw, iy = y / cw, px = x % cw, py = y % cw;
+                bool win;
+                switch (kind)
+                {
+                    case 0: win = px > 0 && py > 1; break;
+                    case 1: win = px > 8 && px < 24 && py > 9 && py < 26; break;
+                    case 2: win = py > 12 && py < 26 && px % 11 != 0; break;
+                    default: win = !missing[ix + iy * cells] && px > 10 && px < 22 && py > 10 && py < 25; break;
+                }
+                float grain = 1f + (float)(rnd.NextDouble() - .5) * .05f;
+                var c = win ? pane[ix + iy * cells] : wall * grain;
+                c.a = 1f;
+                tex.SetPixel(x, y, c);
+            }
+            tex.Apply();
+            string file = $"{Gen}/Materials/{name}.png";
+            File.WriteAllBytes(file, tex.EncodeToPNG());
+            AssetDatabase.ImportAsset(file);
+            var mat = Lit(name, Color.white, smooth);
+            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(file));
+            return mat;
+        }
+
+        const int FacadeCount = 10, RoofSlot = 10, ApronSlot = 11, SlotCount = 12;
+        class Bucket { public List<Vector3>[] v = new List<Vector3>[SlotCount]; public List<Vector2>[] uv = new List<Vector2>[SlotCount]; public List<int>[] t = new List<int>[SlotCount]; }
+
+        static Dictionary<(int, int), List<float>> cells;
+        static RoutePath lookupPath;
+        static Func<float, float> lookupSouth;
+
+        static void PrepareLookup(RoutePath p, Func<float, float> south)
+        {
+            lookupPath = p; lookupSouth = south;
+            cells = new Dictionary<(int, int), List<float>>();
+            for (float s = 0; s < p.Length; s += 20f)
+            {
+                var c = p.Center(s); var key = ((int)Mathf.Floor(c.x / 150f), (int)Mathf.Floor(c.z / 150f));
+                if (!cells.TryGetValue(key, out var list)) cells[key] = list = new List<float>();
+                list.Add(s);
+            }
+        }
+
+        static bool Locate(Vector2 q, out float s, out float lat)
+        {
+            int cx = (int)Mathf.Floor(q.x / 150f), cz = (int)Mathf.Floor(q.y / 150f);
+            float best = float.MaxValue; s = -1; lat = 0;
+            for (int ring = 1; ring <= 6 && s < 0; ring += 5)
+                for (int a = -ring; a <= ring; a++) for (int b = -ring; b <= ring; b++)
+                    if (cells.TryGetValue((cx + a, cz + b), out var list))
+                        foreach (var ss in list) { var c = lookupPath.Center(ss); float d = (c.x - q.x) * (c.x - q.x) + (c.z - q.y) * (c.z - q.y); if (d < best) { best = d; s = ss; } }
+            if (s < 0) return false;
+            var at = lookupPath.Center(s);
+            lat = Vector3.Dot(new Vector3(q.x, at.y, q.y) - at, lookupPath.Right(s));
+            return true;
+        }
+
+        static bool OnRoad(Vector2 q, float margin = 14f)
+        {
+            if (!Locate(q, out var s, out var lat)) return false;
+            return lat > lookupSouth(s) - lookupPath.HalfWidth(s) - margin && lat < lookupPath.HalfWidth(s) + margin + 2f;
+        }
+
+        static void Fan(Bucket bk, int slot, List<Vector2> pts, float y, float uvScale)
+        {
+            var c = new Vector2(pts.Average(q => q.x), pts.Average(q => q.y));
+            var v = bk.v[slot]; var uv = bk.uv[slot]; int n = v.Count;
+            v.Add(new Vector3(c.x, y, c.y)); uv.Add(c / uvScale);
+            for (int i = 0; i < pts.Count; i++)
+            {
+                v.Add(new Vector3(pts[i].x, y, pts[i].y)); uv.Add(pts[i] / uvScale);
+                bk.t[slot].AddRange(new[] { n, n + 1 + (i + 1) % pts.Count, n + 1 + i });
+            }
+        }
+
+        static void Walls(Bucket bk, int style, List<Vector2> pts, float y0, float y1, float shift)
+        {
+            const float TileU = 28.8f, TileV = 27.2f;
+            float run = shift;
+            for (int i = 0; i < pts.Count; i++)
+            {
+                var a = pts[i]; var c = pts[(i + 1) % pts.Count]; float len = (c - a).magnitude;
+                var v = bk.v[style]; var uv = bk.uv[style]; int n = v.Count;
+                v.Add(new Vector3(a.x, y0, a.y)); v.Add(new Vector3(a.x, y1, a.y)); v.Add(new Vector3(c.x, y0, c.y)); v.Add(new Vector3(c.x, y1, c.y));
+                float u0 = Mathf.Round(run / 3.6f) * 3.6f / TileU, u1 = u0 + Mathf.Max(1f, Mathf.Round(len / 3.6f)) * 3.6f / TileU, top = Mathf.Max(1f, Mathf.Round((y1 - y0) / 3.4f)) * 3.4f / TileV;
+                uv.Add(new Vector2(u0, shift)); uv.Add(new Vector2(u0, shift + top)); uv.Add(new Vector2(u1, shift)); uv.Add(new Vector2(u1, shift + top));
+                bk.t[style].AddRange(new[] { n, n + 1, n + 2, n + 2, n + 1, n + 3 });
+                run += len;
+            }
+        }
+
+        static Bucket Get(Dictionary<(int, int), Bucket> map, Vector2 at, float size)
+        {
+            var key = ((int)Mathf.Floor(at.x / size), (int)Mathf.Floor(at.y / size));
+            if (!map.TryGetValue(key, out var bk))
+            {
+                map[key] = bk = new Bucket();
+                for (int i = 0; i < SlotCount; i++) { bk.v[i] = new List<Vector3>(); bk.uv[i] = new List<Vector2>(); bk.t[i] = new List<int>(); }
+            }
+            return bk;
+        }
+
+        static int Flush(Dictionary<(int, int), Bucket> map, string name, Material[] mats, int slots, bool shadows)
+        {
+            var parent = new GameObject(name); int chunk = 0;
+            foreach (var bk in map.Values)
+            {
+                var mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
+                var all = new List<Vector3>(); var allUv = new List<Vector2>(); var subs = new List<int[]>();
+                for (int i = 0; i < slots; i++) { int off = all.Count; all.AddRange(bk.v[i]); allUv.AddRange(bk.uv[i]); subs.Add(bk.t[i].Select(x => x + off).ToArray()); }
+                mesh.SetVertices(all); mesh.SetUVs(0, allUv); mesh.subMeshCount = slots;
+                for (int i = 0; i < slots; i++) mesh.SetTriangles(subs[i], i);
+                mesh.RecalculateNormals(); mesh.RecalculateBounds();
+                var meshFile = $"{Gen}/Meshes/{name}_{chunk++}.asset";
+                AssetDatabase.DeleteAsset(meshFile); AssetDatabase.CreateAsset(mesh, meshFile);
+                var go = new GameObject(name + "Block", typeof(MeshFilter), typeof(MeshRenderer));
+                go.transform.SetParent(parent.transform);
+                go.GetComponent<MeshFilter>().sharedMesh = mesh;
+                var r = go.GetComponent<MeshRenderer>(); r.sharedMaterials = mats;
+                r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            }
+            return chunk;
+        }
+
+        static void BuildBuildings(RoutePath p, Func<float, float> south, Mats m)
+        {
+            occupied.Clear();
+            var file = $"Tools/Data/{RouteId}_buildings.json";
+            if (!File.Exists(file)) { Debug.LogError("[FloridaSlice] no building data"); return; }
+            var data = JsonUtility.FromJson<BuildingFile>(File.ReadAllText(file));
+            var mats = new[]
+            {
+                Facade("FacadeGlassBlue", new Color(.3f, .37f, .44f), new Color(.16f, .28f, .4f), 0, 1, .8f),
+                Facade("FacadeGlassGreen", new Color(.32f, .4f, .4f), new Color(.17f, .33f, .35f), 0, 2, .8f),
+                Facade("FacadeGlassDark", new Color(.2f, .22f, .26f), new Color(.1f, .13f, .18f), 0, 3, .85f),
+                Facade("FacadeBandWhite", new Color(.84f, .84f, .8f), new Color(.2f, .3f, .4f), 2, 4, .45f),
+                Facade("FacadeBandTan", new Color(.72f, .66f, .56f), new Color(.17f, .23f, .3f), 2, 5, .35f),
+                Facade("FacadeCondo", new Color(.88f, .86f, .79f), new Color(.2f, .27f, .35f), 1, 6, .3f),
+                Facade("FacadeStuccoCream", new Color(.9f, .84f, .68f), new Color(.2f, .23f, .28f), 3, 7, .15f),
+                Facade("FacadeStuccoWhite", new Color(.9f, .9f, .86f), new Color(.2f, .24f, .3f), 3, 8, .15f),
+                Facade("FacadeStuccoCoral", new Color(.88f, .67f, .57f), new Color(.2f, .23f, .28f), 3, 9, .15f),
+                Facade("FacadeStuccoTeal", new Color(.58f, .78f, .74f), new Color(.2f, .25f, .3f), 3, 10, .15f),
+                Lit("Roof", new Color(.5f, .5f, .48f), .1f),
+                Lit("Apron", new Color(.8f, .79f, .74f), .1f),
+            };
+            var rnd = new System.Random(305);
+            var map = new Dictionary<(int, int), Bucket>();
+            int built = 0, dropped = 0, solid = 0;
+            foreach (var b in data.items)
+            {
+                var pts = new List<Vector2>();
+                for (int i = 0; i + 1 < b.p.Length; i += 2) pts.Add(new Vector2(b.p[i], b.p[i + 1]));
+                if (pts.Count < 3 || pts.Any(q => OnRoad(q))) { dropped++; continue; }
+                float area = 0;
+                for (int i = 0; i < pts.Count; i++) { var a = pts[i]; var c = pts[(i + 1) % pts.Count]; area += a.x * c.y - c.x * a.y; }
+                if (area < 0) pts.Reverse();
+                float h = b.h > 2f ? b.h : 3.5f + (float)rnd.NextDouble() * 6f;
+                int style = h > 45f ? rnd.Next(3) + (rnd.NextDouble() < .2 ? 3 : 0) : h > 14f ? 3 + rnd.Next(3) : 6 + rnd.Next(4);
+                var mid = new Vector2(pts.Average(q => q.x), pts.Average(q => q.y));
+                var bk = Get(map, mid, 900f);
+                Walls(bk, style, pts, -0.3f, h, (float)rnd.NextDouble() * 3f);
+                Fan(bk, RoofSlot, pts, h, 8f);
+                float rad = pts.Average(q => (q - mid).magnitude);
+                Fan(bk, ApronSlot, pts.Select(q => mid + (q - mid) * (1f + 2.4f / Mathf.Max(3f, rad))).ToList(), -0.14f, 4f);
+                if (h > 30f)
+                {
+                    var core = pts.Select(q => mid + (q - mid) * .48f).ToList();
+                    float h2 = h + 3f + h * .05f;
+                    Walls(bk, style, core, h, h2, 1f);
+                    Fan(bk, RoofSlot, core, h2, 8f);
+                }
+                float minX = pts.Min(q => q.x), maxX = pts.Max(q => q.x), minZ = pts.Min(q => q.y), maxZ = pts.Max(q => q.y);
+                for (int ix = (int)(minX / 30f); ix <= (int)(maxX / 30f); ix++) for (int iz = (int)(minZ / 30f); iz <= (int)(maxZ / 30f); iz++) occupied.Add((ix, iz));
+                if (Locate(mid, out var cs, out var clat) && Mathf.Abs(clat) < 800f)
+                {
+                    var tan = p.Tangent(cs); var right = p.Right(cs); float hs = 0, hl = 0;
+                    foreach (var q in pts)
+                    {
+                        var d = new Vector3(q.x - mid.x, 0, q.y - mid.y);
+                        hs = Mathf.Max(hs, Mathf.Abs(Vector3.Dot(d, tan))); hl = Mathf.Max(hl, Mathf.Abs(Vector3.Dot(d, right)));
+                    }
+                    if (hs < 130f) { Solid(cs, clat, hs * .88f, hl * .88f, "building"); solid++; }
+                }
+                built++;
+            }
+            int chunks = Flush(map, "City", mats, SlotCount, true);
+            Debug.Log($"[FloridaSlice] buildings placed {built}, removed from roadway {dropped}, solid {solid}, chunks {chunks}");
+        }
+
+        [Serializable] class GroundRow { public float w; public float[] p; }
+        [Serializable] class GroundFile { public GroundRow[] roads; public GroundRow[] lots; }
+
+        static void BuildGroundDetail(RoutePath p, Mats m)
+        {
+            var file = $"Tools/Data/{RouteId}_ground.json";
+            if (!File.Exists(file)) { Debug.LogError("[FloridaSlice] no ground data"); return; }
+            var data = JsonUtility.FromJson<GroundFile>(File.ReadAllText(file));
+            var street = Lit("LocalStreet", new Color(.58f, .58f, .57f), .15f, "asphalt_02");
+            var line = Lit("StreetLine", new Color(.86f, .68f, .15f), .2f);
+            var stripes = new Texture2D(64, 64, TextureFormat.RGBA32, true);
+            for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+                stripes.SetPixel(x, y, (x < 3 && y > 6) ? new Color(.86f, .86f, .82f) : new Color(.3f, .3f, .3f) * (1f + (x * 7 + y * 13) % 5 * .012f));
+            stripes.Apply();
+            const string sf = Gen + "/Materials/ParkingStripes.png";
+            File.WriteAllBytes(sf, stripes.EncodeToPNG()); AssetDatabase.ImportAsset(sf);
+            var lot = Lit("ParkingLot", Color.white, .15f);
+            lot.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(sf));
+            var mats = new[] { street, line, lot };
+            var map = new Dictionary<(int, int), Bucket>();
+            int seg = 0;
+            foreach (var r in data.roads)
+                for (int i = 0; i + 3 < r.p.Length; i += 2)
+                {
+                    var a = new Vector2(r.p[i], r.p[i + 1]); var b = new Vector2(r.p[i + 2], r.p[i + 3]);
+                    if (OnRoad((a + b) / 2f, 3f)) continue;
+                    var bk = Get(map, (a + b) / 2f, 1200f);
+                    var dir = (b - a).normalized; var n = new Vector2(-dir.y, dir.x);
+                    Strip(bk, 0, a, b, n * r.w / 2f, -0.17f, r.w);
+                    if (r.w >= 10f) Strip(bk, 1, a, b, n * .09f, -0.155f, 1f);
+                    seg++;
+                }
+            foreach (var l in data.lots)
+            {
+                var pts = new List<Vector2>();
+                for (int i = 0; i + 1 < l.p.Length; i += 2) pts.Add(new Vector2(l.p[i], l.p[i + 1]));
+                if (pts.Any(q => OnRoad(q, 3f))) continue;
+                float area = 0;
+                for (int i = 0; i < pts.Count; i++) { var a = pts[i]; var c = pts[(i + 1) % pts.Count]; area += a.x * c.y - c.x * a.y; }
+                if (area < 0) pts.Reverse();
+                Fan(Get(map, pts[0], 1200f), 2, pts, -0.16f, 5.4f);
+            }
+            Flush(map, "Streets", mats, 3, false);
+            Debug.Log($"[FloridaSlice] street segments {seg}");
+        }
+
+        static void Strip(Bucket bk, int slot, Vector2 a, Vector2 b, Vector2 half, float y, float uvW)
+        {
+            var v = bk.v[slot]; var uv = bk.uv[slot]; int n = v.Count; float len = (b - a).magnitude;
+            v.Add(new Vector3(a.x - half.x, y, a.y - half.y)); v.Add(new Vector3(a.x + half.x, y, a.y + half.y));
+            v.Add(new Vector3(b.x - half.x, y, b.y - half.y)); v.Add(new Vector3(b.x + half.x, y, b.y + half.y));
+            uv.Add(new Vector2(0, 0)); uv.Add(new Vector2(uvW / 7f, 0)); uv.Add(new Vector2(0, len / 7f)); uv.Add(new Vector2(uvW / 7f, len / 7f));
+            bk.t[slot].AddRange(new[] { n, n + 1, n + 2, n + 2, n + 1, n + 3 });
+        }
+
+        static Mesh WallStrip(RoutePath p, Func<float, float> lat, float from, float to, float y0, float y1)
+        {
+            var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+            int rows = Mathf.Max(1, Mathf.CeilToInt((to - from) / 8f));
+            for (int r = 0; r <= rows; r++)
+            {
+                float s = from + (to - from) * r / rows; var c = p.Point(s, lat(s));
+                v.Add(c + Vector3.up * y0); v.Add(c + Vector3.up * y1);
+                uv.Add(new Vector2(s / 4f, 0)); uv.Add(new Vector2(s / 4f, (y1 - y0) / 4f));
+                if (r > 0) { int a = (r - 1) * 2; t.AddRange(new[] { a, a + 1, a + 2, a + 2, a + 1, a + 3 }); }
+            }
+            // The back face needs its own vertices: shared ones average opposite normals to zero and render black.
+            int front = v.Count, frontTris = t.Count;
+            v.AddRange(v.ToArray()); uv.AddRange(uv.ToArray());
+            for (int i = 0; i < frontTris; i += 3) t.AddRange(new[] { t[i] + front, t[i + 2] + front, t[i + 1] + front });
+            return Finish(v, uv, t);
+        }
+
+        static void BuildPillars(GameObject root, RoutePath p, Func<float, float> south, Mats m)
+        {
+            var g = new GameObject("Pillars"); g.transform.SetParent(root.transform);
+            int count = 0;
+            for (float s = 16f; s < p.Length; s += 32f)
+            {
+                float y = p.Center(s).y;
+                if (y < 2.4f) continue;
+                var rot = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
+                foreach (var c in new[] { 0f, south(s) })
+                {
+                    var at = p.Point(s, c); float top = y - 1.5f;
+                    Box(g.transform, new Vector3(at.x, top / 2f, at.z), rot, new Vector3(1.7f, top, 1.5f), m.concrete, "Pillar");
+                    Box(g.transform, new Vector3(at.x, y - 1.15f, at.z), rot, new Vector3(p.HalfWidth(s) * 2f + 2f, 1.1f, 1.8f), m.concrete, "Cap");
+                    count++;
+                }
+            }
+            Debug.Log("[FloridaSlice] pillars " + count);
+        }
+
+        static void BuildSoundWalls(GameObject root, RoutePath p, Func<float, float> south, Mats m)
+        {
+            var g = new GameObject("SoundWalls"); g.transform.SetParent(root.transform);
+            var panels = Textured("SoundWall", MakeConcrete("SoundWallTex", new Color(.78f, .75f, .68f), 2), .15f);
+            float start = -1; int count = 0;
+            for (float s = 0; s < p.Length; s += 10f)
+            {
+                bool on = p.HasSoundWall(s);
+                if (on && start < 0) start = s;
+                if ((!on || s + 10f >= p.Length) && start >= 0)
+                {
+                    float a = start; start = -1;
+                    Add(g, "North", WallStrip(p, q => p.HalfWidth(q) + RoutePath.SoundWallOffset, a, s, -0.3f, 5.2f), panels, true);
+                    Add(g, "South", WallStrip(p, q => south(q) - p.HalfWidth(q) - RoutePath.SoundWallOffset, a, s, -0.3f, 5.2f), panels, true);
+                    count++;
+                }
+            }
+            Debug.Log("[FloridaSlice] sound wall sections " + count);
+        }
+
+        static void LampBox(List<Vector3> v, List<int> t, Vector3 c, Vector3 size)
+        {
+            int n = v.Count;
+            for (int i = 0; i < 8; i++) v.Add(c + new Vector3((i & 1) == 0 ? -size.x : size.x, (i & 2) == 0 ? -size.y : size.y, (i & 4) == 0 ? -size.z : size.z) * .5f);
+            int[] q = { 0, 2, 1, 1, 2, 3, 4, 5, 6, 5, 7, 6, 0, 1, 4, 1, 5, 4, 2, 6, 3, 3, 6, 7, 0, 4, 2, 2, 4, 6, 1, 3, 5, 3, 7, 5 };
+            foreach (var i in q) t.Add(n + i);
+        }
+
+        // Twin-arm lights standing on the concrete median, as on urban stretches of I-95.
+        static void BuildLamps(RoutePath p)
+        {
+            var v = new List<Vector3>(); var t = new List<int>();
+            Cone(v, t, Vector3.zero, .13f, .08f, 12.5f, 8);
+            LampBox(v, t, new Vector3(1.7f, 12.5f, 0), new Vector3(3.4f, .09f, .09f));
+            LampBox(v, t, new Vector3(-1.7f, 12.5f, 0), new Vector3(3.4f, .09f, .09f));
+            LampBox(v, t, new Vector3(3.5f, 12.42f, 0), new Vector3(.75f, .13f, .32f));
+            LampBox(v, t, new Vector3(-3.5f, 12.42f, 0), new Vector3(.75f, .13f, .32f));
+            var mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
+            mesh.SetVertices(v); mesh.SetTriangles(t, 0); mesh.RecalculateNormals(); mesh.RecalculateBounds();
+            var file = Gen + "/Meshes/StreetLamp.asset";
+            AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(mesh, file);
+            var mat = Lit("LampSteel", new Color(.47f, .49f, .5f), .45f); mat.enableInstancing = true;
+            var g = new GameObject("StreetLamps");
+            int count = 0;
+            for (float s = 40f; s < p.Length - 30f; s += 75f)
+            {
+                var go = new GameObject("Lamp", typeof(MeshFilter), typeof(MeshRenderer));
+                go.transform.SetParent(g.transform);
+                go.transform.position = p.Point(s, -p.HalfWidth(s) - RoutePath.BarrierLeft) + Vector3.up * .7f;
+                go.transform.rotation = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
+                go.GetComponent<MeshFilter>().sharedMesh = mesh;
+                go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+                count++;
+            }
+            Debug.Log("[FloridaSlice] street lamps " + count);
+        }
+
         static void BuildTrees(RoutePath p, Func<float, float> south)
         {
-            var bark = Lit("Bark", new Color(.33f, .26f, .19f), .1f); bark.enableInstancing = true;
-            var pineLeaf = Lit("PineLeaf", new Color(.09f, .23f, .1f), .08f); pineLeaf.enableInstancing = true;
-            var palmLeaf = Lit("PalmLeaf", new Color(.2f, .42f, .13f), .12f); palmLeaf.enableInstancing = true;
-            var palmMesh = TreeMesh(true); var pineMesh = TreeMesh(false);
+            var bark = Lit("PalmBark", new Color(.56f, .49f, .39f), .1f); bark.enableInstancing = true;
+            var frond = FrondMaterial();
+            var palms = new[] { PalmMesh(0), PalmMesh(1), PalmMesh(2) };
+            var dome = new List<Vector3>(); var domeT = new List<int>();
+            Cone(dome, domeT, Vector3.zero, .95f, .55f, .55f, 7); Cone(dome, domeT, Vector3.up * .55f, .55f, .04f, .4f, 7);
+            var shrubMesh = new Mesh(); shrubMesh.SetVertices(dome); shrubMesh.SetTriangles(domeT, 0); shrubMesh.RecalculateNormals(); shrubMesh.RecalculateBounds();
+            AssetDatabase.DeleteAsset(Gen + "/Meshes/Shrub.asset"); AssetDatabase.CreateAsset(shrubMesh, Gen + "/Meshes/Shrub.asset");
+            var shrubMat = Lit("Shrub", new Color(.13f, .36f, .13f), .12f); shrubMat.enableInstancing = true;
             var g = new GameObject("Trees");
             var rnd = new System.Random(95);
-            const int count = 1400;
+            const int count = 2200;
             float gap = p.Length / count;
             for (int i = 0; i < count; i++)
             {
-                float s = (i + (float)rnd.NextDouble()) * gap, off = 22f + (float)rnd.NextDouble() * 170f;
-                bool right = rnd.NextDouble() < .55, palm = rnd.NextDouble() < .42;
+                float s = (i + (float)rnd.NextDouble()) * gap, off = 12f + (float)(rnd.NextDouble() * rnd.NextDouble()) * 190f;
+                bool right = rnd.NextDouble() < .55;
                 float lat = right ? p.HalfWidth(s) + off : south(s) - p.HalfWidth(s) - off;
-                var t = new GameObject(palm ? "Palm" : "Pine", typeof(MeshFilter), typeof(MeshRenderer));
+                var spot = p.Point(s, lat);
+                if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) || OnRoad(new Vector2(spot.x, spot.z), 11f)) continue;
+                var t = new GameObject("Palm", typeof(MeshFilter), typeof(MeshRenderer));
                 t.transform.SetParent(g.transform);
-                t.transform.position = p.Point(s, lat) - Vector3.up * .25f;
+                t.transform.position = new Vector3(spot.x, -.25f, spot.z);
                 t.transform.rotation = Quaternion.Euler(0, (float)rnd.NextDouble() * 360f, 0);
-                t.transform.localScale = Vector3.one * (.8f + (float)rnd.NextDouble() * .5f);
-                t.GetComponent<MeshFilter>().sharedMesh = palm ? palmMesh : pineMesh;
-                t.GetComponent<MeshRenderer>().sharedMaterials = new[] { bark, palm ? palmLeaf : pineLeaf };
+                t.transform.localScale = Vector3.one * (.85f + (float)rnd.NextDouble() * .55f);
+                t.GetComponent<MeshFilter>().sharedMesh = palms[rnd.Next(3)];
+                t.GetComponent<MeshRenderer>().sharedMaterials = new[] { bark, frond };
                 Solid(s, lat, 0.3f, 0.3f, "tree");
+            }
+            var sg = new GameObject("Shrubs");
+            for (int i = 0; i < 2600; i++)
+            {
+                float s = (float)rnd.NextDouble() * p.Length, off = 10f + (float)rnd.NextDouble() * 45f;
+                bool right = rnd.NextDouble() < .5;
+                float lat = right ? p.HalfWidth(s) + off : south(s) - p.HalfWidth(s) - off;
+                var spot = p.Point(s, lat);
+                if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) || OnRoad(new Vector2(spot.x, spot.z), 9f)) continue;
+                var t = new GameObject("Shrub", typeof(MeshFilter), typeof(MeshRenderer));
+                t.transform.SetParent(sg.transform);
+                t.transform.position = new Vector3(spot.x, -.25f, spot.z);
+                t.transform.localScale = new Vector3(1f + (float)rnd.NextDouble() * 1.8f, .8f + (float)rnd.NextDouble() * .9f, 1f + (float)rnd.NextDouble() * 1.8f);
+                t.GetComponent<MeshFilter>().sharedMesh = shrubMesh;
+                var r = t.GetComponent<MeshRenderer>(); r.sharedMaterial = shrubMat; r.shadowCastingMode = ShadowCastingMode.Off;
             }
         }
 
@@ -439,6 +913,7 @@ namespace SurviveI95.EditorTools
             var root = new GameObject("PlayerCar");
             var player = root.AddComponent<PlayerCar>();
             player.chaseCamera = cam;
+            player.routeId = RouteId;
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(CarPath);
             if (model == null) { Debug.LogError("[FloridaSlice] car model missing"); return player; }
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(model);

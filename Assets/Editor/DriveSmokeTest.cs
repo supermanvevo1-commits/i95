@@ -12,7 +12,7 @@ namespace SurviveI95.EditorTools
 
         public static void Run()
         {
-            var path = RoutePath.Load("florida_jupiter");
+            var path = RoutePath.Load(FloridaSliceBuilder.RouteId);
             foreach (var id in new[] { "sedan", "muscle", "pickup" }) Bench(path, id);
         }
 

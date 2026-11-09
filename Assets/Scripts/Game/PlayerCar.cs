@@ -15,6 +15,8 @@ namespace SurviveI95.Game
         public Material smokeMaterial;
         /// <summary>Test view from in front of the car, for inspecting crash damage.</summary>
         public bool FrontView;
+        /// <summary>Test view from high above, for inspecting the surroundings.</summary>
+        public float TopView;
         public float cameraBack = 6.6f, cameraUp = 2.25f;
 
         /// <summary>When set, replaces the keyboard. Used by automated play tests.</summary>
@@ -364,7 +366,7 @@ namespace SurviveI95.Game
         float GroundDrop(float s, float lateral)
         {
             float half = Path.HalfWidth(s);
-            float southCenter = -(2f * half + 26f);
+            float southCenter = -(2f * half + RoutePath.MedianGap);
             float north = lateral > 0 ? lateral - (half + 3.05f) : -lateral - (half + 1.3f);
             float south = lateral > southCenter ? (lateral - southCenter) - (half + 3.05f) : (southCenter - lateral) - (half + 1.3f);
             float beyond = Mathf.Min(north, south);
@@ -373,7 +375,9 @@ namespace SurviveI95.Game
 
         void Pose(float s, float lateral, float theta)
         {
-            transform.position = Path.Point(s, lateral) + Vector3.down * GroundDrop(s, lateral);
+            var spot = Path.Point(s, lateral);
+            spot.y = Mathf.Lerp(spot.y, -0.25f, GroundDrop(s, lateral) / 0.25f);
+            transform.position = spot;
             var tan = Path.Tangent(s);
             transform.rotation = Quaternion.LookRotation(tan, Vector3.up) * Quaternion.Euler(0, theta * Mathf.Rad2Deg, 0);
         }
@@ -397,7 +401,6 @@ namespace SurviveI95.Game
             if (on) { lookYaw = 0; lookPitch = 0; mouseSettle = 0.3f; }
             if (chaseCamera != null) chaseCamera.nearClipPlane = on ? 0.04f : 0.3f;
             EnsureCabinLight();
-            if (mirrors != null) mirrors.SetActive(on);
             if (Application.isPlaying) { Cursor.lockState = on ? CursorLockMode.Locked : CursorLockMode.None; Cursor.visible = !on; }
             SnapCamera();
         }
@@ -416,6 +419,12 @@ namespace SurviveI95.Game
 
         void ApplyCamera()
         {
+            if (TopView > 0f)
+            {
+                chaseCamera.transform.position = transform.position - transform.forward * TopView * .9f + Vector3.up * TopView;
+                chaseCamera.transform.rotation = Quaternion.LookRotation(transform.position + transform.forward * TopView * .25f - chaseCamera.transform.position);
+                return;
+            }
             if (FrontView)
             {
                 chaseCamera.transform.position = transform.position + transform.forward * 7.2f + transform.right * 2.6f + Vector3.up * 1.5f;

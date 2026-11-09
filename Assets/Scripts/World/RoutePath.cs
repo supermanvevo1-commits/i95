@@ -24,6 +24,7 @@ namespace SurviveI95.World
         public RouteFile File { get; }
         /// <summary>Solid roadside objects, sorted by distance along the road.</summary>
         public RouteObstacle[] Obstacles { get; private set; } = new RouteObstacle[0];
+        public float MaxObstacleHalfS { get; private set; }
         public float Length => (pos.Length - 1) * Step;
 
         public RoutePath(RouteFile file)
@@ -43,6 +44,13 @@ namespace SurviveI95.World
                 raw[i] = Vector3.Lerp(new Vector3(a.x, a.y, a.z), new Vector3(b.x, b.y, b.z), t);
                 rawLanes[i] = t < 0.5f ? a.lanes : b.lanes;
                 rawBridge[i] = a.bridge > 0 && b.bridge > 0 ? 1 : 0;
+            }
+            // Short bridge records in the map belong to one continuous viaduct, so join them before adding height.
+            for (int i = 0; i < n; i++)
+            {
+                bool deck = false;
+                for (int j = Mathf.Max(0, i - 45); j <= Mathf.Min(n - 1, i + 45) && !deck; j++) deck = rawBridge[j] > 0.5f;
+                if (deck) raw[i].y += DeckRise;
             }
             // Map vertices are coarse; average them so curves flow and terrain noise disappears.
             var xz = Average(Average(raw, 14), 14);
@@ -99,10 +107,18 @@ namespace SurviveI95.World
         public bool IsBridge(float s) { int i = Index(s, out _); return bridge[i] > 0.5f; }
 
         /// <summary>Barrier offsets measured outward from the lane edges.</summary>
-        public const float BarrierLeft = 2.2f, BarrierRight = 4.0f;
+        public const float BarrierLeft = 2.2f, BarrierRight = 4.0f, MedianGap = 6f, DeckRise = 9f, SoundWallOffset = 7.5f;
+        /// <summary>Sound walls run in long sections, with gaps at structures and interchanges.</summary>
+        public bool HasSoundWall(float s)
+        {
+            if (IsBridge(s) || Center(s).y > 1.5f || (int)(s / 1200f) % 3 == 0) return false;
+            foreach (var e in File.exits) if (Mathf.Abs(e.s - s) < 430f) return false;
+            return true;
+        }
+
         public bool HasBarrier(float s)
         {
-            if (IsBridge(s)) return true;
+            if (IsBridge(s) || Center(s).y > 1.5f) return true;
             foreach (var o in File.overpasses) if (Mathf.Abs(o.s - s) < 90f) return true;
             return false;
         }
@@ -121,6 +137,7 @@ namespace SurviveI95.World
             var path = new RoutePath(JsonUtility.FromJson<RouteFile>(asset.text));
             var solids = Resources.Load<TextAsset>("Data/Routes/" + id + "_obstacles");
             if (solids != null) path.Obstacles = JsonUtility.FromJson<RouteObstacleFile>(solids.text).items;
+            foreach (var o in path.Obstacles) path.MaxObstacleHalfS = Mathf.Max(path.MaxObstacleHalfS, o.halfS);
             return path;
         }
     }

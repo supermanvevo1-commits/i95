@@ -16,7 +16,7 @@ namespace SurviveI95.Game
                 Make("Mirror_R", 256, 256, -12f, 0.5f, null),
                 Make("Mirror_Rear", 512, 192, 0f, 0.2f, new Vector3(0, 1.1f, -2.45f)),
             };
-            SetActive(false);
+            SetActive(true);
         }
 
         Camera Make(string part, int w, int h, float yaw, float near, Vector3? position)
