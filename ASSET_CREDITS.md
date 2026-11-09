@@ -1,0 +1,47 @@
+# Asset credits
+
+- asphalt_02 (texture), Poly Haven, CC0, https://polyhaven.com/a/asphalt_02
+- worn_asphalt (texture), Poly Haven, CC0, https://polyhaven.com/a/worn_asphalt
+- road_damaged (texture), Poly Haven, CC0, https://polyhaven.com/a/road_damaged
+- gravel_road (texture), Poly Haven, CC0, https://polyhaven.com/a/gravel_road
+- asphalt_snow (texture), Poly Haven, CC0, https://polyhaven.com/a/asphalt_snow
+- derelict_highway_noon (HDRI), Poly Haven, CC0, https://polyhaven.com/a/derelict_highway_noon
+- evening_road_01 (HDRI), Poly Haven, CC0, https://polyhaven.com/a/evening_road_01
+- citrus_orchard_road_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/citrus_orchard_road_puresky
+- autumn_field_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/autumn_field_puresky
+- concrete_road_barrier (model), Poly Haven, CC0, https://polyhaven.com/a/concrete_road_barrier
+- street_lamp_01 (model), Poly Haven, CC0, https://polyhaven.com/a/street_lamp_01
+- pine_tree_01 (model), Poly Haven, CC0, https://polyhaven.com/a/pine_tree_01
+- grass_medium_01 (model), Poly Haven, CC0, https://polyhaven.com/a/grass_medium_01
+- "Negotiator '80 - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-892b2684fb37442299bfad9222cf331c
+- "Generic passenger car pack" by Comrade1280, CC BY 4.0, https://sketchfab.com/3d-models/none-20f9af9b8a404d5cb022ac6fe87f21f5
+- "Ace '11 - Low Poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-055ff8a21b8d4d279debca089e2fafcd
+- "Fairheaven SW '84 - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-aa0becb6e854422596cac6b21bf79787
+- "Sigil '07 - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-22abe5284d4c4b55920b8462eb24a8c1
+- "Lightbody Lifted '85 - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-67beae18c3d24be68f9c8f0ec382d8e3
+- "Conquer '89 Pickup - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-6c48c94be8974dc7a5932f697c0ba68f
+- "Illinois '90 Taxi #1 - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-72d91f4bce814818b3cd1f2de60f8ef2
+- "Semi Truck Baked" by 3DE_Study, CC BY 4.0, https://sketchfab.com/3d-models/none-3e8c5275aeab487fa37d227ce0bd1a9a
+- "LCT 3000 '07- Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-3be03b6a43aa41898c9ca806b8787052
+- "Shvan '92 - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-09d718c9cf72401b8534d265a06a803f
+- "Gas Tanker" by Unknown Canadian, CC BY 4.0, https://sketchfab.com/3d-models/none-055c6431cdaa440f85e2ac588c4a5ea8
+- "Shvan 92 Traveller - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-c5134fcf8d2944b4b8800ec46fa02e17
+- "Boat Trailer" by BoatUS Foundation, CC BY 4.0, https://sketchfab.com/3d-models/none-594ef36c27924dcaa677781c756fbc7c
+- "Low-Poly Motorcycle LiFanV16" by MadCatD, CC BY 4.0, https://sketchfab.com/3d-models/none-a6c86b5f47ba46c4afee74a23e704af4
+- "Cafe Racer" by Andrei Milin, CC BY 4.0, https://sketchfab.com/3d-models/none-c02dec85ac0541b8ab6dd56098706b50
+- "Fairheaven LT '80 Cop Cruiser - Low poly model" by Daniel Zhabotinsky, CC BY 4.0, https://sketchfab.com/3d-models/none-61766c1e6e1e4b2b803c174f33433a74
+- "Toyota Camry 40" by Ford mondeo, CC BY 4.0, https://sketchfab.com/3d-models/none-560c174d073f4a10bb153ded41ada8c9
+- "2014 Toyota Corolla E180 EU (with interior)" by Armored Wave, CC BY 4.0, https://sketchfab.com/3d-models/none-36f95efb0585464cae43a25a3b3392e8
+- "Mitsubishi Lancer Evolution IX" by Benit Kibabu, CC BY 4.0, https://sketchfab.com/3d-models/none-ee88ad9414884bdabaf0658943ac339b
+- "Nissan Altima" by SalDev73, CC BY 4.0, https://sketchfab.com/3d-models/none-b0e2cab3e44b4784bb89489d4782954f
+- "2017 Honda Civic Si custom" by Socksthecat, CC BY 4.0, https://sketchfab.com/3d-models/none-7cfbf41c94fc4f8a988ab441af702722
+- "2001 Crown Victoria Taxi Game Prop" by 8sianDude, CC BY 4.0, https://sketchfab.com/3d-models/none-2429a825ff1646568e8e6e1453f9c501
+- "Dodge Charger Police NYPD" by David_Holiday, CC BY 4.0, https://sketchfab.com/3d-models/none-578e2bfb9c8f415d932527a938e2fc64
+- "2018 Ford F-150 Raptor" by Galaxy Car Showroom, CC BY 4.0, https://sketchfab.com/3d-models/none-096aa1ba46984eeeb196b75f4d213a0a
+- "2009 Toyota Rav4" by Nieve5677, CC BY 4.0, https://sketchfab.com/3d-models/none-1ea8ca4618dc4742b60dc0a69022bcc3
+- "Chevrolet Tahoe 2007" by David_Holiday, CC BY 4.0, https://sketchfab.com/3d-models/none-a11d407e141b4a88b2a424060075e357
+- "3D Scanned Toyota Sienna (2006) [Free]" by agent, CC BY 4.0, https://sketchfab.com/3d-models/none-2aea96055cf24a818559b92c7e55ba81
+- "2001 Crown Victoria Police Interceptor Game Prop" by 8sianDude, CC BY 4.0, https://sketchfab.com/3d-models/none-9f30d360cee343efb5a441978ddb57bd
+- grass_ground (texture), Poly Haven, CC0, https://polyhaven.com/a/grass_ground
+- brushed_concrete (texture), Poly Haven, CC0, https://polyhaven.com/a/brushed_concrete
+- Road geometry: OpenStreetMap contributors, ODbL. Elevation: USGS 3DEP, public domain.

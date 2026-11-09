@@ -1,0 +1,45 @@
+{
+  "chapters": [
+    { "id": "florida", "name": "Florida", "note": "RVs, boats, convertibles, retirees and sport bikes.", "mix": [
+      {"id":"sedan","weight":20},{"id":"coupe","weight":4},{"id":"hatchback","weight":5},{"id":"convertible","weight":7},{"id":"station_wagon","weight":1},{"id":"luxury","weight":7},
+      {"id":"pickup","weight":8},{"id":"suv","weight":14},{"id":"minivan","weight":4},{"id":"taxi","weight":1},
+      {"id":"semi","weight":8},{"id":"box_truck","weight":3},{"id":"delivery_van","weight":4},{"id":"tanker_gasoline","weight":2},{"id":"tanker_diesel","weight":1},
+      {"id":"motorhome","weight":6},{"id":"fifth_wheel","weight":3},{"id":"suv_boat","weight":6},{"id":"motorcycle_cruiser","weight":3},{"id":"motorcycle_sport","weight":3}
+    ]},
+    { "id": "georgia", "name": "Georgia", "note": "Pickups and port freight out of Savannah.", "mix": [
+      {"id":"sedan","weight":18},{"id":"coupe","weight":3},{"id":"hatchback","weight":3},{"id":"convertible","weight":1},{"id":"station_wagon","weight":1},{"id":"luxury","weight":3},
+      {"id":"pickup","weight":17},{"id":"suv","weight":14},{"id":"minivan","weight":5},
+      {"id":"semi","weight":18},{"id":"box_truck","weight":5},{"id":"delivery_van","weight":3},{"id":"tanker_gasoline","weight":3},{"id":"tanker_diesel","weight":2},
+      {"id":"motorhome","weight":3},{"id":"fifth_wheel","weight":3},{"id":"suv_boat","weight":2},{"id":"motorcycle_cruiser","weight":3},{"id":"motorcycle_sport","weight":1}
+    ]},
+    { "id": "carolinas", "name": "The Carolinas", "note": "Beach-bound towing, pickups and long-haul trucks.", "mix": [
+      {"id":"sedan","weight":19},{"id":"coupe","weight":3},{"id":"hatchback","weight":4},{"id":"convertible","weight":2},{"id":"station_wagon","weight":1},{"id":"luxury","weight":3},
+      {"id":"pickup","weight":15},{"id":"suv","weight":14},{"id":"minivan","weight":6},
+      {"id":"semi","weight":16},{"id":"box_truck","weight":4},{"id":"delivery_van","weight":3},{"id":"tanker_gasoline","weight":2},{"id":"tanker_diesel","weight":2},
+      {"id":"motorhome","weight":5},{"id":"fifth_wheel","weight":4},{"id":"suv_boat","weight":4},{"id":"motorcycle_cruiser","weight":4},{"id":"motorcycle_sport","weight":1}
+    ]},
+    { "id": "virginia", "name": "Virginia", "note": "Commuters, government fleets and freight.", "mix": [
+      {"id":"sedan","weight":26},{"id":"coupe","weight":3},{"id":"hatchback","weight":5},{"id":"convertible","weight":1},{"id":"station_wagon","weight":2},{"id":"luxury","weight":5},
+      {"id":"pickup","weight":9},{"id":"suv","weight":17},{"id":"minivan","weight":6},
+      {"id":"semi","weight":14},{"id":"box_truck","weight":4},{"id":"delivery_van","weight":4},{"id":"tanker_gasoline","weight":2},{"id":"tanker_diesel","weight":1},
+      {"id":"motorhome","weight":2},{"id":"fifth_wheel","weight":1},{"id":"suv_boat","weight":1},{"id":"motorcycle_cruiser","weight":2},{"id":"motorcycle_sport","weight":1}
+    ]},
+    { "id": "dc_md_de", "name": "DC / Maryland / Delaware", "note": "Luxury commuters and heavy urban delivery.", "mix": [
+      {"id":"sedan","weight":27},{"id":"coupe","weight":3},{"id":"hatchback","weight":6},{"id":"convertible","weight":1},{"id":"station_wagon","weight":2},{"id":"luxury","weight":10},
+      {"id":"pickup","weight":5},{"id":"suv","weight":17},{"id":"minivan","weight":4},{"id":"taxi","weight":3},
+      {"id":"semi","weight":10},{"id":"box_truck","weight":5},{"id":"delivery_van","weight":7},{"id":"tanker_gasoline","weight":2},{"id":"tanker_diesel","weight":1},
+      {"id":"motorhome","weight":1},{"id":"suv_boat","weight":1},{"id":"motorcycle_cruiser","weight":1},{"id":"motorcycle_sport","weight":2}
+    ]},
+    { "id": "nj_nyc", "name": "New Jersey / NYC", "note": "Taxis, vans, tankers near the refineries, peak chaos.", "mix": [
+      {"id":"sedan","weight":25},{"id":"coupe","weight":4},{"id":"hatchback","weight":5},{"id":"convertible","weight":1},{"id":"station_wagon","weight":1},{"id":"luxury","weight":9},
+      {"id":"pickup","weight":4},{"id":"suv","weight":15},{"id":"minivan","weight":3},{"id":"taxi","weight":9},
+      {"id":"semi","weight":10},{"id":"box_truck","weight":7},{"id":"delivery_van","weight":10},{"id":"tanker_gasoline","weight":4},{"id":"tanker_diesel","weight":2},
+      {"id":"motorcycle_cruiser","weight":1},{"id":"motorcycle_sport","weight":3}
+    ]},
+    { "id": "new_england", "name": "New England", "note": "Wagons, hatchbacks, SUVs; few bikes in the snow.", "mix": [
+      {"id":"sedan","weight":20},{"id":"coupe","weight":2},{"id":"hatchback","weight":10},{"id":"station_wagon","weight":8},{"id":"luxury","weight":5},
+      {"id":"pickup","weight":11},{"id":"suv","weight":21},{"id":"minivan","weight":4},{"id":"taxi","weight":1},
+      {"id":"semi","weight":10},{"id":"box_truck","weight":3},{"id":"delivery_van","weight":3},{"id":"tanker_gasoline","weight":1},{"id":"tanker_diesel","weight":2}
+    ]}
+  ]
+}

@@ -1,0 +1,23 @@
+# Unity generated
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+*.csproj
+*.sln
+*.slnx
+.vs/
+.vscode/
+
+# Large third-party assets. Restore with Tools/fetch_assets.js
+/Tools/Downloads/
+/Assets/ThirdParty/
+/Assets/ThirdParty.meta
+
+# Rebuild with menu: Survive I-95 > Build Florida Slice
+/Assets/Generated/
+/Assets/Generated.meta

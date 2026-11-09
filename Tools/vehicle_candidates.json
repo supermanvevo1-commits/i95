@@ -1,0 +1,2805 @@
+{
+  "sedan": [
+    {
+      "name": "City",
+      "uid": "1f50f0d6ec5a493d8e91d7db1106b324",
+      "url": "https://sketchfab.com/3d-models/none-1f50f0d6ec5a493d8e91d7db1106b324",
+      "author": "SpatialNeglect",
+      "license": "by",
+      "faces": 80408,
+      "likes": 3071,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Generic passenger car pack",
+      "uid": "20f9af9b8a404d5cb022ac6fe87f21f5",
+      "url": "https://sketchfab.com/3d-models/none-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 69312,
+      "likes": 2280,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fairheaven LT '80 Cop Cruiser - Low poly model",
+      "uid": "61766c1e6e1e4b2b803c174f33433a74",
+      "url": "https://sketchfab.com/3d-models/none-61766c1e6e1e4b2b803c174f33433a74",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19505,
+      "likes": 1876,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Oldsmobile Cutlass Supreme Sedan '71",
+      "uid": "78f76d386a4341b0b71745bdc50fd5ab",
+      "url": "https://sketchfab.com/3d-models/none-78f76d386a4341b0b71745bdc50fd5ab",
+      "author": "Barbo",
+      "license": "by",
+      "faces": 70258,
+      "likes": 1491,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Burned Police Cars",
+      "uid": "ad16f7085cb047b494997cf9efed5059",
+      "url": "https://sketchfab.com/3d-models/none-ad16f7085cb047b494997cf9efed5059",
+      "author": "Renafox",
+      "license": "by",
+      "faces": 21578,
+      "likes": 1413,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Generic civil service vehicles pack",
+      "uid": "8ff2a13f30914932a70c7950cfa58465",
+      "url": "https://sketchfab.com/3d-models/none-8ff2a13f30914932a70c7950cfa58465",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 92709,
+      "likes": 1183,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fairheaven LT '80 - Low poly model",
+      "uid": "e2678da920cc4be68dbc193727919ffb",
+      "url": "https://sketchfab.com/3d-models/none-e2678da920cc4be68dbc193727919ffb",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19709,
+      "likes": 1007,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Cadillac 75 Sedan 1953",
+      "uid": "2935f8faa5f64ce4a3bd65af0f925c21",
+      "url": "https://sketchfab.com/3d-models/none-2935f8faa5f64ce4a3bd65af0f925c21",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 14663,
+      "likes": 972,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Negotiator '80 - Low poly model",
+      "uid": "892b2684fb37442299bfad9222cf331c",
+      "url": "https://sketchfab.com/3d-models/none-892b2684fb37442299bfad9222cf331c",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19747,
+      "likes": 911,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Fairheaven SW '84 - Low poly model",
+      "uid": "aa0becb6e854422596cac6b21bf79787",
+      "url": "https://sketchfab.com/3d-models/none-aa0becb6e854422596cac6b21bf79787",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19461,
+      "likes": 863,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Dirty Car - Cadillac 75 Sedan 1953",
+      "uid": "e08f2486cc0c49a7a2102561fb9b3377",
+      "url": "https://sketchfab.com/3d-models/none-e08f2486cc0c49a7a2102561fb9b3377",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 14663,
+      "likes": 797,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Kiri '86 - Low poly model",
+      "uid": "5c17c582ef9549798f694b660feea42a",
+      "url": "https://sketchfab.com/3d-models/none-5c17c582ef9549798f694b660feea42a",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 20319,
+      "likes": 786,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Canyon '75 Taxi - Low poly model",
+      "uid": "9e8f92a215784f3d8aaaaeab1bef54c4",
+      "url": "https://sketchfab.com/3d-models/none-9e8f92a215784f3d8aaaaeab1bef54c4",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 20037,
+      "likes": 759,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sedan car covered with a gray car cloth 3D scan",
+      "uid": "5818270ead0649498ab6120604b19f7f",
+      "url": "https://sketchfab.com/3d-models/none-5818270ead0649498ab6120604b19f7f",
+      "author": "Alben Tan",
+      "license": "by",
+      "faces": 36313,
+      "likes": 667,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Chrysler Saratoga 1960",
+      "uid": "3fa89e6bf78b49aab111af4195efb6fe",
+      "url": "https://sketchfab.com/3d-models/none-3fa89e6bf78b49aab111af4195efb6fe",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 17764,
+      "likes": 1182,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "BMW E34 [stance style]",
+      "uid": "ffe1a3a1bcb34e0bb80f1aa41c9edb46",
+      "url": "https://sketchfab.com/3d-models/none-ffe1a3a1bcb34e0bb80f1aa41c9edb46",
+      "author": "Myedsu",
+      "license": "by",
+      "faces": 128586,
+      "likes": 909,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - BMW E30 1985 White",
+      "uid": "9dea494b447e442fafbddfc7eccbf158",
+      "url": "https://sketchfab.com/3d-models/none-9dea494b447e442fafbddfc7eccbf158",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 13076,
+      "likes": 802,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "coupe": [
+    {
+      "name": "Generic passenger car pack",
+      "uid": "20f9af9b8a404d5cb022ac6fe87f21f5",
+      "url": "https://sketchfab.com/3d-models/none-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 69312,
+      "likes": 2280,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Coupe '33 Hot Rod #2 - Low poly model",
+      "uid": "c880d700b7ec445ea9718e1b73f97e3e",
+      "url": "https://sketchfab.com/3d-models/none-c880d700b7ec445ea9718e1b73f97e3e",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18294,
+      "likes": 494,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Aston Martin db11",
+      "uid": "0ce56f01b1ff40b3a4e36bc56873dbc7",
+      "url": "https://sketchfab.com/3d-models/none-0ce56f01b1ff40b3a4e36bc56873dbc7",
+      "author": "Black Snow",
+      "license": "by",
+      "faces": 218007,
+      "likes": 449,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Coupe '33 Hotrod #1 - Low poly model",
+      "uid": "1f00f875bd594469ad41e377585dc0fc",
+      "url": "https://sketchfab.com/3d-models/none-1f00f875bd594469ad41e377585dc0fc",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 17573,
+      "likes": 437,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Mazda RX-7 FC",
+      "uid": "8ac0df459f514950ab83ac37109a06ab",
+      "url": "https://sketchfab.com/3d-models/none-8ac0df459f514950ab83ac37109a06ab",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 40928,
+      "likes": 419,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Mazda RX-7 FC3S (\"Akagi's White Comet\") [remake]",
+      "uid": "de2dd3c49fc8467aa8af0ec934a40c15",
+      "url": "https://sketchfab.com/3d-models/none-de2dd3c49fc8467aa8af0ec934a40c15",
+      "author": "Myedsu",
+      "license": "by",
+      "faces": 146009,
+      "likes": 365,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - De Tomaso P72 2020",
+      "uid": "ab85c302e652492196b600ee1eb7106a",
+      "url": "https://sketchfab.com/3d-models/none-ab85c302e652492196b600ee1eb7106a",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 21496,
+      "likes": 350,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "54 Vehicle Pack",
+      "uid": "10575d5318f244e5987d45239dbc6247",
+      "url": "https://sketchfab.com/3d-models/none-10575d5318f244e5987d45239dbc6247",
+      "author": "[Aaron]",
+      "license": "by",
+      "faces": 52849,
+      "likes": 308,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Porsche 911 (930) Turbo 1975",
+      "uid": "de1ffd344c41481892511f7fd332c136",
+      "url": "https://sketchfab.com/3d-models/none-de1ffd344c41481892511f7fd332c136",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 61232,
+      "likes": 1411,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Mercedes-Benz 300 SL Gullwing",
+      "uid": "505241c829c540a4921533000736904e",
+      "url": "https://sketchfab.com/3d-models/none-505241c829c540a4921533000736904e",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 96160,
+      "likes": 1003,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - BMW E30 1985 White",
+      "uid": "9dea494b447e442fafbddfc7eccbf158",
+      "url": "https://sketchfab.com/3d-models/none-9dea494b447e442fafbddfc7eccbf158",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 13076,
+      "likes": 802,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Honda NSX 1990",
+      "uid": "1cc15628a00a4739a6b6c01128927c8d",
+      "url": "https://sketchfab.com/3d-models/none-1cc15628a00a4739a6b6c01128927c8d",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 101006,
+      "likes": 749,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Nissan Skyline GT-R C110 Kenmeri '73",
+      "uid": "1a950b81ee274a0eb8014bd84ba047f5",
+      "url": "https://sketchfab.com/3d-models/none-1a950b81ee274a0eb8014bd84ba047f5",
+      "author": "Martin Trafas",
+      "license": "by",
+      "faces": 290990,
+      "likes": 694,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Toyota Corolla Levin AE92 GT APEX Kouki",
+      "uid": "66dcbaf822ae47468655a604a83af703",
+      "url": "https://sketchfab.com/3d-models/none-66dcbaf822ae47468655a604a83af703",
+      "author": "Nix_Dektara",
+      "license": "by",
+      "faces": 253622,
+      "likes": 511,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Nissan 200SX Silvia S14",
+      "uid": "f2a917a924734a89a020e7f970e55e7c",
+      "url": "https://sketchfab.com/3d-models/none-f2a917a924734a89a020e7f970e55e7c",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 18231,
+      "likes": 359,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Nissan Z Proto",
+      "uid": "db9a5f7ae9d84a0fb01cac96afe3e69c",
+      "url": "https://sketchfab.com/3d-models/none-db9a5f7ae9d84a0fb01cac96afe3e69c",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 67294,
+      "likes": 350,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "hatchback": [
+    {
+      "name": "Generic passenger car pack",
+      "uid": "20f9af9b8a404d5cb022ac6fe87f21f5",
+      "url": "https://sketchfab.com/3d-models/none-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 69312,
+      "likes": 2280,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Cadillac 75 Sedan 1953",
+      "uid": "2935f8faa5f64ce4a3bd65af0f925c21",
+      "url": "https://sketchfab.com/3d-models/none-2935f8faa5f64ce4a3bd65af0f925c21",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 14663,
+      "likes": 972,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Lasley '67 - Low poly model",
+      "uid": "1269720ec7b84c899eac77c1d325141e",
+      "url": "https://sketchfab.com/3d-models/none-1269720ec7b84c899eac77c1d325141e",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 21050,
+      "likes": 500,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly cars pack",
+      "uid": "1d942e1a2f564690a5d703fdc08657b3",
+      "url": "https://sketchfab.com/3d-models/none-1d942e1a2f564690a5d703fdc08657b3",
+      "author": "matisosanimation",
+      "license": "by",
+      "faces": 109358,
+      "likes": 372,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Milano '95 - Low poly model",
+      "uid": "122a22d210234596ad23623588d0d166",
+      "url": "https://sketchfab.com/3d-models/none-122a22d210234596ad23623588d0d166",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18064,
+      "likes": 354,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Low Poly Vehicles Pack",
+      "uid": "cb7640039e7a40679a53be705ebff50e",
+      "url": "https://sketchfab.com/3d-models/none-cb7640039e7a40679a53be705ebff50e",
+      "author": "RgsDev",
+      "license": "by",
+      "faces": 39644,
+      "likes": 296,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Asti Stradale '89 - Low poly model",
+      "uid": "97b15b067111443ebe05840137b49c65",
+      "url": "https://sketchfab.com/3d-models/none-97b15b067111443ebe05840137b49c65",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 20942,
+      "likes": 210,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Ace '11 - Low Poly model",
+      "uid": "055ff8a21b8d4d279debca089e2fafcd",
+      "url": "https://sketchfab.com/3d-models/none-055ff8a21b8d4d279debca089e2fafcd",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18442,
+      "likes": 170,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Mitsubishi Starion GSR-VR",
+      "uid": "56c780a9e82b4c739517a13b98a8e77a",
+      "url": "https://sketchfab.com/3d-models/none-56c780a9e82b4c739517a13b98a8e77a",
+      "author": "All-Wide",
+      "license": "by",
+      "faces": 20705,
+      "likes": 159,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - BMW E30 1985 White",
+      "uid": "9dea494b447e442fafbddfc7eccbf158",
+      "url": "https://sketchfab.com/3d-models/none-9dea494b447e442fafbddfc7eccbf158",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 13076,
+      "likes": 802,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Honda Civic Type R -98 (Free Asset)",
+      "uid": "b9604dd71c6546ec842702682019492a",
+      "url": "https://sketchfab.com/3d-models/none-b9604dd71c6546ec842702682019492a",
+      "author": "tiedtke",
+      "license": "by",
+      "faces": 238189,
+      "likes": 369,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2013 Suzuki WagonR",
+      "uid": "71112627f42342099ff95b59e7532663",
+      "url": "https://sketchfab.com/3d-models/none-71112627f42342099ff95b59e7532663",
+      "author": "BHP3D",
+      "license": "by",
+      "faces": 72729,
+      "likes": 158,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "convertible": [
+    {
+      "name": "2022 | Aston Martin Valkyrie Spider",
+      "uid": "019bad036d1d4695ac8b3f3085e3ea14",
+      "url": "https://sketchfab.com/3d-models/none-019bad036d1d4695ac8b3f3085e3ea14",
+      "author": "kevin (ケビン)",
+      "license": "by",
+      "faces": 266754,
+      "likes": 117,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "1939.678.b Streamline Automobile: Removable Top",
+      "uid": "88b1cd2a9ab840328ad5ce16c6459a21",
+      "url": "https://sketchfab.com/3d-models/none-88b1cd2a9ab840328ad5ce16c6459a21",
+      "author": "Cleveland Museum of Art",
+      "license": "cc0",
+      "faces": 15000,
+      "likes": 1,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - BMW E30 1985 White",
+      "uid": "9dea494b447e442fafbddfc7eccbf158",
+      "url": "https://sketchfab.com/3d-models/none-9dea494b447e442fafbddfc7eccbf158",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 13076,
+      "likes": 802,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "1965 Ford Mustang Convertible",
+      "uid": "05f2a294087541ab82f681136d134344",
+      "url": "https://sketchfab.com/3d-models/none-05f2a294087541ab82f681136d134344",
+      "author": "Kristian LaGrange",
+      "license": "by",
+      "faces": 111817,
+      "likes": 482,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Nissan 200SX Silvia S14",
+      "uid": "f2a917a924734a89a020e7f970e55e7c",
+      "url": "https://sketchfab.com/3d-models/none-f2a917a924734a89a020e7f970e55e7c",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 18231,
+      "likes": 359,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - BMW E46 1998",
+      "uid": "d9bfd8126e754164b48ded833c017bbf",
+      "url": "https://sketchfab.com/3d-models/none-d9bfd8126e754164b48ded833c017bbf",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 18447,
+      "likes": 211,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Chevrolet Camaro IROC-Z",
+      "uid": "091551ed13de40b59a39f3937114d6f4",
+      "url": "https://sketchfab.com/3d-models/none-091551ed13de40b59a39f3937114d6f4",
+      "author": "Randomness",
+      "license": "by",
+      "faces": 68838,
+      "likes": 115,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2015 Chevrolet Corvette Z06 Convertible",
+      "uid": "1f070661dc2f43d29a3646757bcfd5e7",
+      "url": "https://sketchfab.com/3d-models/none-1f070661dc2f43d29a3646757bcfd5e7",
+      "author": "Ddiaz Design",
+      "license": "by",
+      "faces": 101060,
+      "likes": 92,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "station_wagon": [
+    {
+      "name": "Fairheaven LT '80 Cop Cruiser - Low poly model",
+      "uid": "61766c1e6e1e4b2b803c174f33433a74",
+      "url": "https://sketchfab.com/3d-models/none-61766c1e6e1e4b2b803c174f33433a74",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19505,
+      "likes": 1876,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fairheaven SW '84 - Low poly model",
+      "uid": "aa0becb6e854422596cac6b21bf79787",
+      "url": "https://sketchfab.com/3d-models/none-aa0becb6e854422596cac6b21bf79787",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19461,
+      "likes": 863,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Railway tank",
+      "uid": "c87b96181fd249ae8de1ac14575ec475",
+      "url": "https://sketchfab.com/3d-models/none-c87b96181fd249ae8de1ac14575ec475",
+      "author": "Dmitriev Nikita",
+      "license": "by",
+      "faces": 45287,
+      "likes": 713,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sialia SW '68 - Low poly model",
+      "uid": "eea2291a90f04a4b860c9e74be14f2d6",
+      "url": "https://sketchfab.com/3d-models/none-eea2291a90f04a4b860c9e74be14f2d6",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18049,
+      "likes": 285,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sialia SW '68 Racemod - Low poly model",
+      "uid": "2e63fb0a8f7e4ea9b3cbf796e8373d49",
+      "url": "https://sketchfab.com/3d-models/none-2e63fb0a8f7e4ea9b3cbf796e8373d49",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18543,
+      "likes": 228,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sigil '07 - Low poly model",
+      "uid": "22abe5284d4c4b55920b8462eb24a8c1",
+      "url": "https://sketchfab.com/3d-models/none-22abe5284d4c4b55920b8462eb24a8c1",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 16963,
+      "likes": 168,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fairheaven SW '80 - Low poly model",
+      "uid": "ff4cf29564094dc7bd18a8c18e988dc4",
+      "url": "https://sketchfab.com/3d-models/none-ff4cf29564094dc7bd18a8c18e988dc4",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 23237,
+      "likes": 131,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Station Wagon New",
+      "uid": "6c741775861b40178d610af25e64710a",
+      "url": "https://sketchfab.com/3d-models/none-6c741775861b40178d610af25e64710a",
+      "author": "rodrigoscar",
+      "license": "by",
+      "faces": 55714,
+      "likes": 130,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fairheaven SW '80 Fire Dept. - Low poly model",
+      "uid": "0cd661aaab6949ba9d77dbb13ab146c5",
+      "url": "https://sketchfab.com/3d-models/none-0cd661aaab6949ba9d77dbb13ab146c5",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 21331,
+      "likes": 84,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Station Wagon  OLD",
+      "uid": "0095e5bc031844c382184c0456e98c52",
+      "url": "https://sketchfab.com/3d-models/none-0095e5bc031844c382184c0456e98c52",
+      "author": "rodrigoscar",
+      "license": "by",
+      "faces": 58813,
+      "likes": 50,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Vintage Station Wagon Car",
+      "uid": "186687773de74beb947b9f5440ff62ff",
+      "url": "https://sketchfab.com/3d-models/none-186687773de74beb947b9f5440ff62ff",
+      "author": "katherinemunro33",
+      "license": "by",
+      "faces": 166210,
+      "likes": 45,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "2009 Dacia Logan",
+      "uid": "bd250be9928342a9b6f632d80da1fdc3",
+      "url": "https://sketchfab.com/3d-models/none-bd250be9928342a9b6f632d80da1fdc3",
+      "author": "Dave Love SketchFab",
+      "license": "by",
+      "faces": 66141,
+      "likes": 41,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Halloween The Game - Station Wagon",
+      "uid": "0755e91f4b994d20917df5f76af23340",
+      "url": "https://sketchfab.com/3d-models/none-0755e91f4b994d20917df5f76af23340",
+      "author": "Zorg_Sinister",
+      "license": "by",
+      "faces": 95011,
+      "likes": 32,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "BMW E34 [stance style]",
+      "uid": "ffe1a3a1bcb34e0bb80f1aa41c9edb46",
+      "url": "https://sketchfab.com/3d-models/none-ffe1a3a1bcb34e0bb80f1aa41c9edb46",
+      "author": "Myedsu",
+      "license": "by",
+      "faces": 128586,
+      "likes": 909,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Chevrolet Caprice Station Wagon 1998",
+      "uid": "ee2fd85ef1994c00b6de0e93a019901b",
+      "url": "https://sketchfab.com/3d-models/none-ee2fd85ef1994c00b6de0e93a019901b",
+      "author": "Doz3",
+      "license": "by",
+      "faces": 63335,
+      "likes": 117,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "FREE 1938 Vairogs V8 Woody Wagon (Ford Based)",
+      "uid": "6922a82fe9724af99c4293c513624ff6",
+      "url": "https://sketchfab.com/3d-models/none-6922a82fe9724af99c4293c513624ff6",
+      "author": "Libau Media",
+      "license": "by",
+      "faces": 48425,
+      "likes": 48,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Mercedes-Benz E-Class (W212)",
+      "uid": "9b70707fd2304f578175158564719c5d",
+      "url": "https://sketchfab.com/3d-models/none-9b70707fd2304f578175158564719c5d",
+      "author": "Savelliy 07",
+      "license": "by",
+      "faces": 204662,
+      "likes": 42,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "luxury": [
+    {
+      "name": "Dirty Car - Cadillac 75 Sedan 1953",
+      "uid": "e08f2486cc0c49a7a2102561fb9b3377",
+      "url": "https://sketchfab.com/3d-models/none-e08f2486cc0c49a7a2102561fb9b3377",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 14663,
+      "likes": 797,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "2017 Aston Martin DB11 [5.2L Twin-Turbo V12]",
+      "uid": "936854ba7dde46f09a47d355d433808c",
+      "url": "https://sketchfab.com/3d-models/none-936854ba7dde46f09a47d355d433808c",
+      "author": "Hari Prasath R",
+      "license": "by",
+      "faces": 296094,
+      "likes": 367,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Rolls Royce Ghost",
+      "uid": "1f614e803fc24946b83bdc2dd9926d62",
+      "url": "https://sketchfab.com/3d-models/none-1f614e803fc24946b83bdc2dd9926d62",
+      "author": "kurojishi",
+      "license": "by",
+      "faces": 256286,
+      "likes": 290,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Mersedes-Benz E-class w212",
+      "uid": "820387a848a8449eb6565ff35e74388a",
+      "url": "https://sketchfab.com/3d-models/none-820387a848a8449eb6565ff35e74388a",
+      "author": "Black Snow",
+      "license": "by",
+      "faces": 151990,
+      "likes": 228,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Polski Fiat (Fiat 126p)",
+      "uid": "edc1b9d866484e048b4c54d917cca900",
+      "url": "https://sketchfab.com/3d-models/none-edc1b9d866484e048b4c54d917cca900",
+      "author": "Martin Trafas",
+      "license": "by",
+      "faces": 153907,
+      "likes": 206,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Lexus SC300 1993",
+      "uid": "2070ca6185464d8f9dd44a59e674392b",
+      "url": "https://sketchfab.com/3d-models/none-2070ca6185464d8f9dd44a59e674392b",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 95184,
+      "likes": 189,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Bugatti - La Voiture Noire",
+      "uid": "b713f2e7c48842c194084cf42b0b7a5f",
+      "url": "https://sketchfab.com/3d-models/none-b713f2e7c48842c194084cf42b0b7a5f",
+      "author": "SINNIK",
+      "license": "by",
+      "faces": 220607,
+      "likes": 170,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Chrysler Saratoga 1960",
+      "uid": "3fa89e6bf78b49aab111af4195efb6fe",
+      "url": "https://sketchfab.com/3d-models/none-3fa89e6bf78b49aab111af4195efb6fe",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 17764,
+      "likes": 1182,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2019 Chevrolet Corvette C8 Stingray",
+      "uid": "790c40ccff6843eab0b7b4bd18421ff8",
+      "url": "https://sketchfab.com/3d-models/none-790c40ccff6843eab0b7b4bd18421ff8",
+      "author": "Hari Prasath R",
+      "license": "by",
+      "faces": 263691,
+      "likes": 452,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "McLaren Spider",
+      "uid": "10b474f26b2643be82ee26417ca78a0a",
+      "url": "https://sketchfab.com/3d-models/none-10b474f26b2643be82ee26417ca78a0a",
+      "author": "SINNIK",
+      "license": "by",
+      "faces": 260352,
+      "likes": 447,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Lamborghini Gallardo 2010",
+      "uid": "ff0eb2242d0e42eb8b7034b4db639e56",
+      "url": "https://sketchfab.com/3d-models/none-ff0eb2242d0e42eb8b7034b4db639e56",
+      "author": "Artem P",
+      "license": "by",
+      "faces": 154699,
+      "likes": 363,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "BMW M3 Need for speed Most Wanted",
+      "uid": "b6a04764e3ea42cc9021327fdccd45ab",
+      "url": "https://sketchfab.com/3d-models/none-b6a04764e3ea42cc9021327fdccd45ab",
+      "author": "memoov",
+      "license": "by",
+      "faces": 80757,
+      "likes": 349,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Lamborghini - Ferzor",
+      "uid": "3f415397029e4633a8f2c0fc583d7c6b",
+      "url": "https://sketchfab.com/3d-models/none-3f415397029e4633a8f2c0fc583d7c6b",
+      "author": "SINNIK",
+      "license": "by",
+      "faces": 97387,
+      "likes": 332,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "3d model Supercar McLaren 765LT VR Ready",
+      "uid": "70106c466d664a909b9920f292a64bbe",
+      "url": "https://sketchfab.com/3d-models/none-70106c466d664a909b9920f292a64bbe",
+      "author": "zizian",
+      "license": "by",
+      "faces": 222237,
+      "likes": 168,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Sigil '07 - Low poly model",
+      "uid": "22abe5284d4c4b55920b8462eb24a8c1",
+      "url": "https://sketchfab.com/3d-models/none-22abe5284d4c4b55920b8462eb24a8c1",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 16963,
+      "likes": 168,
+      "brandRisk": false,
+      "approved": true
+    }
+  ],
+  "pickup": [
+    {
+      "name": "Lightbody Lifted '85 - Low poly model",
+      "uid": "67beae18c3d24be68f9c8f0ec382d8e3",
+      "url": "https://sketchfab.com/3d-models/none-67beae18c3d24be68f9c8f0ec382d8e3",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 37407,
+      "likes": 925,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Doutrive '78 - Low poly model",
+      "uid": "30700a84311c4bea9ef722f0773ce92a",
+      "url": "https://sketchfab.com/3d-models/none-30700a84311c4bea9ef722f0773ce92a",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 24585,
+      "likes": 558,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Lightbody '90 MD Utility - Low poly model",
+      "uid": "d3aca50a8f2b4917bb9f4ce2bf1ccfe5",
+      "url": "https://sketchfab.com/3d-models/none-d3aca50a8f2b4917bb9f4ce2bf1ccfe5",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 26606,
+      "likes": 423,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Low Poly Vehicles Pack",
+      "uid": "cb7640039e7a40679a53be705ebff50e",
+      "url": "https://sketchfab.com/3d-models/none-cb7640039e7a40679a53be705ebff50e",
+      "author": "RgsDev",
+      "license": "by",
+      "faces": 39644,
+      "likes": 296,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "El Alamo '78 - Low Poly model",
+      "uid": "41b3a5c0bc534817b3311c3736c403e6",
+      "url": "https://sketchfab.com/3d-models/none-41b3a5c0bc534817b3311c3736c403e6",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 16172,
+      "likes": 290,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Conquer '89 Pickup - Low poly model",
+      "uid": "6c48c94be8974dc7a5932f697c0ba68f",
+      "url": "https://sketchfab.com/3d-models/none-6c48c94be8974dc7a5932f697c0ba68f",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 21130,
+      "likes": 270,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "C10-Monster Truck and Pickup",
+      "uid": "8a27349f103d47ca924d4a6ecdeddb73",
+      "url": "https://sketchfab.com/3d-models/none-8a27349f103d47ca924d4a6ecdeddb73",
+      "author": "Jorma Rysky",
+      "license": "by",
+      "faces": 147773,
+      "likes": 206,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Chevrolet C10 Pickup 1963",
+      "uid": "679354c151984747bb74310ec5af8995",
+      "url": "https://sketchfab.com/3d-models/none-679354c151984747bb74310ec5af8995",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 16527,
+      "likes": 1326,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "1938 Vairogs V8 flatbed truck (Ford based)",
+      "uid": "1986239266ee44c788fd6effe4055704",
+      "url": "https://sketchfab.com/3d-models/none-1986239266ee44c788fd6effe4055704",
+      "author": "Libau Media",
+      "license": "by",
+      "faces": 36270,
+      "likes": 456,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Carry Pickup | Suzuki | Game ready",
+      "uid": "e1654a399b9d448a9a7ce200410ac91d",
+      "url": "https://sketchfab.com/3d-models/none-e1654a399b9d448a9a7ce200410ac91d",
+      "author": "by__Rx",
+      "license": "by",
+      "faces": 23104,
+      "likes": 296,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2018 Ford Everest/Endeavour",
+      "uid": "a6681649d203483c95239c4b73157697",
+      "url": "https://sketchfab.com/3d-models/none-a6681649d203483c95239c4b73157697",
+      "author": "BHP3D",
+      "license": "by",
+      "faces": 212963,
+      "likes": 187,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "suv": [
+    {
+      "name": "Generic passenger car pack",
+      "uid": "20f9af9b8a404d5cb022ac6fe87f21f5",
+      "url": "https://sketchfab.com/3d-models/none-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 69312,
+      "likes": 2280,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Cadillac 75 Sedan 1953",
+      "uid": "2935f8faa5f64ce4a3bd65af0f925c21",
+      "url": "https://sketchfab.com/3d-models/none-2935f8faa5f64ce4a3bd65af0f925c21",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 14663,
+      "likes": 972,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Dirty Car - Cadillac 75 Sedan 1953",
+      "uid": "e08f2486cc0c49a7a2102561fb9b3377",
+      "url": "https://sketchfab.com/3d-models/none-e08f2486cc0c49a7a2102561fb9b3377",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 14663,
+      "likes": 797,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Desert road",
+      "uid": "48b076dadec243cbb7b7d7d37de097d3",
+      "url": "https://sketchfab.com/3d-models/none-48b076dadec243cbb7b7d7d37de097d3",
+      "author": "Vanya Dzhus",
+      "license": "by",
+      "faces": 135150,
+      "likes": 710,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Karlmann King",
+      "uid": "2fc7c5a5c3814663a0a75cd03a9a0bcf",
+      "url": "https://sketchfab.com/3d-models/none-2fc7c5a5c3814663a0a75cd03a9a0bcf",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 36507,
+      "likes": 608,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "F-series light vehicles (V1)",
+      "uid": "acc5ab0ec0a946faba7d9cd364302f4e",
+      "url": "https://sketchfab.com/3d-models/none-acc5ab0ec0a946faba7d9cd364302f4e",
+      "author": "3DBuilder",
+      "license": "by",
+      "faces": 130928,
+      "likes": 561,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Low Poly Vehicles Pack",
+      "uid": "cb7640039e7a40679a53be705ebff50e",
+      "url": "https://sketchfab.com/3d-models/none-cb7640039e7a40679a53be705ebff50e",
+      "author": "RgsDev",
+      "license": "by",
+      "faces": 39644,
+      "likes": 296,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Conquer '89 Pickup - Low poly model",
+      "uid": "6c48c94be8974dc7a5932f697c0ba68f",
+      "url": "https://sketchfab.com/3d-models/none-6c48c94be8974dc7a5932f697c0ba68f",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 21130,
+      "likes": 270,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car - Chevrolet C10 Pickup 1963",
+      "uid": "679354c151984747bb74310ec5af8995",
+      "url": "https://sketchfab.com/3d-models/none-679354c151984747bb74310ec5af8995",
+      "author": "ROH3D",
+      "license": "by",
+      "faces": 16527,
+      "likes": 1326,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "1989 Chevrolet Suburban",
+      "uid": "44bdb8317f0840b3bc858e606f86db6b",
+      "url": "https://sketchfab.com/3d-models/none-44bdb8317f0840b3bc858e606f86db6b",
+      "author": "Randomness",
+      "license": "by",
+      "faces": 124262,
+      "likes": 455,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Mercedes Benz G-class W263",
+      "uid": "1a2a52b16cad4e618af347461817895c",
+      "url": "https://sketchfab.com/3d-models/none-1a2a52b16cad4e618af347461817895c",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 12518,
+      "likes": 429,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Nissan 200SX Silvia S14",
+      "uid": "f2a917a924734a89a020e7f970e55e7c",
+      "url": "https://sketchfab.com/3d-models/none-f2a917a924734a89a020e7f970e55e7c",
+      "author": "Lexyc16",
+      "license": "by",
+      "faces": 18231,
+      "likes": 359,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "minivan": [
+    {
+      "name": "Generic passenger car pack",
+      "uid": "20f9af9b8a404d5cb022ac6fe87f21f5",
+      "url": "https://sketchfab.com/3d-models/none-20f9af9b8a404d5cb022ac6fe87f21f5",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 69312,
+      "likes": 2280,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Cs_office with real light",
+      "uid": "7321fe525c854b87944c78af5f009128",
+      "url": "https://sketchfab.com/3d-models/none-7321fe525c854b87944c78af5f009128",
+      "author": "Neo_minigan",
+      "license": "by",
+      "faces": 23918,
+      "likes": 758,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Horny bat",
+      "uid": "b9824e471a0f4ddd842bf700ad3ca1b2",
+      "url": "https://sketchfab.com/3d-models/none-b9824e471a0f4ddd842bf700ad3ca1b2",
+      "author": "Neo_minigan",
+      "license": "by",
+      "faces": 39450,
+      "likes": 372,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Cs_Italy with real light",
+      "uid": "556bd442814d4db5a9d301c4754fbb3c",
+      "url": "https://sketchfab.com/3d-models/none-556bd442814d4db5a9d301c4754fbb3c",
+      "author": "Neo_minigan",
+      "license": "by",
+      "faces": 38073,
+      "likes": 265,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Dragon and castle fantasy knife",
+      "uid": "c7f2f82a60d9472492b02506d71f22e6",
+      "url": "https://sketchfab.com/3d-models/none-c7f2f82a60d9472492b02506d71f22e6",
+      "author": "Neo_minigan",
+      "license": "by",
+      "faces": 26098,
+      "likes": 143,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "DAE Diorama - FOREST LONER",
+      "uid": "a0430ad032f6431ba4bc346acfe69903",
+      "url": "https://sketchfab.com/3d-models/none-a0430ad032f6431ba4bc346acfe69903",
+      "author": "Das Do",
+      "license": "by",
+      "faces": 45328,
+      "likes": 133,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Suzuki Carry Minivan",
+      "uid": "5c0007c0c6ed4d298b8c80646efa09d2",
+      "url": "https://sketchfab.com/3d-models/none-5c0007c0c6ed4d298b8c80646efa09d2",
+      "author": "ProPolyModels",
+      "license": "by",
+      "faces": 152924,
+      "likes": 534,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2003 Chevrolet Express GMC Savana 2500 Cargo Van",
+      "uid": "ed2a0b37a01e4e51ba5b82c35d4a9dae",
+      "url": "https://sketchfab.com/3d-models/none-ed2a0b37a01e4e51ba5b82c35d4a9dae",
+      "author": "Ddiaz Design",
+      "license": "by",
+      "faces": 31252,
+      "likes": 388,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "taxi": [
+    {
+      "name": "Generic civil service vehicles pack",
+      "uid": "8ff2a13f30914932a70c7950cfa58465",
+      "url": "https://sketchfab.com/3d-models/none-8ff2a13f30914932a70c7950cfa58465",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 92709,
+      "likes": 1183,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Canyon '75 Taxi - Low poly model",
+      "uid": "9e8f92a215784f3d8aaaaeab1bef54c4",
+      "url": "https://sketchfab.com/3d-models/none-9e8f92a215784f3d8aaaaeab1bef54c4",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 20037,
+      "likes": 759,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Low Poly Vehicles Pack",
+      "uid": "cb7640039e7a40679a53be705ebff50e",
+      "url": "https://sketchfab.com/3d-models/none-cb7640039e7a40679a53be705ebff50e",
+      "author": "RgsDev",
+      "license": "by",
+      "faces": 39644,
+      "likes": 296,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sky Cab",
+      "uid": "2322696582de46e2ba816352ff243337",
+      "url": "https://sketchfab.com/3d-models/none-2322696582de46e2ba816352ff243337",
+      "author": "Helsingr",
+      "license": "by",
+      "faces": 107178,
+      "likes": 234,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fairheaven LT '80 Taxi - Low poly model",
+      "uid": "7da68ec2677f4abd8e31e9998b497a67",
+      "url": "https://sketchfab.com/3d-models/none-7da68ec2677f4abd8e31e9998b497a67",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18831,
+      "likes": 194,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "2008 Baird Silver Coronet Taxicab",
+      "uid": "d4c035d5857f4b49baf2ee27f7051a16",
+      "url": "https://sketchfab.com/3d-models/none-d4c035d5857f4b49baf2ee27f7051a16",
+      "author": "Andrew Duong",
+      "license": "by",
+      "faces": 85369,
+      "likes": 150,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Illinois '90 Taxi #1 - Low poly model",
+      "uid": "72d91f4bce814818b3cd1f2de60f8ef2",
+      "url": "https://sketchfab.com/3d-models/none-72d91f4bce814818b3cd1f2de60f8ef2",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19852,
+      "likes": 133,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Negotiator '80 Taxi - Low poly model",
+      "uid": "436ee962d7ff4397ba1c2d0c7ce998d5",
+      "url": "https://sketchfab.com/3d-models/none-436ee962d7ff4397ba1c2d0c7ce998d5",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 20121,
+      "likes": 107,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Illinois '90 Taxi #2 - Low poly model",
+      "uid": "fa1a26fc2b0848c38efba4ed132b49ad",
+      "url": "https://sketchfab.com/3d-models/none-fa1a26fc2b0848c38efba4ed132b49ad",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19905,
+      "likes": 106,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Volvo PV654 Sedan Free v2",
+      "uid": "65f8f21ef0824e62b9fe36d17ebd8b99",
+      "url": "https://sketchfab.com/3d-models/none-65f8f21ef0824e62b9fe36d17ebd8b99",
+      "author": "Libau Media",
+      "license": "by",
+      "faces": 47458,
+      "likes": 420,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2013 Suzuki WagonR",
+      "uid": "71112627f42342099ff95b59e7532663",
+      "url": "https://sketchfab.com/3d-models/none-71112627f42342099ff95b59e7532663",
+      "author": "BHP3D",
+      "license": "by",
+      "faces": 72729,
+      "likes": 158,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "[FREE] Ford Crown Victoria 2005",
+      "uid": "91b2d4d7fe5b4197928c2f0315e24a67",
+      "url": "https://sketchfab.com/3d-models/none-91b2d4d7fe5b4197928c2f0315e24a67",
+      "author": "Velrifea",
+      "license": "by",
+      "faces": 40004,
+      "likes": 112,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Toyota Crown Super Deluxe Mild Hybrid",
+      "uid": "6e357d856df44d98a615cac1d0c30b56",
+      "url": "https://sketchfab.com/3d-models/none-6e357d856df44d98a615cac1d0c30b56",
+      "author": "Andrasfi Games",
+      "license": "by",
+      "faces": 81289,
+      "likes": 92,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Abandoned Mercedes Benz Moroccan Taxi",
+      "uid": "badd01911fb84d1fb8ec146a9c5752d3",
+      "url": "https://sketchfab.com/3d-models/none-badd01911fb84d1fb8ec146a9c5752d3",
+      "author": "Libau Media",
+      "license": "by",
+      "faces": 73985,
+      "likes": 67,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "semi": [
+    {
+      "name": "Chmzap 9990-073 & Урал-4420",
+      "uid": "c0a0ceaea5584ab287a96b4ff1b5c7c9",
+      "url": "https://sketchfab.com/3d-models/none-c0a0ceaea5584ab287a96b4ff1b5c7c9",
+      "author": "Basic Hsu",
+      "license": "by",
+      "faces": 161830,
+      "likes": 185,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Lightbody '90 MD Tow Truck - Low poly model",
+      "uid": "5cba208001c64e8ea164f89e4dde91e7",
+      "url": "https://sketchfab.com/3d-models/none-5cba208001c64e8ea164f89e4dde91e7",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 26150,
+      "likes": 146,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Semi Truck Baked",
+      "uid": "3e8c5275aeab487fa37d227ce0bd1a9a",
+      "url": "https://sketchfab.com/3d-models/none-3e8c5275aeab487fa37d227ce0bd1a9a",
+      "author": "3DE_Study",
+      "license": "by",
+      "faces": 40024,
+      "likes": 143,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Titan Docked",
+      "uid": "165153ef35f548219be4b26bf599a5f7",
+      "url": "https://sketchfab.com/3d-models/none-165153ef35f548219be4b26bf599a5f7",
+      "author": "Blackhart",
+      "license": "by",
+      "faces": 18384,
+      "likes": 93,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Vintage Train Bogie.",
+      "uid": "9d446fa31b4b4b7886b9f7383c928c7f",
+      "url": "https://sketchfab.com/3d-models/none-9d446fa31b4b4b7886b9f7383c928c7f",
+      "author": "Sassiska",
+      "license": "by",
+      "faces": 20400,
+      "likes": 90,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "MAN TGX 2010 V8 – High-Detail Semi-Truck",
+      "uid": "34ce748d9a4b4de7b035cfe5cb97f5d1",
+      "url": "https://sketchfab.com/3d-models/none-34ce748d9a4b4de7b035cfe5cb97f5d1",
+      "author": "DevPoly3D",
+      "license": "by",
+      "faces": 37692,
+      "likes": 78,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Freighter of FEAR",
+      "uid": "39477cd912f44ec695970601dac2f0fa",
+      "url": "https://sketchfab.com/3d-models/none-39477cd912f44ec695970601dac2f0fa",
+      "author": "Zach Kolman",
+      "license": "by",
+      "faces": 58085,
+      "likes": 58,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Gas Tanker",
+      "uid": "055c6431cdaa440f85e2ac588c4a5ea8",
+      "url": "https://sketchfab.com/3d-models/none-055c6431cdaa440f85e2ac588c4a5ea8",
+      "author": "Unknown Canadian",
+      "license": "by",
+      "faces": 43729,
+      "likes": 53,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Oshkosh M1070 HET",
+      "uid": "d1761adbbf534f13bc6519ecae231acb",
+      "url": "https://sketchfab.com/3d-models/none-d1761adbbf534f13bc6519ecae231acb",
+      "author": "42manako",
+      "license": "by",
+      "faces": 32168,
+      "likes": 227,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Toyota Land Cruiser J200 2017",
+      "uid": "374e85a6e18743429f6d9c0e7bbffb3c",
+      "url": "https://sketchfab.com/3d-models/none-374e85a6e18743429f6d9c0e7bbffb3c",
+      "author": "David_Holiday",
+      "license": "by",
+      "faces": 262168,
+      "likes": 142,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Tesla Semi",
+      "uid": "39ffc7c746184e0c9ebd5bbcd0b405dd",
+      "url": "https://sketchfab.com/3d-models/none-39ffc7c746184e0c9ebd5bbcd0b405dd",
+      "author": "Oleksii Rozumnyi",
+      "license": "by",
+      "faces": 80376,
+      "likes": 70,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2018 Ford F150 Raptor-Concept",
+      "uid": "2eeef6f9fe3d41ce9aca1534dbe85f6d",
+      "url": "https://sketchfab.com/3d-models/none-2eeef6f9fe3d41ce9aca1534dbe85f6d",
+      "author": "David_Holiday",
+      "license": "by",
+      "faces": 286656,
+      "likes": 37,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "box_truck": [
+    {
+      "name": "LCT 3000 '95 - Low poly model",
+      "uid": "663a0953c038434a918cb85725c88ffa",
+      "url": "https://sketchfab.com/3d-models/none-663a0953c038434a918cb85725c88ffa",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 18947,
+      "likes": 1524,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "LCT 3000 '07- Low poly model",
+      "uid": "3be03b6a43aa41898c9ca806b8787052",
+      "url": "https://sketchfab.com/3d-models/none-3be03b6a43aa41898c9ca806b8787052",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 15846,
+      "likes": 715,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Motel Scene",
+      "uid": "ea61677def5849eb821bcb6de9a38b9c",
+      "url": "https://sketchfab.com/3d-models/none-ea61677def5849eb821bcb6de9a38b9c",
+      "author": "HippoStance",
+      "license": "by",
+      "faces": 53714,
+      "likes": 190,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Simple Warehouse Pallet Hand Truck",
+      "uid": "fea97b85ce194a9b9c4e79fc242e1034",
+      "url": "https://sketchfab.com/3d-models/none-fea97b85ce194a9b9c4e79fc242e1034",
+      "author": "jpo1703",
+      "license": "by",
+      "faces": 299692,
+      "likes": 166,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Marv Truck Set",
+      "uid": "64122d2f1f964d35822dcdee5ca46d32",
+      "url": "https://sketchfab.com/3d-models/none-64122d2f1f964d35822dcdee5ca46d32",
+      "author": "iedalton",
+      "license": "by",
+      "faces": 158150,
+      "likes": 115,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Box-truck",
+      "uid": "b0e8788b6b774fe3a18eda1895a2b8fe",
+      "url": "https://sketchfab.com/3d-models/none-b0e8788b6b774fe3a18eda1895a2b8fe",
+      "author": "Cristian Rus",
+      "license": "by",
+      "faces": 31374,
+      "likes": 95,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Japanese Dump Truck",
+      "uid": "bdd68dcc73be430dbffff61017c95fb8",
+      "url": "https://sketchfab.com/3d-models/none-bdd68dcc73be430dbffff61017c95fb8",
+      "author": "Pavel Gorbachev",
+      "license": "by",
+      "faces": 18848,
+      "likes": 48,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Unimog Truck",
+      "uid": "72caf995b6064890b7bc62371cc79f36",
+      "url": "https://sketchfab.com/3d-models/none-72caf995b6064890b7bc62371cc79f36",
+      "author": "Levi Giovani",
+      "license": "by",
+      "faces": 18048,
+      "likes": 47,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "German V3000 Low-Poly Truck",
+      "uid": "2b87535b2a7148b596a10f22e1c6354d",
+      "url": "https://sketchfab.com/3d-models/none-2b87535b2a7148b596a10f22e1c6354d",
+      "author": "Red Fox / nokillnando",
+      "license": "by",
+      "faces": 37617,
+      "likes": 47,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Kraz 250",
+      "uid": "8d91ff04467c423fb670de9057d254fc",
+      "url": "https://sketchfab.com/3d-models/none-8d91ff04467c423fb670de9057d254fc",
+      "author": "Randonavt",
+      "license": "by",
+      "faces": 126191,
+      "likes": 32,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Delivery Truck",
+      "uid": "6842eac23e6d4484bad081522b1602d8",
+      "url": "https://sketchfab.com/3d-models/none-6842eac23e6d4484bad081522b1602d8",
+      "author": "farooq.smurf",
+      "license": "by",
+      "faces": 24652,
+      "likes": 23,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "The Screaming Banshee",
+      "uid": "052ebe6d108c4c43a24adab765e32c36",
+      "url": "https://sketchfab.com/3d-models/none-052ebe6d108c4c43a24adab765e32c36",
+      "author": "Jack",
+      "license": "by",
+      "faces": 250000,
+      "likes": 23,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "gmc sierra 2500 hd double cab standard box",
+      "uid": "0fb040c349a24defadaa9ab9f0cb5f22",
+      "url": "https://sketchfab.com/3d-models/none-0fb040c349a24defadaa9ab9f0cb5f22",
+      "author": "amogusstrikesback2",
+      "license": "by",
+      "faces": 43608,
+      "likes": 33,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "delivery_van": [
+    {
+      "name": "Shvan '92 - Low poly model",
+      "uid": "09d718c9cf72401b8534d265a06a803f",
+      "url": "https://sketchfab.com/3d-models/none-09d718c9cf72401b8534d265a06a803f",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 23045,
+      "likes": 1366,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Shvan '92 Ambulance - Low Poly model",
+      "uid": "2856dd3c61f940909dced9a5c0379484",
+      "url": "https://sketchfab.com/3d-models/none-2856dd3c61f940909dced9a5c0379484",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 25943,
+      "likes": 768,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "European Delivery Van",
+      "uid": "0b2f1ad95a79419f9a092420024d329c",
+      "url": "https://sketchfab.com/3d-models/none-0b2f1ad95a79419f9a092420024d329c",
+      "author": "Evan Hiltz",
+      "license": "by",
+      "faces": 21317,
+      "likes": 244,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Delivery Truck",
+      "uid": "6842eac23e6d4484bad081522b1602d8",
+      "url": "https://sketchfab.com/3d-models/none-6842eac23e6d4484bad081522b1602d8",
+      "author": "farooq.smurf",
+      "license": "by",
+      "faces": 24652,
+      "likes": 23,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Delivery Truck  Vehicle | Low Poly",
+      "uid": "50cdb3c674c84224b6ebfe471ca404fe",
+      "url": "https://sketchfab.com/3d-models/none-50cdb3c674c84224b6ebfe471ca404fe",
+      "author": "Miguel Vega",
+      "license": "by",
+      "faces": 14174,
+      "likes": 18,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "european_delivery_van",
+      "uid": "14399c860401445681b88095c6c3abf3",
+      "url": "https://sketchfab.com/3d-models/none-14399c860401445681b88095c6c3abf3",
+      "author": "teacherap123",
+      "license": "by",
+      "faces": 21317,
+      "likes": 12,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Delivery Van - Emergency Driver Sim 3D Model",
+      "uid": "16d5597b617b4398be659487cf3dd413",
+      "url": "https://sketchfab.com/3d-models/none-16d5597b617b4398be659487cf3dd413",
+      "author": "Villanueva-Jonatan-32621",
+      "license": "by",
+      "faces": 13040,
+      "likes": 8,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "3D Scanned Utilimaster P900 Step Van [Free]",
+      "uid": "44d1e847bba4465dbf0bf5384eaa9ba9",
+      "url": "https://sketchfab.com/3d-models/none-44d1e847bba4465dbf0bf5384eaa9ba9",
+      "author": "agent",
+      "license": "by",
+      "faces": 154180,
+      "likes": 7,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Rustic Chevrolet P30 Step-Van Replica",
+      "uid": "45c4e2166c8a4cbc88f04ae404fa9a02",
+      "url": "https://sketchfab.com/3d-models/none-45c4e2166c8a4cbc88f04ae404fa9a02",
+      "author": "the.snajp",
+      "license": "by",
+      "faces": 18837,
+      "likes": 15,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2016 Ford Transit with Interior",
+      "uid": "52f919aedaa1497a9c0395ec0ac63af1",
+      "url": "https://sketchfab.com/3d-models/none-52f919aedaa1497a9c0395ec0ac63af1",
+      "author": "asian3dmodel",
+      "license": "by",
+      "faces": 98261,
+      "likes": 13,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "tanker": [
+    {
+      "name": "German V3000 Low-Poly Truck",
+      "uid": "2b87535b2a7148b596a10f22e1c6354d",
+      "url": "https://sketchfab.com/3d-models/none-2b87535b2a7148b596a10f22e1c6354d",
+      "author": "Red Fox / nokillnando",
+      "license": "by",
+      "faces": 37617,
+      "likes": 47,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Military Truck Pack Low Poly Pack",
+      "uid": "9d4df5dc5c8d4443850ff900024b01fa",
+      "url": "https://sketchfab.com/3d-models/none-9d4df5dc5c8d4443850ff900024b01fa",
+      "author": "KidBi-Gaming",
+      "license": "by",
+      "faces": 43598,
+      "likes": 2,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Fuel Tanker Truck Ungroup",
+      "uid": "c708780b0fe94ff99a01fa260efe0ba0",
+      "url": "https://sketchfab.com/3d-models/none-c708780b0fe94ff99a01fa260efe0ba0",
+      "author": "3DMODEL",
+      "license": "by",
+      "faces": 33052,
+      "likes": 0,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Magirus D serie fuel tanker",
+      "uid": "9a65bb474e244cb0a3e9a3d68e79f036",
+      "url": "https://sketchfab.com/3d-models/none-9a65bb474e244cb0a3e9a3d68e79f036",
+      "author": "Randonavt",
+      "license": "by",
+      "faces": 126436,
+      "likes": 14,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Gas Tanker",
+      "uid": "055c6431cdaa440f85e2ac588c4a5ea8",
+      "url": "https://sketchfab.com/3d-models/none-055c6431cdaa440f85e2ac588c4a5ea8",
+      "author": "Unknown Canadian",
+      "license": "by",
+      "faces": 43729,
+      "likes": 53,
+      "brandRisk": false,
+      "approved": true
+    }
+  ],
+  "motorhome": [
+    {
+      "name": "Shvan 92 Traveller - Low poly model",
+      "uid": "c5134fcf8d2944b4b8800ec46fa02e17",
+      "url": "https://sketchfab.com/3d-models/none-c5134fcf8d2944b4b8800ec46fa02e17",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 27503,
+      "likes": 159,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Retro Motorhome - Spaceflight Retrofit",
+      "uid": "502e8e19e3a04ee7b77e0407970d05f5",
+      "url": "https://sketchfab.com/3d-models/none-502e8e19e3a04ee7b77e0407970d05f5",
+      "author": "Vaportrash",
+      "license": "by",
+      "faces": 129098,
+      "likes": 82,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Retro Motorhome",
+      "uid": "3ee6b2c3c1ab4cf79f118d327215c55d",
+      "url": "https://sketchfab.com/3d-models/none-3ee6b2c3c1ab4cf79f118d327215c55d",
+      "author": "Vaportrash",
+      "license": "by",
+      "faces": 77274,
+      "likes": 28,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Realistic Caravan / Caravelle 3D Model",
+      "uid": "90e7ba7a6b954fd5824c170bb0de8c98",
+      "url": "https://sketchfab.com/3d-models/none-90e7ba7a6b954fd5824c170bb0de8c98",
+      "author": "ARTEL_3D",
+      "license": "by",
+      "faces": 21892,
+      "likes": 16,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "FREE GMC Motorhome reimagined low poly",
+      "uid": "6hiH0iyDqXqtdD9wbqSbyLLhKmz",
+      "url": "https://sketchfab.com/3d-models/none-6hiH0iyDqXqtdD9wbqSbyLLhKmz",
+      "author": "Lionsharp Studios",
+      "license": "by",
+      "faces": 43401,
+      "likes": 2529,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "FREE Rustic 1910s Caravan (Ford Model TT)",
+      "uid": "bea92028c7a34553b530622c34f29874",
+      "url": "https://sketchfab.com/3d-models/none-bea92028c7a34553b530622c34f29874",
+      "author": "Libau Media",
+      "license": "by",
+      "faces": 59965,
+      "likes": 118,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "fifth_wheel": [],
+  "suv_boat": [
+    {
+      "name": "Fishing Ship game-ready asset",
+      "uid": "f791868a8b5f4996a49a3c8cd99336f6",
+      "url": "https://sketchfab.com/3d-models/none-f791868a8b5f4996a49a3c8cd99336f6",
+      "author": "Dominik Biały",
+      "license": "by",
+      "faces": 22506,
+      "likes": 233,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Boat Trailer",
+      "uid": "594ef36c27924dcaa677781c756fbc7c",
+      "url": "https://sketchfab.com/3d-models/none-594ef36c27924dcaa677781c756fbc7c",
+      "author": "BoatUS Foundation",
+      "license": "by",
+      "faces": 147882,
+      "likes": 120,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "UNDERPOLY: Free Jet-Ski + Trailer",
+      "uid": "c9e324b0a9284904b4a442080fc2a6ef",
+      "url": "https://sketchfab.com/3d-models/none-c9e324b0a9284904b4a442080fc2a6ef",
+      "author": "UNDERPOLY Project",
+      "license": "by",
+      "faces": 29118,
+      "likes": 64,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "285 Conquest Boston Whaler",
+      "uid": "61e2b2fae81b4e858b401ce7ccc8d8d2",
+      "url": "https://sketchfab.com/3d-models/none-61e2b2fae81b4e858b401ce7ccc8d8d2",
+      "author": "BoatUS Foundation",
+      "license": "by",
+      "faces": 286128,
+      "likes": 60,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sotong Class 50ft Coastal Research Vessel",
+      "uid": "781f9e3b0fb84d31986c81e68a7b4407",
+      "url": "https://sketchfab.com/3d-models/none-781f9e3b0fb84d31986c81e68a7b4407",
+      "author": "pandoraskitten",
+      "license": "by",
+      "faces": 38474,
+      "likes": 29,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Salt-Beaten Fishing Trawler (Game-Ready)",
+      "uid": "fd28c35b76754c9386b32aa281a0e238",
+      "url": "https://sketchfab.com/3d-models/none-fd28c35b76754c9386b32aa281a0e238",
+      "author": "Moon Moon",
+      "license": "by",
+      "faces": 77117,
+      "likes": 16,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Smal Fishing Trawler II",
+      "uid": "8b2961255d51493eb8cd73f344f2f807",
+      "url": "https://sketchfab.com/3d-models/none-8b2961255d51493eb8cd73f344f2f807",
+      "author": "gogiart",
+      "license": "by",
+      "faces": 153733,
+      "likes": 14,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Smal Fishing Trawler",
+      "uid": "e3175ce6f47d47f6ac3dfd7fc5122789",
+      "url": "https://sketchfab.com/3d-models/none-e3175ce6f47d47f6ac3dfd7fc5122789",
+      "author": "gogiart",
+      "license": "by",
+      "faces": 266372,
+      "likes": 13,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Jensen-class Stern Trawler boat — 62 m",
+      "uid": "f5bcbc03dfa0453189403951112422ad",
+      "url": "https://sketchfab.com/3d-models/none-f5bcbc03dfa0453189403951112422ad",
+      "author": "floor2727",
+      "license": "by",
+      "faces": 122554,
+      "likes": 7,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Hawk XXI Launcher with AIM-120 Missiles",
+      "uid": "c9e32f76f45440ebbb57e1231d45aac1",
+      "url": "https://sketchfab.com/3d-models/none-c9e32f76f45440ebbb57e1231d45aac1",
+      "author": "xFORTUNAx",
+      "license": "by",
+      "faces": 89845,
+      "likes": 5,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "AN/MPQ-64 Sentinel Radar (HMMWV + Trailer)",
+      "uid": "b76ef9d61c604521aba7387385761497",
+      "url": "https://sketchfab.com/3d-models/none-b76ef9d61c604521aba7387385761497",
+      "author": "xFORTUNAx",
+      "license": "by",
+      "faces": 67488,
+      "likes": 4,
+      "brandRisk": false,
+      "approved": false
+    }
+  ],
+  "motorcycle_cruiser": [
+    {
+      "name": "Gorilla Cruiser",
+      "uid": "1dd88e5a43eb4b848069c6efe9120e1a",
+      "url": "https://sketchfab.com/3d-models/none-1dd88e5a43eb4b848069c6efe9120e1a",
+      "author": "Eric Wang",
+      "license": "by",
+      "faces": 228600,
+      "likes": 63,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low-Poly Motorcycle LiFanV16",
+      "uid": "a6c86b5f47ba46c4afee74a23e704af4",
+      "url": "https://sketchfab.com/3d-models/none-a6c86b5f47ba46c4afee74a23e704af4",
+      "author": "MadCatD",
+      "license": "by",
+      "faces": 35562,
+      "likes": 17,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Motorcycle Fallout",
+      "uid": "b93e669f04bc45679d32a905205dc11c",
+      "url": "https://sketchfab.com/3d-models/none-b93e669f04bc45679d32a905205dc11c",
+      "author": "Andrei Milin",
+      "license": "by",
+      "faces": 19900,
+      "likes": 118,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "1990 Fatboy inspired Cruiser Motorcycle",
+      "uid": "a38557914e324e418a407071eaedf6ec",
+      "url": "https://sketchfab.com/3d-models/none-a38557914e324e418a407071eaedf6ec",
+      "author": "Alpha One",
+      "license": "by",
+      "faces": 108807,
+      "likes": 110,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley Davidson Sportster",
+      "uid": "ea00cf627ec24dea828601b28b56548f",
+      "url": "https://sketchfab.com/3d-models/none-ea00cf627ec24dea828601b28b56548f",
+      "author": "RusikMDLR",
+      "license": "by",
+      "faces": 89150,
+      "likes": 35,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Yamaha XV1000",
+      "uid": "add986d4e12240d197482ebba4068160",
+      "url": "https://sketchfab.com/3d-models/none-add986d4e12240d197482ebba4068160",
+      "author": "RusikMDLR",
+      "license": "by",
+      "faces": 139981,
+      "likes": 26,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Vintage Chopper Bobber",
+      "uid": "6a9fad13991a4b0dbcfc1b7be930ea10",
+      "url": "https://sketchfab.com/3d-models/none-6a9fad13991a4b0dbcfc1b7be930ea10",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 208014,
+      "likes": 14,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Chopper Cruiser",
+      "uid": "c28ff59ec2dc4b0aaf5349c90f51e7aa",
+      "url": "https://sketchfab.com/3d-models/none-c28ff59ec2dc4b0aaf5349c90f51e7aa",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 197520,
+      "likes": 14,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Road Glide Style Bagger",
+      "uid": "bd1640cecf8e438abe7a5749fc76a4ba",
+      "url": "https://sketchfab.com/3d-models/none-bd1640cecf8e438abe7a5749fc76a4ba",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 279696,
+      "likes": 13,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Futuristic Chopper",
+      "uid": "310c0cf048d347598355b97f2b689586",
+      "url": "https://sketchfab.com/3d-models/none-310c0cf048d347598355b97f2b689586",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 183812,
+      "likes": 13,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Sportster Street Tracker",
+      "uid": "768f1cdbb48c4e95b78a6cf5b93d0bd5",
+      "url": "https://sketchfab.com/3d-models/none-768f1cdbb48c4e95b78a6cf5b93d0bd5",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 259066,
+      "likes": 13,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Scrambler - Free",
+      "uid": "09583f4f7c724bb084f18911194226e2",
+      "url": "https://sketchfab.com/3d-models/none-09583f4f7c724bb084f18911194226e2",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 275644,
+      "likes": 12,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom 883 Classic - Free",
+      "uid": "e7345ba59699470b9ac0ccf7f6979ff6",
+      "url": "https://sketchfab.com/3d-models/none-e7345ba59699470b9ac0ccf7f6979ff6",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 296746,
+      "likes": 11,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Sportster Bronze Street",
+      "uid": "66af4be22c044e4a81bee7c15cc1eb33",
+      "url": "https://sketchfab.com/3d-models/none-66af4be22c044e4a81bee7c15cc1eb33",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 248352,
+      "likes": 9,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Street Cruiser - Free",
+      "uid": "4e0d5713e99a4bcc9f74623ea85348e4",
+      "url": "https://sketchfab.com/3d-models/none-4e0d5713e99a4bcc9f74623ea85348e4",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 279952,
+      "likes": 9,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Harley-Davidson Custom Sportster Cafe Racer",
+      "uid": "95ba2e33b6734d91a41d13ee635bea9c",
+      "url": "https://sketchfab.com/3d-models/none-95ba2e33b6734d91a41d13ee635bea9c",
+      "author": "Tulio Portela",
+      "license": "by",
+      "faces": 183446,
+      "likes": 6,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "motorcycle_sport": [
+    {
+      "name": "DAE Diorama - Forest Loner",
+      "uid": "7528da6888b14bd9afec998e840d3f1a",
+      "url": "https://sketchfab.com/3d-models/none-7528da6888b14bd9afec998e840d3f1a",
+      "author": "Vitalii_Mykhalevych",
+      "license": "by",
+      "faces": 72370,
+      "likes": 514,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Akt Tt Ds 200 repainted",
+      "uid": "c32f7b87090d4ce4b10c76e844dc86cd",
+      "url": "https://sketchfab.com/3d-models/none-c32f7b87090d4ce4b10c76e844dc86cd",
+      "author": "e-restrepo1114",
+      "license": "by",
+      "faces": 27830,
+      "likes": 427,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Cafe Racer",
+      "uid": "c02dec85ac0541b8ab6dd56098706b50",
+      "url": "https://sketchfab.com/3d-models/none-c02dec85ac0541b8ab6dd56098706b50",
+      "author": "Andrei Milin",
+      "license": "by",
+      "faces": 95326,
+      "likes": 398,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Three Cylinder Motorcycle Engine",
+      "uid": "ad2416e341cb4beca3f86b0b00e84749",
+      "url": "https://sketchfab.com/3d-models/none-ad2416e341cb4beca3f86b0b00e84749",
+      "author": "Jamie Hamel-Smith",
+      "license": "by",
+      "faces": 157938,
+      "likes": 359,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Vintage Kart (CycleKart)",
+      "uid": "962316b91e914fc1808f6fb574b46ba5",
+      "url": "https://sketchfab.com/3d-models/none-962316b91e914fc1808f6fb574b46ba5",
+      "author": "Mike_hbrt",
+      "license": "by",
+      "faces": 13619,
+      "likes": 233,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Z1000 2014",
+      "uid": "70cecfa5568347428c5ad72e9a156be9",
+      "url": "https://sketchfab.com/3d-models/none-70cecfa5568347428c5ad72e9a156be9",
+      "author": "e-restrepo1114",
+      "license": "by",
+      "faces": 36723,
+      "likes": 223,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Sport Motorcycle Tires",
+      "uid": "f089def8e2fe4886ac402f538875d19e",
+      "url": "https://sketchfab.com/3d-models/none-f089def8e2fe4886ac402f538875d19e",
+      "author": "Jamie Hamel-Smith",
+      "license": "by",
+      "faces": 213376,
+      "likes": 155,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Motorcycle model \"Planeta Sport\"",
+      "uid": "cb392cc23de94295897e0100dd506e0d",
+      "url": "https://sketchfab.com/3d-models/none-cb392cc23de94295897e0100dd506e0d",
+      "author": "Mila (Liudmyla) Andrushchenko",
+      "license": "by",
+      "faces": 66074,
+      "likes": 120,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Batbike",
+      "uid": "a61fb6dd656447aa8e167eda6c38b5d7",
+      "url": "https://sketchfab.com/3d-models/none-a61fb6dd656447aa8e167eda6c38b5d7",
+      "author": "Shaz",
+      "license": "by",
+      "faces": 16182,
+      "likes": 106,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Akt Tt Ds 200",
+      "uid": "e9c1ff9a40494ea59c2263fd3d6ea477",
+      "url": "https://sketchfab.com/3d-models/none-e9c1ff9a40494ea59c2263fd3d6ea477",
+      "author": "e-restrepo1114",
+      "license": "by",
+      "faces": 28086,
+      "likes": 82,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Honda CB 750 F Super Sport 1970💛",
+      "uid": "f121301624174b179ca4d50158797b03",
+      "url": "https://sketchfab.com/3d-models/none-f121301624174b179ca4d50158797b03",
+      "author": "ᗩᒪE᙭. Kᗩ.🚗",
+      "license": "by",
+      "faces": 37041,
+      "likes": 676,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2021 Honda CBR1000RR-R Fireblade SP HRC",
+      "uid": "1923bd756e974b798daa281f379c8ffd",
+      "url": "https://sketchfab.com/3d-models/none-1923bd756e974b798daa281f379c8ffd",
+      "author": "Carlito",
+      "license": "by",
+      "faces": 178617,
+      "likes": 76,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2021 Ducati Panigale V4 SP",
+      "uid": "8c0632e4c54249758114490390f0b73f",
+      "url": "https://sketchfab.com/3d-models/none-8c0632e4c54249758114490390f0b73f",
+      "author": "Carlito",
+      "license": "by",
+      "faces": 221228,
+      "likes": 60,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "Yamaha Tracer 9 Moto",
+      "uid": "5611ae9df1ef471da647a0d8b1e9c235",
+      "url": "https://sketchfab.com/3d-models/none-5611ae9df1ef471da647a0d8b1e9c235",
+      "author": "alban",
+      "license": "by",
+      "faces": 297685,
+      "likes": 54,
+      "brandRisk": true,
+      "approved": false
+    },
+    {
+      "name": "2025 BMW M4 CS VR46 Edition",
+      "uid": "3d111a7ed0f544bc9215e3038db4c8dc",
+      "url": "https://sketchfab.com/3d-models/none-3d111a7ed0f544bc9215e3038db4c8dc",
+      "author": "BMW'S Lost Proxy",
+      "license": "by",
+      "faces": 166313,
+      "likes": 51,
+      "brandRisk": true,
+      "approved": false
+    }
+  ],
+  "police": [
+    {
+      "name": "Fairheaven LT '80 Cop Cruiser - Low poly model",
+      "uid": "61766c1e6e1e4b2b803c174f33433a74",
+      "url": "https://sketchfab.com/3d-models/none-61766c1e6e1e4b2b803c174f33433a74",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19505,
+      "likes": 1876,
+      "brandRisk": false,
+      "approved": true
+    },
+    {
+      "name": "Free Burned Police Cars",
+      "uid": "ad16f7085cb047b494997cf9efed5059",
+      "url": "https://sketchfab.com/3d-models/none-ad16f7085cb047b494997cf9efed5059",
+      "author": "Renafox",
+      "license": "by",
+      "faces": 21578,
+      "likes": 1413,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Police car",
+      "uid": "9166b13b6ae341f4bfc093edb71d74f4",
+      "url": "https://sketchfab.com/3d-models/none-9166b13b6ae341f4bfc093edb71d74f4",
+      "author": "SpatialNeglect",
+      "license": "by",
+      "faces": 256420,
+      "likes": 1402,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Generic civil service vehicles pack",
+      "uid": "8ff2a13f30914932a70c7950cfa58465",
+      "url": "https://sketchfab.com/3d-models/none-8ff2a13f30914932a70c7950cfa58465",
+      "author": "Comrade1280",
+      "license": "by",
+      "faces": 92709,
+      "likes": 1183,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Negotiator '80 - Low poly model",
+      "uid": "892b2684fb37442299bfad9222cf331c",
+      "url": "https://sketchfab.com/3d-models/none-892b2684fb37442299bfad9222cf331c",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19747,
+      "likes": 911,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "City",
+      "uid": "deb4dc75e62346c19c117bf61334eeb5",
+      "url": "https://sketchfab.com/3d-models/none-deb4dc75e62346c19c117bf61334eeb5",
+      "author": "Invictus.Art.00",
+      "license": "by",
+      "faces": 105204,
+      "likes": 509,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Vehicle Mini Pack 7",
+      "uid": "c8fce59e51874a4182dc20a66cbc6c74",
+      "url": "https://sketchfab.com/3d-models/none-c8fce59e51874a4182dc20a66cbc6c74",
+      "author": "Vladek",
+      "license": "by",
+      "faces": 195350,
+      "likes": 489,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly UFO Scene",
+      "uid": "207cb85b20a5430eb636966d408f1bd0",
+      "url": "https://sketchfab.com/3d-models/none-207cb85b20a5430eb636966d408f1bd0",
+      "author": "EdwiixGG",
+      "license": "by",
+      "faces": 40740,
+      "likes": 469,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Autozak russian prison car destroyed",
+      "uid": "cd9cff813aef48c2a18ce6cc8f207cee",
+      "url": "https://sketchfab.com/3d-models/none-cd9cff813aef48c2a18ce6cc8f207cee",
+      "author": "Ilya Kapustin",
+      "license": "by",
+      "faces": 254919,
+      "likes": 438,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly Car Set",
+      "uid": "9b8a51478e404a3594e11584b90a0e91",
+      "url": "https://sketchfab.com/3d-models/none-9b8a51478e404a3594e11584b90a0e91",
+      "author": "BetelgeuseMan",
+      "license": "by",
+      "faces": 32674,
+      "likes": 417,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Low Poly Simple Urban City 3D Asset Pack",
+      "uid": "310c806355814c3794f5e3022b38db85",
+      "url": "https://sketchfab.com/3d-models/none-310c806355814c3794f5e3022b38db85",
+      "author": "Syoma Pozdeev",
+      "license": "by",
+      "faces": 37780,
+      "likes": 382,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Illinois '90 - Low poly model",
+      "uid": "d604871eee5b4181bb298163b0b675b7",
+      "url": "https://sketchfab.com/3d-models/none-d604871eee5b4181bb298163b0b675b7",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 19354,
+      "likes": 377,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Los Angeles Police Department car",
+      "uid": "795fa0620bc44db8afcb06720a4dadd7",
+      "url": "https://sketchfab.com/3d-models/none-795fa0620bc44db8afcb06720a4dadd7",
+      "author": "SpatialNeglect",
+      "license": "by",
+      "faces": 241902,
+      "likes": 315,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Low Poly City",
+      "uid": "579d7493dbbc4cfa9fd50dde3df229bb",
+      "url": "https://sketchfab.com/3d-models/none-579d7493dbbc4cfa9fd50dde3df229bb",
+      "author": "kabukidanshii",
+      "license": "by",
+      "faces": 82626,
+      "likes": 307,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Abandoned Generic Sedan 2 - Game Ready",
+      "uid": "db2df46c49f9441286c84c66208ef7ac",
+      "url": "https://sketchfab.com/3d-models/none-db2df46c49f9441286c84c66208ef7ac",
+      "author": "Rashad Ibrahimli",
+      "license": "by",
+      "faces": 16487,
+      "likes": 300,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Free Low Poly Vehicles Pack",
+      "uid": "cb7640039e7a40679a53be705ebff50e",
+      "url": "https://sketchfab.com/3d-models/none-cb7640039e7a40679a53be705ebff50e",
+      "author": "RgsDev",
+      "license": "by",
+      "faces": 39644,
+      "likes": 296,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Negotiator '80 Cop Cruiser - Low poly model",
+      "uid": "945fd09f513f4d1ab19b6388a7ea7323",
+      "url": "https://sketchfab.com/3d-models/none-945fd09f513f4d1ab19b6388a7ea7323",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 21049,
+      "likes": 280,
+      "brandRisk": false,
+      "approved": false
+    },
+    {
+      "name": "Phoenix 455 '71 Interceptor - Low poly model",
+      "uid": "fbd5b96599944932a71fc8c81291253c",
+      "url": "https://sketchfab.com/3d-models/none-fbd5b96599944932a71fc8c81291253c",
+      "author": "Daniel Zhabotinsky",
+      "license": "by",
+      "faces": 26505,
+      "likes": 276,
+      "brandRisk": false,
+      "approved": false
+    }
+  ],
+  "lookalike_camry": [
+    {
+      "name": "Toyota Camry 40",
+      "uid": "560c174d073f4a10bb153ded41ada8c9",
+      "url": "https://sketchfab.com/3d-models/none-560c174d073f4a10bb153ded41ada8c9",
+      "author": "Ford mondeo",
+      "license": "by",
+      "faces": 18410,
+      "likes": 69,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_corolla": [
+    {
+      "name": "2014 Toyota Corolla E180 EU (with interior)",
+      "uid": "36f95efb0585464cae43a25a3b3392e8",
+      "url": "https://sketchfab.com/3d-models/none-36f95efb0585464cae43a25a3b3392e8",
+      "author": "Armored Wave",
+      "license": "by",
+      "faces": 84408,
+      "likes": 190,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_lancer": [
+    {
+      "name": "Mitsubishi Lancer Evolution IX",
+      "uid": "ee88ad9414884bdabaf0658943ac339b",
+      "url": "https://sketchfab.com/3d-models/none-ee88ad9414884bdabaf0658943ac339b",
+      "author": "Benit Kibabu",
+      "license": "by",
+      "faces": 163361,
+      "likes": 138,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_altima": [
+    {
+      "name": "Nissan Altima",
+      "uid": "b0e2cab3e44b4784bb89489d4782954f",
+      "url": "https://sketchfab.com/3d-models/none-b0e2cab3e44b4784bb89489d4782954f",
+      "author": "SalDev73",
+      "license": "by",
+      "faces": 34638,
+      "likes": 18,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_civic": [
+    {
+      "name": "2017 Honda Civic Si custom",
+      "uid": "7cfbf41c94fc4f8a988ab441af702722",
+      "url": "https://sketchfab.com/3d-models/none-7cfbf41c94fc4f8a988ab441af702722",
+      "author": "Socksthecat",
+      "license": "by",
+      "faces": 131775,
+      "likes": 131,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_crownvic_police": [
+    {
+      "name": "2001 Crown Victoria Police Interceptor Game Prop",
+      "uid": "9f30d360cee343efb5a441978ddb57bd",
+      "url": "https://sketchfab.com/3d-models/none-9f30d360cee343efb5a441978ddb57bd",
+      "author": "8sianDude",
+      "license": "by",
+      "faces": 42420,
+      "likes": 429,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_crownvic_taxi": [
+    {
+      "name": "2001 Crown Victoria Taxi Game Prop",
+      "uid": "2429a825ff1646568e8e6e1453f9c501",
+      "url": "https://sketchfab.com/3d-models/none-2429a825ff1646568e8e6e1453f9c501",
+      "author": "8sianDude",
+      "license": "by",
+      "faces": 33922,
+      "likes": 482,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_charger_police": [
+    {
+      "name": "Dodge Charger Police NYPD",
+      "uid": "578e2bfb9c8f415d932527a938e2fc64",
+      "url": "https://sketchfab.com/3d-models/none-578e2bfb9c8f415d932527a938e2fc64",
+      "author": "David_Holiday",
+      "license": "by",
+      "faces": 31382,
+      "likes": 225,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_f150": [
+    {
+      "name": "2018 Ford F-150 Raptor",
+      "uid": "096aa1ba46984eeeb196b75f4d213a0a",
+      "url": "https://sketchfab.com/3d-models/none-096aa1ba46984eeeb196b75f4d213a0a",
+      "author": "Galaxy Car Showroom",
+      "license": "by",
+      "faces": 54340,
+      "likes": 67,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_rav4": [
+    {
+      "name": "2009 Toyota Rav4",
+      "uid": "1ea8ca4618dc4742b60dc0a69022bcc3",
+      "url": "https://sketchfab.com/3d-models/none-1ea8ca4618dc4742b60dc0a69022bcc3",
+      "author": "Nieve5677",
+      "license": "by",
+      "faces": 13748,
+      "likes": 10,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_tahoe": [
+    {
+      "name": "Chevrolet Tahoe 2007",
+      "uid": "a11d407e141b4a88b2a424060075e357",
+      "url": "https://sketchfab.com/3d-models/none-a11d407e141b4a88b2a424060075e357",
+      "author": "David_Holiday",
+      "license": "by",
+      "faces": 140989,
+      "likes": 62,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ],
+  "lookalike_sienna": [
+    {
+      "name": "3D Scanned Toyota Sienna (2006) [Free]",
+      "uid": "2aea96055cf24a818559b92c7e55ba81",
+      "url": "https://sketchfab.com/3d-models/none-2aea96055cf24a818559b92c7e55ba81",
+      "author": "agent",
+      "license": "by",
+      "faces": 61618,
+      "likes": 7,
+      "brandRisk": true,
+      "approved": true,
+      "replaceBeforeRelease": true
+    }
+  ]
+}
