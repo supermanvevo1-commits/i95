@@ -97,8 +97,9 @@ namespace SurviveI95.Game
         {
             var input = AutoDriver != null ? AutoDriver(Path, Sim) : ReadKeyboard();
             StorePrevious();
+            int roads = Sim.RoadSwitches;
             Sim.Step(Path, input, Time.fixedDeltaTime);
-            if (Mathf.Abs(Sim.S - prevS) > 20f) StorePrevious(); // respawned
+            if (Mathf.Abs(Sim.S - prevS) > 20f || roads != Sim.RoadSwitches) StorePrevious(); // respawned or changed road
         }
 
         DriveInput ReadKeyboard()
@@ -375,10 +376,12 @@ namespace SurviveI95.Game
 
         void Pose(float s, float lateral, float theta)
         {
-            var spot = Path.Point(s, lateral);
-            spot.y = Mathf.Lerp(spot.y, -0.25f, GroundDrop(s, lateral) / 0.25f);
+            var road = Sim.Current ?? Path;
+            var spot = road.Point(s, lateral);
+            if (Sim.Current == null) spot.y = Mathf.Lerp(spot.y, -0.25f, GroundDrop(s, lateral) / 0.25f);
+            if (Sim.Current != null) spot = road.Point(s, lateral);
             transform.position = spot;
-            var tan = Path.Tangent(s);
+            var tan = road.Tangent(s);
             transform.rotation = Quaternion.LookRotation(tan, Vector3.up) * Quaternion.Euler(0, theta * Mathf.Rad2Deg, 0);
         }
 

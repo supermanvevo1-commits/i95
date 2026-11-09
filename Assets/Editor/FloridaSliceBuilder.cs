@@ -39,6 +39,8 @@ namespace SurviveI95.EditorTools
             Add(road, "Ground", GroundPlane(path, 3200f, -0.25f, 12f), m.grass);
             BuildCarriageway(road, "Northbound", path, s => 0, m);
             BuildCarriageway(road, "Southbound", path, south, m);
+            PrepareLookup(path, south);
+            ComputeExits(path);
             BuildBarriers(road, path, m);
             BuildOverpasses(road, path, south, m);
             BuildSigns(path, m);
@@ -48,6 +50,7 @@ namespace SurviveI95.EditorTools
             BuildLamps(path);
             BuildPillars(road, path, south, m);
             BuildRamps(road, path, m);
+            BuildExitRoads(road, path, m);
             BuildSoundWalls(road, path, south, m);
             BuildTrees(path, south);
 
@@ -325,7 +328,7 @@ namespace SurviveI95.EditorTools
             float start = -1;
             for (float s = 0; s < p.Length; s += 5)
             {
-                bool on = p.HasBarrier(s); // must match the collision rule exactly, or walls become invisible
+                bool on = p.HasBarrier(s) && !p.InGate(s); // must match the collision rule exactly, or walls become invisible
                 if (on && start < 0) start = s;
                 if (!on && start >= 0) { spans.Add((start, s)); start = -1; }
             }
@@ -645,6 +648,98 @@ namespace SurviveI95.EditorTools
             for (int i = 0, j = poly.Count - 1; i < poly.Count; j = i++)
                 if ((poly[i].y > q.y) != (poly[j].y > q.y) && q.x < (poly[j].x - poly[i].x) * (q.y - poly[i].y) / (poly[j].y - poly[i].y) + poly[i].x) inside = !inside;
             return inside;
+        }
+
+        class Chain { public List<Vector2> pts; public float edgeS; }
+
+        // Stitches the map's ramp fragments into exits, pairing each off-ramp with the next on-ramp.
+        static void ComputeExits(RoutePath p)
+        {
+            var file = $"Tools/Data/{RouteId}_ramps.json";
+            var rows = new List<RouteExitRow>();
+            if (File.Exists(file))
+            {
+                var ways = JsonUtility.FromJson<GroundFile>(File.ReadAllText(file)).roads.Select(r => { var l = new List<Vector2>(); for (int i = 0; i + 1 < r.p.Length; i += 2) l.Add(new Vector2(r.p[i], r.p[i + 1])); return l; }).ToList();
+                Func<Vector2, string> key = q => Mathf.RoundToInt(q.x) + "," + Mathf.RoundToInt(q.y);
+                var starts = new Dictionary<string, List<List<Vector2>>>(); var ends = new Dictionary<string, List<List<Vector2>>>();
+                foreach (var w in ways)
+                {
+                    var a = key(w[0]); var b = key(w[w.Count - 1]);
+                    if (!starts.ContainsKey(a)) starts[a] = new List<List<Vector2>>(); starts[a].Add(w);
+                    if (!ends.ContainsKey(b)) ends[b] = new List<List<Vector2>>(); ends[b].Add(w);
+                }
+                Func<Vector2, bool> nearEdge = q => Locate(q, out var s, out var lat) && lat > p.HalfWidth(s) - 9f && lat < p.HalfWidth(s) + 28f;
+                var offs = new List<Chain>(); var ons = new List<Chain>();
+                foreach (var w in ways)
+                {
+                    if (nearEdge(w[0]) && Locate(w[w.Count - 1], out var es, out var el) && el > p.HalfWidth(es) + 4f )
+                    {
+                        var c = new List<Vector2>(w); var cur = w;
+                        for (int g = 0; g < 8 && c.Count < 80; g++) { if (!starts.TryGetValue(key(cur[cur.Count - 1]), out var nx)) break; cur = nx[0]; c.AddRange(cur.Skip(1)); }
+                        Locate(c[0], out var cs, out _); offs.Add(new Chain { pts = c, edgeS = cs });
+                    }
+                    if (nearEdge(w[w.Count - 1]) && Locate(w[0], out var ss, out var sl) && sl > p.HalfWidth(ss) + 4f )
+                    {
+                        var c = new List<Vector2>(w); var cur = w;
+                        for (int g = 0; g < 8 && c.Count < 80; g++) { if (!ends.TryGetValue(key(cur[0]), out var pv)) break; cur = pv[0]; c.InsertRange(0, cur.Take(cur.Count - 1)); }
+                        Locate(c[c.Count - 1], out var cs, out _); ons.Add(new Chain { pts = c, edgeS = cs });
+                    }
+                }
+                float lastDiverge = -9999f;
+                foreach (var o in offs.OrderBy(x => x.edgeS))
+                {
+                    if (o.edgeS < 900f || o.edgeS - lastDiverge < 1100f || rows.Count >= 8) continue;
+                    var on = ons.Where(x => x.edgeS > o.edgeS + 250f && x.edgeS < o.edgeS + 1800f && (x.pts[0] - o.pts[o.pts.Count - 1]).magnitude < 800f).OrderBy(x => (x.pts[0] - o.pts[o.pts.Count - 1]).magnitude).FirstOrDefault();
+                    if (on == null) continue;
+                    var flat = new List<Vector2>();
+                    var d0 = p.Point(o.edgeS, p.HalfWidth(o.edgeS) + 2f); flat.Add(new Vector2(d0.x, d0.z));
+                    flat.AddRange(o.pts.Where((q, i) => i > 0 && !OnRoad(q, -1f)));
+                    var a = flat[flat.Count - 1]; var b = on.pts[0];
+                    // A curved connecting street, leaving and arriving in line with the ramps.
+                    var inDir = (a - flat[Mathf.Max(0, flat.Count - 2)]).normalized; var outDir = (on.pts[Mathf.Min(1, on.pts.Count - 1)] - b).normalized;
+                    float reach = (b - a).magnitude * .5f; var c1 = a + inDir * reach; var c2 = b - outDir * reach;
+                    int steps = Mathf.Max(6, Mathf.RoundToInt((b - a).magnitude / 12f));
+                    for (int i = 1; i < steps; i++) { float u = i / (float)steps, w = 1f - u; flat.Add(w * w * w * a + 3f * w * w * u * c1 + 3f * w * u * u * c2 + u * u * u * b); }
+                    flat.AddRange(on.pts.Where((q, i) => i < on.pts.Count - 1 && !OnRoad(q, -1f)));
+                    var d1 = p.Point(on.edgeS, p.HalfWidth(on.edgeS) + 1f); flat.Add(new Vector2(d1.x, d1.z));
+                    var xyz = new List<float>();
+                    for (int i = 0; i < flat.Count; i++)
+                    {
+                        float y = -.12f;
+                        if (i == 0) y = d0.y; else if (i == flat.Count - 1) y = d1.y;
+                        else if (Locate(flat[i], out var s, out var lat)) y = Mathf.Lerp(p.Center(s).y, -.12f, Mathf.SmoothStep(0, 1, Mathf.Clamp01((lat - p.HalfWidth(s)) / 70f)));
+                        xyz.Add(flat[i].x); xyz.Add(y); xyz.Add(flat[i].y);
+                    }
+                    rows.Add(new RouteExitRow { divergeS = o.edgeS, mergeS = on.edgeS, xyz = xyz.ToArray() });
+                    lastDiverge = o.edgeS;
+                }
+            }
+            var data = new RouteExitFile { items = rows.ToArray() };
+            string outFile = $"Assets/Resources/Data/Routes/{RouteId}_exits.json";
+            File.WriteAllText(outFile, JsonUtility.ToJson(data));
+            AssetDatabase.ImportAsset(outFile);
+            p.LoadJunctions(data);
+            Debug.Log("[FloridaSlice] drivable exits " + rows.Count + ": " + string.Join(", ", rows.Select(r => Mathf.RoundToInt(r.divergeS))));
+        }
+
+        static void BuildExitRoads(GameObject root, RoutePath p, Mats m)
+        {
+            var g = new GameObject("DrivableExits"); g.transform.SetParent(root.transform);
+            foreach (var j in p.Junctions)
+            {
+                var r = j.road; Func<float, float> h = r.HalfWidth;
+                Add(g, "Road", Ribbon(r, s => -h(s) - 1f, s => h(s) + 1f, 0.05f, 7, 7, step: 3f), m.asphalt);
+                Add(g, "EdgeL", Ribbon(r, s => -h(s) - .08f, s => -h(s) + .08f, 0.07f, 1, 1, step: 3f), m.yellow);
+                Add(g, "EdgeR", Ribbon(r, s => h(s) - .08f, s => h(s) + .08f, 0.07f, 1, 1, step: 3f), m.white);
+                Add(g, "WallL", WallStrip(r, s => -h(s) - 1.5f, 14f, r.Length - 14f, -0.1f, 0.9f), m.concrete, true);
+                Add(g, "WallR", WallStrip(r, s => h(s) + 1.5f, 14f, r.Length - 14f, -0.1f, 0.9f), m.concrete, true);
+                for (float s = 15f; s < r.Length; s += 24f)
+                {
+                    float y = r.Center(s).y; if (y < 2.4f) continue;
+                    var at = r.Center(s);
+                    Box(g.transform, new Vector3(at.x, y / 2f - .4f, at.z), Quaternion.identity, new Vector3(1.3f, y - .8f, 1.3f), m.concrete, "Pillar");
+                }
+            }
         }
 
         static void BuildRamps(GameObject root, RoutePath p, Mats m)

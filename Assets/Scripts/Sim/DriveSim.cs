@@ -52,6 +52,9 @@ namespace SurviveI95.Sim
         public bool Disabled => Damage >= 1f;
         float pullDirection = 1f;
         bool wallContact, sideContact;
+        /// <summary>The exit road the car is on, or null when on the main highway.</summary>
+        public RoutePath Current; public RouteJunction CurrentJunction;
+        public int RoadSwitches;
         public char Gear = 'P';
         public float Beta => Mathf.Atan2(SideSpeed, Mathf.Max(1f, Mathf.Abs(Speed)));
 
@@ -61,6 +64,7 @@ namespace SurviveI95.Sim
         public void Reset(RoutePath path, float s)
         {
             S = s; Lateral = path.HalfWidth(s) - RoutePath.LaneWidth / 2f;
+            Current = null; CurrentJunction = null;
             Theta = Speed = SideSpeed = YawRate = Steer = LateralAccel = LongAccel = 0;
             Gear = 'P';
             Damage = FrontCrush = 0f; crashDecel = crashTurn = stunned = 0f; pinS = float.PositiveInfinity; wallContact = sideContact = false;
@@ -77,6 +81,8 @@ namespace SurviveI95.Sim
         public void Step(RoutePath path, DriveInput input, float dt)
         {
             lastDt = dt;
+            var mainRoad = path;
+            if (Current != null) path = Current;
             if (stunned > 0f) { stunned -= dt; input.Throttle = 0f; input.Brake = 0f; }
             if (Disabled) input.Throttle = 0f;
             // Bent suspension pulls the car to one side.
@@ -102,6 +108,7 @@ namespace SurviveI95.Sim
             LongAccel = (Speed - before) / dt;
             Sliding = Mathf.Abs(Speed) > 6f && Mathf.Abs(Beta) > 0.07f;
             ApplyLimits(path);
+            CheckJunctions(mainRoad);
         }
 
         void UpdateSpeed(DriveInput input, float grip, float dt)
@@ -251,12 +258,63 @@ namespace SurviveI95.Sim
             if (!touching) { pinS = float.PositiveInfinity; sideContact = false; }
         }
 
+        void CheckJunctions(RoutePath main)
+        {
+            if (Current == null)
+            {
+                if (Speed < 1f || Lateral <= main.HalfWidth(S) + 0.6f) return;
+                foreach (var j in main.Junctions)
+                    if (S > j.divergeS && S < j.divergeS + RoutePath.GateLength)
+                    {
+                        var world = main.Point(S, Lateral); var forward = Rotate(main.Tangent(S), Theta);
+                        float bestS = 0, bestD = float.MaxValue;
+                        for (float q = 0; q < Mathf.Min(j.road.Length, 200f); q += 2f)
+                        {
+                            float d = (j.road.Center(q) - world).sqrMagnitude;
+                            if (d < bestD) { bestD = d; bestS = q; }
+                        }
+                        Current = j.road; CurrentJunction = j; S = bestS;
+                        Lateral = Vector3.Dot(world - j.road.Center(bestS), j.road.Right(bestS));
+                        Theta = HeadingFrom(j.road.Tangent(bestS), forward);
+                        RoadSwitches++;
+                        return;
+                    }
+                return;
+            }
+            if (S >= Current.Length - 3f)
+            {
+                var forward = Rotate(Current.Tangent(S), Theta);
+                var j = CurrentJunction;
+                S = j.mergeS; Lateral = main.HalfWidth(S) + 1f;
+                Theta = HeadingFrom(main.Tangent(S), forward);
+                Current = null; CurrentJunction = null; RoadSwitches++;
+            }
+        }
+
+        static Vector3 Rotate(Vector3 tangent, float theta) => Quaternion.AngleAxis(theta * Mathf.Rad2Deg, Vector3.up) * tangent;
+        static float HeadingFrom(Vector3 tangent, Vector3 forward) => Vector3.SignedAngle(new Vector3(tangent.x, 0, tangent.z), new Vector3(forward.x, 0, forward.z), Vector3.up) * Mathf.Deg2Rad;
+
         void ApplyLimits(RoutePath path)
         {
             bool wasHit = HitWall;
             HitWall = false;
             float half = path.HalfWidth(S);
             if (!wasHit) wallContact = false;
+            if (path.IsRamp)
+            {
+                float wall = half + 0.6f;
+                if (Mathf.Abs(Lateral) > wall)
+                {
+                    float into = Mathf.Abs(Speed * Mathf.Sin(Theta) + SideSpeed * Mathf.Cos(Theta));
+                    if (!wallContact) { if (into > 1f) TakeDamage(0.5f * Mathf.Pow(into / 20f, 2f), into, Lateral); Speed = Mathf.MoveTowards(Speed, 0f, into * 0.6f); }
+                    wallContact = true;
+                    Lateral = Mathf.Clamp(Lateral, -wall, wall);
+                    Speed = Mathf.MoveTowards(Speed, 0f, 2f * lastDt);
+                    Theta *= 0.82f; YawRate *= 0.3f; SideSpeed = 0f; HitWall = true; LastHitKind = "barrier";
+                }
+                if (S < 3f) { S = 3f; Speed = Mathf.Max(0, Speed); }
+                return;
+            }
             {
                 // The concrete median runs the whole road; the right-hand barrier only exists on structures.
                 float right = path.HasBarrier(S) ? half + RoutePath.BarrierRight - 1.2f : path.HasSoundWall(S) ? half + RoutePath.SoundWallOffset - 1.2f : float.PositiveInfinity, left = -half - RoutePath.BarrierLeft + 1.2f;
@@ -288,11 +346,15 @@ namespace SurviveI95.Sim
     {
         public int TargetLaneFromRight;
         public float SpeedMph = 200f;
+        /// <summary>When set, heads for the shoulder past this distance to take an exit.</summary>
+        public float ExitAtS = -1f;
 
         public DriveInput Think(RoutePath path, DriveSim car)
         {
+            if (car.Current != null) path = car.Current;
             float half = path.HalfWidth(car.S);
-            float target = half - RoutePath.LaneWidth * (TargetLaneFromRight + 0.5f);
+            float target = path.IsRamp ? 0f : half - RoutePath.LaneWidth * (TargetLaneFromRight + 0.5f);
+            if (!path.IsRamp && ExitAtS > 0f && car.S > ExitAtS) target = half + 2.2f;
             float aim = Mathf.Clamp((target - car.Lateral) * 0.055f, -0.09f, 0.09f);
             float look = path.Curvature(car.S + car.Speed * 0.4f);
             float err = aim - car.Theta - car.Beta - car.YawRate * 0.3f + look * car.Speed * 0.22f;

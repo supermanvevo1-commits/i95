@@ -36,7 +36,8 @@ Move testing to where the game starts, so traffic and police are tuned in the re
 - [x] Import Downtown Miami to Fort Lauderdale as the test road
 - [x] Elevated highway sections and bridges with height
 - [x] Scenery on and off ramps from real map data
-- [ ] Drivable exits: leave I-95 and rejoin (road network that traffic will also use)
+- [x] Drivable exits: 8 exits that leave I-95 and rejoin (road network that traffic will also use)
+- [ ] Clean up exits 0 to 2 and add matching exit signs
 - [x] First-pass skyline and buildings from real map footprints
 - [x] Sound walls and urban roadside
 

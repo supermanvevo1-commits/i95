@@ -12,6 +12,9 @@ namespace SurviveI95.World
         public RoutePoint[] points; public RouteExit[] exits; public RouteOverpass[] overpasses;
     }
 
+    public class RouteJunction { public float divergeS, mergeS; public RoutePath road; }
+    [Serializable] public class RouteExitRow { public float divergeS, mergeS; public float[] xyz; }
+    [Serializable] public class RouteExitFile { public RouteExitRow[] items; }
     [Serializable] public class RouteObstacle { public float s, lat, halfS, halfLat; public string kind; }
     [Serializable] public class RouteObstacleFile { public RouteObstacle[] items; }
 
@@ -25,11 +28,36 @@ namespace SurviveI95.World
         /// <summary>Solid roadside objects, sorted by distance along the road.</summary>
         public RouteObstacle[] Obstacles { get; private set; } = new RouteObstacle[0];
         public float MaxObstacleHalfS { get; private set; }
+        /// <summary>True for exit roads that branch off the highway.</summary>
+        public bool IsRamp { get; }
+        /// <summary>Drivable exits leaving this road.</summary>
+        public System.Collections.Generic.List<RouteJunction> Junctions { get; } = new System.Collections.Generic.List<RouteJunction>();
+        public const float GateLength = 110f;
+
+        public bool InGate(float s)
+        {
+            foreach (var j in Junctions) if ((s > j.divergeS - 5f && s < j.divergeS + GateLength) || (s > j.mergeS - 70f && s < j.mergeS + 5f)) return true;
+            return false;
+        }
+
+        /// <summary>Builds a one-lane branch road from world points.</summary>
+        public static RoutePath Branch(System.Collections.Generic.IList<Vector3> pts)
+        {
+            var file = new RouteFile { points = new RoutePoint[pts.Count], exits = new RouteExit[0], overpasses = new RouteOverpass[0] };
+            float s = 0;
+            for (int i = 0; i < pts.Count; i++)
+            {
+                if (i > 0) s += Vector3.Distance(pts[i], pts[i - 1]);
+                file.points[i] = new RoutePoint { x = pts[i].x, y = pts[i].y, z = pts[i].z, s = s, lanes = 1.5f };
+            }
+            file.length = s;
+            return new RoutePath(file, 7, 10, true);
+        }
         public float Length => (pos.Length - 1) * Step;
 
-        public RoutePath(RouteFile file)
+        public RoutePath(RouteFile file, int xzRadius = 14, int yRadius = 50, bool isRamp = false)
         {
-            File = file;
+            File = file; IsRamp = isRamp;
             int n = Mathf.FloorToInt(file.points[file.points.Length - 1].s / Step) + 1;
             var raw = new Vector3[n];
             var rawLanes = new float[n];
@@ -53,8 +81,8 @@ namespace SurviveI95.World
                 if (deck) raw[i].y += DeckRise;
             }
             // Map vertices are coarse; average them so curves flow and terrain noise disappears.
-            var xz = Average(Average(raw, 14), 14);
-            var y = Average(Average(raw, 50), 50);
+            var xz = Average(Average(raw, xzRadius), xzRadius);
+            var y = Average(Average(raw, yRadius), yRadius);
             pos = new Vector3[n];
             for (int i = 0; i < n; i++) pos[i] = new Vector3(xz[i].x, y[i].y, xz[i].z);
             lanes = Average(rawLanes, 30);
@@ -130,6 +158,17 @@ namespace SurviveI95.World
             return Vector3.SignedAngle(a, b, Vector3.up) * Mathf.Deg2Rad / 40f;
         }
 
+        public void LoadJunctions(RouteExitFile data)
+        {
+            Junctions.Clear();
+            foreach (var row in data.items)
+            {
+                var pts = new System.Collections.Generic.List<Vector3>();
+                for (int i = 0; i + 2 < row.xyz.Length; i += 3) pts.Add(new Vector3(row.xyz[i], row.xyz[i + 1], row.xyz[i + 2]));
+                Junctions.Add(new RouteJunction { divergeS = row.divergeS, mergeS = row.mergeS, road = Branch(pts) });
+            }
+        }
+
         public static RoutePath Load(string id)
         {
             var asset = Resources.Load<TextAsset>("Data/Routes/" + id);
@@ -137,6 +176,8 @@ namespace SurviveI95.World
             var path = new RoutePath(JsonUtility.FromJson<RouteFile>(asset.text));
             var solids = Resources.Load<TextAsset>("Data/Routes/" + id + "_obstacles");
             if (solids != null) path.Obstacles = JsonUtility.FromJson<RouteObstacleFile>(solids.text).items;
+            var loops = Resources.Load<TextAsset>("Data/Routes/" + id + "_exits");
+            if (loops != null) path.LoadJunctions(JsonUtility.FromJson<RouteExitFile>(loops.text));
             foreach (var o in path.Obstacles) path.MaxObstacleHalfS = Mathf.Max(path.MaxObstacleHalfS, o.halfS);
             return path;
         }
