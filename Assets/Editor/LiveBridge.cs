@@ -185,6 +185,16 @@ namespace SurviveI95.EditorTools
                     float mean = 0f; foreach (var o in over) mean += o; mean /= Mathf.Max(1, over.Count);
                     return FormattableString.Invariant($"limit={lim:F0} nearCars={n} nearAvgOver={(n > 0 ? sum / n : 0f):F1} | all: n={over.Count} meanOver={mean:F1} p50={P(.5f):F1} p85={P(.85f):F1} p99={P(.99f):F1}{diag} | habits: {ts.SpeedSpread()}");
                 }
+                case "validate": SurviveI95.EditorTools.DataValidator.Validate(); return "validated (see console)";
+                case "profiles": { var ts = car.GetComponent<TrafficManager>().Sim; return $"races={ts.Races} " + ts.ProfileSpread(); }
+                case "forcerace": // carId: this driver always takes up a challenge
+                {
+                    var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2));
+                    if (c == null) return "ERROR no car";
+                    var p = c.Profile;
+                    c.Profile = new SurviveI95.Data.DriverProfile { id = p.id + "_test", name = p.name, habit = p.habit, aggression = p.aggression, temper = p.temper, discipline = p.discipline, attention = p.attention, rager = p.rager, racer = 1f, brakeTaps = p.brakeTaps };
+                    return "racer set";
+                }
                 case "tempers": { var n = car.GetComponent<TrafficManager>().Sim.TemperCounts(); return $"shrug={n[0]} honk={n[1]} follow={n[2]} yell={n[3]} ram={n[4]}"; }
                 case "temper": { var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2)); if (c == null) return "ERROR no car"; c.Temper = (int)F(a, 3); return "temper " + c.Temper; }
                 case "wheel": car.ScrollCruise((int)F(a, 2)); return car.CruiseStatus;
@@ -217,7 +227,8 @@ namespace SurviveI95.EditorTools
                     var def = SurviveI95.Data.GameData.LoadVehicles().vehicles.Find(v => v.id == a[2]);
                     var kind = (DriverKind)Enum.Parse(typeof(DriverKind), a[3]);
                     int spawnLane = F(a, 5) < 0f ? ts.LaneCount(car.Sim.S) - 1 : (int)F(a, 5);
-                    var c = ts.Create(def, kind, car.Sim.S + F(a, 4), spawnLane, F(a, 6) / DriveSim.MetersPerSecondToMph);
+                    var prof = a.Length > 7 ? TrafficSim.FindProfile(a[7]) : null;
+                    var c = ts.Create(def, kind, car.Sim.S + F(a, 4), spawnLane, F(a, 6) / DriveSim.MetersPerSecondToMph, prof);
                     c.Desired = c.Speed; c.HoldDesired = true;
                     return $"spawned {def.id} {kind} id={c.Id}";
                 }
@@ -229,7 +240,7 @@ namespace SurviveI95.EditorTools
         {
             var sb = new System.Text.StringBuilder();
             foreach (var c in car.GetComponent<TrafficManager>().Sim.Cars)
-                if (Mathf.Abs(c.S - car.Sim.S) < 90f) sb.Append(FormattableString.Invariant($"[#{c.Id} {c.Def.id} {c.Kind}{(c.Regular != null ? " REG" + c.Regular.Level : "")} d={c.S - car.Sim.S:F0} lane={c.Lane} lat={c.Lateral:F1} {c.Speed * 2.237f:F0}mph sig={c.Signal} brk={c.Braking} flash={c.FlashingHighBeams} wreck={c.Wrecked}] "));
+                if (Mathf.Abs(c.S - car.Sim.S) < 90f) sb.Append(FormattableString.Invariant($"[#{c.Id} {c.Def.id} {c.Kind} {(c.Profile != null ? c.Profile.id : "-")}{(c.Racing ? " RACING" : "")}{(c.Regular != null ? " REG" + c.Regular.Level : "")} d={c.S - car.Sim.S:F0} lane={c.Lane} lat={c.Lateral:F1} {c.Speed * 2.237f:F0}mph sig={c.Signal} brk={c.Braking} flash={c.FlashingHighBeams} wreck={c.Wrecked}] "));
             return sb.ToString();
         }
 
@@ -286,7 +297,7 @@ namespace SurviveI95.EditorTools
                 foreach (var c in sim.Cars) if (c.Speed < 3f) { jams++; if (jams % 25 == 1) stops.AppendLine(FormattableString.Invariant($"t={i / 60} {c.Def.id} {c.Kind} s={c.S:F0} d={c.S - anchor:F0} lane={c.Lane} laneCount={sim.LaneCount(c.S)} ahead400={sim.LaneCount(c.S + 400f)} lanes={path.Lanes(c.S):F2} v={c.Speed:F1} desired={c.Desired:F1}")); }
             }
             watch.Stop();
-            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct");
+            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct\n  profiles: {sim.ProfileSpread()}");
             File.WriteAllText(Path.Combine(Dir, "trafficbench.txt"), res + "\n" + stops);
             return res;
         }

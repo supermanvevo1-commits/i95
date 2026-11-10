@@ -75,6 +75,10 @@ namespace SurviveI95.Game
                 t[sub].Add(i); t[sub].Add(flip ? i + 2 : i + 1); t[sub].Add(flip ? i + 1 : i + 2);
             }
 
+            /// <summary>Where the next shape starts, so everything built after it can be moved together.</summary>
+            public int Mark => v.Count;
+            public void Raise(int from, float dy) { for (int i = from; i < v.Count; i++) v[i] += new Vector3(0, dy, 0); }
+
             public Mesh Done(string name, int subs = SubCount)
             {
                 // Split vertices per face already, so normals come out flat and read as hard panels.
@@ -177,6 +181,19 @@ namespace SurviveI95.Game
                     Passenger(b, L, W, new Cab { H = 1.88f, Shoulder = 1.16f, RearBase = .4f, RearRoof = .42f, FrontRoof = .64f, FrontBase = .73f });
                     b.Box(Dark, new Vector3(0, 1.16f, zr + L * .2f), new Vector3(W * .78f, .03f, L * .34f));
                     break;
+                case "lifted_pickup":
+                {
+                    // A pickup on a tall lift: body raised, oversized off-road tires sticking past the fenders, a light bar up top.
+                    const float Lift = .42f;
+                    int start = b.Mark;
+                    Passenger(b, L, W * .93f, new Cab { H = 1.88f, Shoulder = 1.16f, RearBase = .4f, RearRoof = .42f, FrontRoof = .64f, FrontBase = .73f });
+                    b.Box(Dark, new Vector3(0, 1.16f, zr + L * .2f), new Vector3(W * .72f, .03f, L * .34f));
+                    b.Raise(start, Lift);
+                    b.Box(Trim, new Vector3(0, 1.88f + Lift + .08f, zr + L * .58f), new Vector3(W * .7f, .12f, .14f));
+                    b.Box(Dark, new Vector3(0, .62f, 0f), new Vector3(W * .5f, .2f, L * .7f)); // lift kit and frame showing underneath
+                    if (wheels) Wheels(b, .55f, hw - .16f, .38f, zr + L * .2f, zf - L * .2f);
+                    return;
+                }
                 case "semi":
                 case "tanker_gasoline":
                 case "tanker_diesel":
@@ -262,8 +279,8 @@ namespace SurviveI95.Game
             return b.Done(d.id + "_lamp", 1);
         }
 
-        static float LampHeight(VehicleDefinition d) => d.category == "motorcycle" ? .86f : d.lengthM > 6.8f ? 1.05f : d.id == "pickup" || d.id == "suv" || d.id == "minivan" ? .9f : .72f;
-        static float FrontLampHeight(VehicleDefinition d) => d.category == "motorcycle" ? .98f : d.lengthM > 6.8f && d.id != "suv_boat" && d.id != "fifth_wheel" ? .84f : d.id == "pickup" || d.id == "suv" || d.id == "minivan" || d.id == "suv_boat" || d.id == "fifth_wheel" ? .78f : .58f;
+        static float LampHeight(VehicleDefinition d) => d.id == "lifted_pickup" ? 1.32f : d.category == "motorcycle" ? .86f : d.lengthM > 6.8f ? 1.05f : d.id == "pickup" || d.id == "suv" || d.id == "minivan" ? .9f : .72f;
+        static float FrontLampHeight(VehicleDefinition d) => d.id == "lifted_pickup" ? 1.2f : d.category == "motorcycle" ? .98f : d.lengthM > 6.8f && d.id != "suv_boat" && d.id != "fifth_wheel" ? .84f : d.id == "pickup" || d.id == "suv" || d.id == "minivan" || d.id == "suv_boat" || d.id == "fifth_wheel" ? .78f : .58f;
 
         public static Set Create(VehicleDefinition d)
         {

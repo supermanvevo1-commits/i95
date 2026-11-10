@@ -34,6 +34,12 @@ namespace SurviveI95.Sim
         public float SpeedHabit;
         /// <summary>Keeps Desired as set, ignoring the limit. For tests that place a car at a fixed speed.</summary>
         public bool HoldDesired;
+        /// <summary>Who tends to drive this kind of vehicle, which shifted this driver's traits.</summary>
+        public DriverProfile Profile;
+        internal float RaceLeft, TapLeft, Age, GapSum;
+        internal int Changes, GapSamples;
+        internal bool Raced, PlayerWasBehind;
+        public bool Racing => RaceLeft > 0f;
         public object View;
 
         internal int PendingLane, Paint;
@@ -115,12 +121,15 @@ namespace SurviveI95.Sim
         // Campers are memorable, not common: about one driver in ten who could be one is.
         static float Weight(string personality) => personality == "normal" ? 58f : personality == "camper" ? 9f : personality == "rager" ? 13f : personality == "weaver" ? 11f : 100f;
 
-        DriverKind PickKind(VehicleDefinition def)
+        // A profile makes tailgaters and weavers more or less likely: a lifted truck far more, a minivan far less.
+        static float Weight(string personality, DriverProfile profile) => Weight(personality) * (personality == "rager" || personality == "weaver" ? profile.rager : 1f);
+
+        DriverKind PickKind(VehicleDefinition def, DriverProfile profile)
         {
             float total = 0f;
-            foreach (var p in def.personalities) total += Weight(p);
+            foreach (var p in def.personalities) total += Weight(p, profile);
             float r = Rand(0f, total);
-            foreach (var p in def.personalities) { r -= Weight(p); if (r <= 0f) return ToKind(p); }
+            foreach (var p in def.personalities) { r -= Weight(p, profile); if (r <= 0f) return ToKind(p); }
             return ToKind(def.personalities[0]);
         }
 
@@ -147,10 +156,12 @@ namespace SurviveI95.Sim
 
         float MaxLaneFor(DriverKind k, int lanes) => k == DriverKind.Truck ? Mathf.Min(1, lanes - 1) : lanes - 1;
 
-        public TrafficCar Create(VehicleDefinition def, DriverKind kind, float s, int lane, float speed = -1f)
+        public TrafficCar Create(VehicleDefinition def, DriverKind kind, float s, int lane, float speed = -1f, DriverProfile profile = null)
         {
-            var traits = MakeTraits(kind);
-            float habit = PickHabit(def, kind, traits);
+            profile ??= PickProfile(def);
+            var traits = Shift(MakeTraits(kind), profile);
+            // Trucks and campers keep their own habit; everyone else carries the profile's lean.
+            float habit = PickHabit(def, kind, traits) + (kind == DriverKind.Truck || kind == DriverKind.Camper ? 0f : profile.habit);
             var c = new TrafficCar
             {
                 Id = ++nextId, Def = def, Kind = kind, Traits = traits, S = s, Lane = lane, PendingLane = -1, SpeedHabit = habit,
@@ -158,7 +169,8 @@ namespace SurviveI95.Sim
                 Phase = Rand(0f, 6.28f), Paint = rng.Next(0, 1000), Cooldown = Rand(1f, 8f),
                 Signals = rng.NextDouble() < 0.25f + 0.75f * traits.LaneDiscipline
             };
-            c.Temper = PickTemper(def, kind, traits);
+            c.Profile = profile;
+            c.Temper = PickTemper(def, kind, traits, profile.temper);
             c.Speed = speed >= 0f ? speed : c.Desired;
             c.Lateral = LaneCenter(s, lane);
             c.PrevS = c.S; c.PrevLateral = c.Lateral;
@@ -175,7 +187,7 @@ namespace SurviveI95.Sim
             Cars[i] = c;
         }
 
-        void RemoveAt(int i) { var c = Cars[i]; Cars.RemoveAt(i); Detach(c); Removed?.Invoke(c); }
+        void RemoveAt(int i) { var c = Cars[i]; Cars.RemoveAt(i); Detach(c); LogProfile(c); Removed?.Invoke(c); }
 
         public void Clear() { for (int i = Cars.Count - 1; i >= 0; i--) RemoveAt(i); }
 
@@ -192,7 +204,8 @@ namespace SurviveI95.Sim
         {
             if (s < RouteStart || s > path.Length - RouteMargin) return false;
             var def = PickVehicle();
-            var kind = PickKind(def);
+            var profile = PickProfile(def);
+            var kind = PickKind(def, profile);
             int lanes = LaneCount(s);
             int lane;
             if (kind == DriverKind.Camper && lanes >= 2) lane = lanes - 1;
@@ -201,7 +214,7 @@ namespace SurviveI95.Sim
             // A lane that ends right here would make the driver's first move an emergency.
             while (lane > 0 && !float.IsInfinity(LaneEnd(s, lane, LaneEndLook + 300f))) lane--;
             if (!SpotIsClear(s, lane, def.lengthM)) return false;
-            var c = Create(def, kind, s, lane);
+            var c = Create(def, kind, s, lane, -1f, profile);
             // Cars behind must be able to catch up, or they would sit out of sight forever.
             if (behindPlayer && c.Desired < anchorSpeed + 2f) { RemoveAt(Cars.IndexOf(c)); return false; }
             return true;
@@ -393,8 +406,13 @@ namespace SurviveI95.Sim
             // The speed this driver wants follows the posted limit as it changes.
             if (!c.HoldDesired) c.Desired = c.Regular != null ? CruiseFor(c.Regular, c.S) : CruiseAt(c, c.S);
             if (near) cap = Personal(c, gap, leadPlayer, backGap, backPlayer, dt);
+            if (near) Challenge(c, dt);
+            // For tests: how long this driver has been around, and the gap they keep when following at speed.
+            c.Age += dt;
+            if (!float.IsInfinity(gap) && gap < 80f && c.Speed > 15f) { c.GapSum += gap / c.Speed; c.GapSamples++; }
 
             float a = c.TightFollow && leadPlayer ? Idm(c.Speed, c.Desired, MaxAccel(c), 2.6f, .35f, 1.5f, gap, seen) : AccelFor(c, gap, seen);
+            a = BrakeTaps(c, a, dt);
             if (endGap < 160f) a = Mathf.Min(a, AccelFor(c, endGap, 0f));
             if (c.StartledLeft > 0f) a = Mathf.Min(a, -2.5f);
             a = Mathf.Min(a, cap);
@@ -509,7 +527,7 @@ namespace SurviveI95.Sim
         void StartChange(TrafficCar c, int lane)
         {
             c.ChangeFrom = c.Lateral - LaneCenter(c.S, lane);
-            c.Lane = lane; c.PendingLane = -1; c.SinceChange = 0f;
+            c.Lane = lane; c.PendingLane = -1; c.SinceChange = 0f; c.Changes++;
             c.ChangeTime = 0f;
             c.ChangeDuration = c.Kind == DriverKind.Truck ? 5.5f : c.Kind == DriverKind.Weaver ? 1.9f : Mathf.Lerp(3.8f, 2.4f, c.Traits.Aggression);
             float wait = c.Regular != null && c.Regular.Level >= 2 ? 1.2f : c.Kind == DriverKind.Weaver ? 2.5f : c.Kind == DriverKind.Tailgater ? 5f : c.Kind == DriverKind.Camper ? 1.5f : Mathf.Lerp(11f, 5f, c.Traits.Aggression);

@@ -81,8 +81,10 @@ Drivers with memory and character, and real speed limits.
 - [x] 4.7 Real speed limits per section. Drivers mostly run 5-9 over, a few far over in any lane
     - Second look: in the 65 zone, measured traffic averages +3 over with the 85th percentile at +8 (real roads: about +5 and +9-10). About half of drivers are held behind slower cars, and the 55 zone downtown sags to the limit. Revisit traffic flow in M6 (rush hour)
 - [ ] 4.7b Lanes sort by speed like a real highway: slower drivers keep right, faster ones settle left, so the left lane runs noticeably quicker. Its pace varies with who's leading, and now and then one driver is flat-out booking it
-- [ ] 4.8 The car says something about the driver, as odds, never certainties. Covers every vehicle on the road: minivans calm (a rare crash-out, not never), sports and muscle cars race and take risks, luxury cars own the road, lifted trucks on oversized wheels push people around, plus work vans, taxis, rentals, RVs and snowbirds, trucks, motorcycles. Adds the lifted truck
-- [ ] 4.9 Who's on the road depends on where and why: more freight near ports and Jacksonville, more RVs, snowbirds and Quebec plates heading to Florida in winter, commuters and delivery vans near cities, beach and vacation traffic in season
+- [x] 4.8 The car says something about the driver, as odds, never certainties. Covers every vehicle on the road: minivans calm (a rare crash-out, not never), sports and muscle cars race and take risks, luxury cars own the road, lifted trucks on oversized wheels push people around, plus work vans, taxis, rentals, RVs and snowbirds, trucks, motorcycles. Adds the lifted truck
+    - Second look: over two 2-hour runs (about 1,000 drivers each), the profiles separate clearly. Families: temper 0.6, +1-2 mph over, 2.25 s gaps. Lifted trucks: temper 2.2, +6-7 over, 1.75 s gaps. Snowbirds and RVs run 2-3 under. 0 unprovoked or chain crashes. Rentals don't yet make late exit moves, because traffic doesn't take exits yet
+- [ ] 4.8b Who's behind the wheel: age, experience and license, from real data. Skill comes from experience, not the car. Teens crash far more per mile (IIHS: 16-19 nearly 3 times drivers 20+). Drivers 70+ rise again per mile, mostly from fragility, not mistakes. About 1 in 5 fatal crashes involves an unlicensed or invalidly licensed driver (AAA Foundation), with suspended or revoked licenses about 5-7% of drivers in them. The car then shifts the odds by who owns it. An older luxury owner is careful and values the car; a young driver in the same car takes risks. Japanese and Korean commuter cars mean disciplined owners, but a cheap tuner hatchback with a young driver means impulsive. Low-skill drivers wander in the lane and drift over the line, brake late and hard, merge sloppily, and signal late or never. This revisits 4.8, where luxury drivers got a flat, low discipline, so it depends on age instead
+- [ ] 4.9 License plates from where the driver is from (Florida locals, Georgia and Carolina through traffic, New York and New Jersey hurry, Ontario and Quebec snowbirds), hinting at how they drive and helping you recognize regulars. Who's on the road depends on where and why: more freight near ports and Jacksonville, more RVs, snowbirds and Quebec plates heading to Florida in winter, commuters and delivery vans near cities, beach and vacation traffic in season
 
 Done when: a driver you wronged comes back and you recognize them, and you can tell a minivan mom from a lifted-truck guy by how they drive.
 
@@ -177,7 +179,7 @@ The whole Florida route, built to the slice's look and sound. See FLORIDA_ROUTE.
 - [ ] 12.6 Gas stations and rest stops at real spacing, with pull-off ramps, signs, and exits that reach city streets
 - [ ] 12.7 Florida events: gators, downpours, Florida Man
 - [ ] 12.8 Full NPC behavior list (npc_behaviors.md)
-- [ ] 12.9 Art for everything: fictional car designs with no real badges, roadside variety, proper trees
+- [ ] 12.9 Art for everything: fictional car designs with parody brand names and no real badges, as GTA does, roadside variety, proper trees
 - [ ] 12.10 Full sound: every vehicle, ambience, cabin, and the radio (stations by genre, talk and podcasts, original or independently licensed music)
 - [ ] 12.11 Settings screen, performance on modest PCs
 - [ ] 12.12 Whole-run balance

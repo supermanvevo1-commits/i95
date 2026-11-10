@@ -23,6 +23,7 @@ namespace SurviveI95.Sim
         public bool Signals;
         /// <summary>mph over the posted limit they like to drive.</summary>
         public float SpeedHabit;
+        public DriverProfile Profile;
         /// <summary>The highest level this driver's anger can reach. See <see cref="TrafficCar.Temper"/>.</summary>
         public int Temper;
         /// <summary>0 calm, 1 out for blood. Cools down slowly.</summary>
@@ -122,11 +123,10 @@ namespace SurviveI95.Sim
         // The most anger each temper can reach, just under the next level.
         static readonly float[] TemperCeiling = { .14f, .39f, .64f, .84f, 1f };
 
-        int PickTemper(VehicleDefinition def, DriverKind kind, DriverTraits t)
+        int PickTemper(VehicleDefinition def, DriverKind kind, DriverTraits t, float profileShift)
         {
-            // Aggressive drivers lean angrier; families and people towing a camper lean calmer.
-            float u = (float)rng.NextDouble() + (t.Aggression - .4f) * .2f;
-            if (def.id == "minivan" || def.category == "recreation") u -= .12f;
+            // Aggressive drivers lean angrier; the driver profile adds its own lean (families calmer, lifted trucks hotter).
+            float u = (float)rng.NextDouble() + (t.Aggression - .4f) * .2f + profileShift;
             int temper = 0;
             while (temper < TemperOdds.Length && u >= TemperOdds[temper]) temper++;
             // Truck drivers and left-lane campers dig in, but they don't chase anyone down.
@@ -164,7 +164,7 @@ namespace SurviveI95.Sim
             var reg = new Regular
             {
                 Id = c.Id, Def = c.Def, Kind = c.Kind, Traits = c.Traits, Paint = c.Paint, Signals = c.Signals, Temper = c.Temper,
-                SpeedHabit = c.SpeedHabit, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
+                SpeedHabit = c.SpeedHabit, Profile = c.Profile, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
             };
             Regulars.Add(reg);
             c.Regular = reg;
@@ -275,7 +275,7 @@ namespace SurviveI95.Sim
                 int tries = 0;
                 while (!SpotIsClear(r.S, lane, r.Def.lengthM) && tries++ < lanes) lane = (lane + 1) % Mathf.Max(1, (int)MaxLaneFor(r.Kind, lanes) + 1);
                 if (!SpotIsClear(r.S, lane, r.Def.lengthM)) continue;
-                var c = Create(r.Def, r.Kind, r.S, lane, r.Speed);
+                var c = Create(r.Def, r.Kind, r.S, lane, r.Speed, r.Profile);
                 Spawned--; // the same driver, not new traffic
                 c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.SpeedHabit = r.SpeedHabit; c.Desired = CruiseAt(r, r.S); c.Temper = r.Temper;
                 c.Regular = r; r.Car = c;

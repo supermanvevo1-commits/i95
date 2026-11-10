@@ -16,6 +16,29 @@ namespace SurviveI95.Data
         public string[] personalities;
         public bool articulated;
         public bool fuelHazard;
+        /// <summary>Who tends to drive this vehicle, by weight. Profiles are in driver_profiles.json.</summary>
+        public DriverShare[] drivers;
+    }
+
+    [Serializable]
+    public class DriverShare
+    {
+        public string profile;
+        public float weight;
+    }
+
+    /// <summary>How a kind of driver shifts the random traits of whoever is behind the wheel. Odds, never certainties.</summary>
+    [Serializable]
+    public class DriverProfile
+    {
+        public string id, name;
+        public float habit, aggression, temper, discipline, attention, rager, racer, brakeTaps;
+    }
+
+    [Serializable]
+    public class DriverProfileTable
+    {
+        public List<DriverProfile> profiles;
     }
 
     [Serializable]
@@ -57,5 +80,6 @@ namespace SurviveI95.Data
 
         public static VehicleCatalog LoadVehicles() => Load<VehicleCatalog>("Data/vehicles");
         public static StateTrafficTable LoadStateTraffic() => Load<StateTrafficTable>("Data/state_traffic");
+        public static DriverProfileTable LoadDriverProfiles() => Load<DriverProfileTable>("Data/driver_profiles");
     }
 }

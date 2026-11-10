@@ -16,9 +16,12 @@ namespace SurviveI95.EditorTools
             var table = GameData.LoadStateTraffic();
             var ids = new HashSet<string>();
             var used = new HashSet<string>();
+            var profileIds = new HashSet<string>(GameData.LoadDriverProfiles().profiles.Select(p => p.id));
 
             foreach (var v in catalog.vehicles)
             {
+                if (v.drivers == null || v.drivers.Length == 0) errors.Add("No driver profiles: " + v.id);
+                else foreach (var d in v.drivers) if (!profileIds.Contains(d.profile)) errors.Add(v.id + " uses unknown driver profile: " + d.profile);
                 if (!ids.Add(v.id)) errors.Add("Duplicate vehicle id: " + v.id);
                 if (v.lengthM <= 0 || v.widthM <= 0) errors.Add("Bad size: " + v.id);
                 if (v.cruiseMph == null || v.cruiseMph.Length != 2 || v.cruiseMph[0] > v.cruiseMph[1]) errors.Add("Bad cruiseMph: " + v.id);
