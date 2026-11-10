@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using SurviveI95.Game;
 using SurviveI95.Sim;
+using SurviveI95.World;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -72,6 +73,7 @@ namespace SurviveI95.EditorTools
                 case "refresh": AssetDatabase.Refresh(); return "refreshing";
                 case "play": EditorApplication.isPlaying = true; return "entering play";
                 case "stop": PlayerCar.AutoDriver = null; EditorApplication.isPlaying = false; return "stopping";
+                case "trafficbench": return TrafficBench(F(a, 2), (int)F(a, 3), a.Length > 4 ? F(a, 4) : 31f, a.Length > 5 ? (int)F(a, 5) : 95);
                 case "rebuild": if (EditorApplication.isPlaying) return "ERROR stop first"; FloridaSliceBuilder.Build(); return "rebuilt";
             }
             if (car == null) return "ERROR not in play mode";
@@ -124,8 +126,146 @@ namespace SurviveI95.EditorTools
                     fpsTime = Time.realtimeSinceStartup; fpsFrames = Time.frameCount;
                     return $"fps={fpsN / Mathf.Max(.001f, fpsDt):F1} frames={fpsN} seconds={fpsDt:F1}";
                 case "shot": return Shot(a[2]);
+                case "traffic": return TrafficStatus(car);
+                case "trafficcount": car.GetComponent<TrafficManager>().Sim.Target = (int)F(a, 2); return "traffic target " + a[2];
+                case "cruise": // mph lane: stays in lane and brakes for traffic, like a careful driver
+                {
+                    var tm = car.GetComponent<TrafficManager>();
+                    float want = F(a, 2);
+                    bot = new LaneBot { SpeedMph = want, TargetLaneFromRight = (int)F(a, 3) };
+                    PlayerCar.AutoDriver = (p, c) =>
+                    {
+                        var input = bot.Think(p, c);
+                        float gap = float.MaxValue, lead = 0f;
+                        foreach (var o in tm.Sim.Cars)
+                        {
+                            float d = o.S - c.S - o.Length / 2f - DriveSim.CarHalfLength;
+                            if (d > -3f && d < gap && Mathf.Abs(o.Lateral - c.Lateral) < (o.Width / 2f + 1.3f)) { gap = d; lead = o.Speed; }
+                        }
+                        float safe = 8f + c.Speed * 1.4f + Mathf.Max(0f, c.Speed - lead) * 2.2f;
+                        if (gap < safe) { input.Throttle = 0f; input.Brake = gap < safe * .7f ? 1f : .35f; }
+                        return input;
+                    };
+                    return "cruising";
+                }
+                case "cars": return TrafficNear(car);
+                case "lineup":
+                {
+                    var ts = car.GetComponent<TrafficManager>().Sim; ts.Target = 0; ts.Clear();
+                    PlayerCar.AutoDriver = (p, c) => new DriveInput();
+                    var all = SurviveI95.Data.GameData.LoadVehicles().vehicles;
+                    int from = (int)F(a, 2), n = 0; float z = 16f;
+                    for (int i = from; i < all.Count && n < (int)F(a, 3); i++, n++)
+                    {
+                        int lane = n % 3; var c = ts.Create(all[i], DriverKind.Normal, car.Sim.S + z + all[i].lengthM / 2f, lane, 0f);
+                        c.Desired = 0.01f; if (lane == 2) z += 26f;
+                    }
+                    return "lineup " + n;
+                }
+                case "trafficclear": { var ts = car.GetComponent<TrafficManager>().Sim; ts.Target = 0; ts.ForgetRegulars(); ts.Clear(); return "traffic cleared"; }
+                case "regulars": return Regulars(car);
+                case "tempers": { var n = car.GetComponent<TrafficManager>().Sim.TemperCounts(); return $"shrug={n[0]} honk={n[1]} follow={n[2]} yell={n[3]} ram={n[4]}"; }
+                case "temper": { var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2)); if (c == null) return "ERROR no car"; c.Temper = (int)F(a, 3); return "temper " + c.Temper; }
+                case "wheel": car.ScrollCruise((int)F(a, 2)); return car.CruiseStatus;
+                case "cruisebot": // lane: the test bot steers, the player's own cruise control works the pedals
+                {
+                    bot = new LaneBot { SpeedMph = 0f, TargetLaneFromRight = (int)F(a, 2) };
+                    PlayerCar.AutoDriver = (p, c) => { var input = bot.Think(p, c); input.Throttle = 0f; input.Brake = 0f; return car.ApplyCruise(input); };
+                    return "cruise bot";
+                }
+                case "glance": car.TestGlance = a[2] == "off" ? null : a[2]; return "glance " + a[2];
+                case "lookback": car.TestLookBack = a[2] == "on"; return "look back " + a[2];
+                case "fovset": car.SetBaseFov(F(a, 2)); return "fov " + car.BaseFov;
+                case "camera": return FormattableString.Invariant($"fov={car.chaseCamera.fieldOfView:F1} glance={car.Glance:F2} pos={car.chaseCamera.transform.position} fwd={car.chaseCamera.transform.forward}");
+                case "notices": { var log = car.GetComponent<TrafficManager>().NoticeLog; var res = string.Join(" | ", log); log.Clear(); return res; }
+                case "anger": // carId anger: sets how much this driver hates the player
+                {
+                    var ts = car.GetComponent<TrafficManager>().Sim;
+                    var c = ts.Cars.Find(o => o.Id == (int)F(a, 2));
+                    if (c == null) return "ERROR no car " + a[2];
+                    c.Temper = 4;
+                    var reg = ts.Grudge(c, Grievance.CutOff, 0f);
+                    reg.Anger = F(a, 3);
+                    return $"{reg.Name} anger {reg.Anger:F2} level {reg.Level}";
+                }
+                case "trafficspawn": // vehicleId kind distanceAhead laneFromRight mph
+                {
+                    var ts = car.GetComponent<TrafficManager>().Sim;
+                    var def = SurviveI95.Data.GameData.LoadVehicles().vehicles.Find(v => v.id == a[2]);
+                    var kind = (DriverKind)Enum.Parse(typeof(DriverKind), a[3]);
+                    int spawnLane = F(a, 5) < 0f ? ts.LaneCount(car.Sim.S) - 1 : (int)F(a, 5);
+                    var c = ts.Create(def, kind, car.Sim.S + F(a, 4), spawnLane, F(a, 6) / DriveSim.MetersPerSecondToMph);
+                    c.Desired = c.Speed;
+                    return $"spawned {def.id} {kind} id={c.Id}";
+                }
             }
             return "ERROR unknown command " + a[1];
+        }
+
+        static string TrafficNear(PlayerCar car)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in car.GetComponent<TrafficManager>().Sim.Cars)
+                if (Mathf.Abs(c.S - car.Sim.S) < 90f) sb.Append(FormattableString.Invariant($"[#{c.Id} {c.Def.id} {c.Kind}{(c.Regular != null ? " REG" + c.Regular.Level : "")} d={c.S - car.Sim.S:F0} lane={c.Lane} lat={c.Lateral:F1} {c.Speed * 2.237f:F0}mph sig={c.Signal} brk={c.Braking} flash={c.FlashingHighBeams} wreck={c.Wrecked}] "));
+            return sb.ToString();
+        }
+
+        static string Regulars(PlayerCar car)
+        {
+            var ts = car.GetComponent<TrafficManager>().Sim;
+            var sb = new System.Text.StringBuilder(FormattableString.Invariant($"regulars={ts.Regulars.Count} grudges={ts.Grudges} shrugs={ts.Shrugs} returns={ts.Returns} honks={ts.Honks} brakeChecks={ts.BrakeChecks} rams={ts.Rams} "));
+            foreach (var r in ts.Regulars)
+            {
+                float s = r.Car != null ? r.Car.S : r.S;
+                sb.Append(FormattableString.Invariant($"[{r.Name} '{r.Plate}' {r.Kind} temper={r.Temper} anger={r.Anger:F2} lvl={r.Level} last={r.Last} n={r.Grievances} d={s - car.Sim.S:F0} {(r.Car != null ? r.Car.Speed : r.Speed) * 2.237f:F0}mph {(r.Car != null ? "on" : "off")}{(r.Wrecked || (r.Car != null && r.Car.Wrecked) ? " wrecked" : "")}] "));
+            }
+            return sb.ToString();
+        }
+
+        static string TrafficStatus(PlayerCar car)
+        {
+            var ts = car.GetComponent<TrafficManager>().Sim;
+            int[] kinds = new int[5]; int signaling = 0, braking = 0, wrecks = 0, leftCampers = 0; float nearest = float.MaxValue, minSp = 999f, maxSp = 0f;
+            foreach (var c in ts.Cars)
+            {
+                kinds[(int)c.Kind]++;
+                if (c.Signal != 0) signaling++; if (c.Braking) braking++; if (c.Wrecked) wrecks++;
+                if (c.Kind == DriverKind.Camper && c.Lane >= ts.LaneCount(c.S) - 1) leftCampers++;
+                nearest = Mathf.Min(nearest, Mathf.Abs(c.S - car.Sim.S));
+                minSp = Mathf.Min(minSp, c.Speed); maxSp = Mathf.Max(maxSp, c.Speed);
+            }
+            return FormattableString.Invariant($"cars={ts.Cars.Count} normal={kinds[0]} camper={kinds[1]} (left lane {leftCampers}) tailgater={kinds[2]} truck={kinds[3]} weaver={kinds[4]} signaling={signaling} braking={braking} wrecks={wrecks} nearest={nearest:F0}m speedMph={minSp * 2.237f:F0}-{maxSp * 2.237f:F0} laneChanges={ts.LaneChanges} signaled={ts.LaneChangesSignaled} playerCrashes={ts.CrashesWithPlayer} chain={ts.ChainCrashes} unprovoked={ts.UnprovokedCrashes} spawned={ts.Spawned}");
+        }
+
+        // Runs traffic with no rendering and no player, following a moving window down the whole route.
+        static string TrafficBench(float seconds, int cars, float windowMs, int seed)
+        {
+            var path = RoutePath.Load("miami_ftl");
+            var chapter = SurviveI95.Data.GameData.LoadStateTraffic().chapters.Find(c => c.id == "florida");
+            var sim = new TrafficSim(path, SurviveI95.Data.GameData.LoadVehicles(), chapter, seed) { Target = cars };
+            const float dt = 1f / 60f;
+            float anchor = 400f, top = path.Length - 1500f, minGapAll = 999f; int steps = Mathf.RoundToInt(seconds / dt), under = 0, totalCars = 0, jams = 0;
+            var stops = new System.Text.StringBuilder(); int campers = 0, campersLeft = 0, trucks = 0, trucksLeft = 0;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int i = 0; i < steps; i++)
+            {
+                anchor += windowMs * dt;
+                if (anchor > top) { anchor = 400f; }
+                sim.Step(dt, null, anchor, windowMs);
+                if (i % 60 != 0) continue;
+                foreach (var c in sim.Cars)
+                {
+                    int leftLane = sim.LaneCount(c.S) - 1;
+                    if (c.Kind == DriverKind.Camper) { campers++; if (c.Lane >= leftLane) campersLeft++; }
+                    else if (c.Kind == DriverKind.Truck && leftLane >= 2) { trucks++; if (c.Lane >= leftLane) trucksLeft++; }
+                }
+                totalCars += sim.Cars.Count; if (sim.Cars.Count < cars * .9f) under++;
+                foreach (var c in sim.Cars) if (c.Speed < 3f) { jams++; if (jams % 25 == 1) stops.AppendLine(FormattableString.Invariant($"t={i / 60} {c.Def.id} {c.Kind} s={c.S:F0} d={c.S - anchor:F0} lane={c.Lane} laneCount={sim.LaneCount(c.S)} ahead400={sim.LaneCount(c.S + 400f)} lanes={path.Lanes(c.S):F2} v={c.Speed:F1} desired={c.Desired:F1}")); }
+            }
+            watch.Stop();
+            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct");
+            File.WriteAllText(Path.Combine(Dir, "trafficbench.txt"), res + "\n" + stops);
+            return res;
         }
 
         // Lists separate mesh pieces around the center console, used to locate parts fused into larger meshes.

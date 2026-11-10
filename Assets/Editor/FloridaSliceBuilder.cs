@@ -1115,6 +1115,7 @@ namespace SurviveI95.EditorTools
         {
             var root = new GameObject("PlayerCar");
             var player = root.AddComponent<PlayerCar>();
+            root.AddComponent<TrafficManager>();
             player.chaseCamera = cam;
             player.routeId = RouteId;
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(CarPath);

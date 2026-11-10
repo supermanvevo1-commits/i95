@@ -1,6 +1,6 @@
 # NPC behavior wishlist (from the game's creator)
 
-Status: design target. Not implemented in Unity yet.
+Status: design target. M3 built left-lane campers, tailgaters, trucks and weavers; the rest is still to come.
 
 ## Distracted
 Texting (lane drift, random slowing, late reactions); eating, makeup or shaving; rubbernecking at crashes, slowing both directions; lost tourists on GPS (sudden lane changes, last-second exits); singing or on FaceTime.

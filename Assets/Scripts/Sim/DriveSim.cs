@@ -78,6 +78,22 @@ namespace SurviveI95.Sim
             if (Mathf.Abs(pull) > 0.05f) pullDirection = Mathf.Sign(pull);
         }
 
+        /// <summary>Applies contact with another vehicle. Separation and velocity change are along the road and across it.</summary>
+        public void ApplyVehicleHit(float sepS, float sepLat, float dvS, float dvLat, float damage, float crush, float yawKick, float impact, float pull)
+        {
+            S += sepS; Lateral += sepLat;
+            float c = Mathf.Cos(Theta), s = Mathf.Sin(Theta);
+            float along = Speed * c - SideSpeed * s + dvS, across = Speed * s + SideSpeed * c + dvLat;
+            Speed = along * c + across * s;
+            SideSpeed = -along * s + across * c;
+            YawRate += yawKick;
+            LastHitKind = "vehicle";
+            if (damage <= 0f) return;
+            TakeDamage(damage, impact, pull);
+            FrontCrush = Mathf.Min(0.55f, FrontCrush + crush);
+            if (impact > 7f) stunned = 0.5f;
+        }
+
         public void Step(RoutePath path, DriveInput input, float dt)
         {
             lastDt = dt;
@@ -174,7 +190,7 @@ namespace SurviveI95.Sim
             Theta = Mathf.Repeat(Theta + (YawRate - k * sDot) * h + Mathf.PI, Mathf.PI * 2f) - Mathf.PI;
         }
 
-        const float CarHalfLength = 2.3f, CarHalfWidth = 0.9f;
+        public const float CarHalfLength = 2.3f, CarHalfWidth = 0.9f;
         readonly HashSet<int> broken = new HashSet<int>();
         float crashDecel, crashTurn, stunned, lastDt = 1f / 60f, pinS = float.PositiveInfinity;
         public int BrokenCount; public float LastBrokenS, LastBrokenLat;

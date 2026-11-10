@@ -45,8 +45,132 @@ namespace SurviveI95.Game
         Vector3 shifterHome;
         int shownMph = -1;
         string shownGear = "";
-        
-        void Awake() { Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious(); }
+
+        // ---- view: field of view, mirror glances, looking back
+        const float DefaultFov = 58f;
+        /// <summary>Cockpit vertical field of view in degrees. The chase camera runs a little narrower. [ and ] change it.</summary>
+        public float BaseFov { get; private set; } = DefaultFov;
+        /// <summary>0 looking ahead, 1 eyes fully on a mirror.</summary>
+        public float Glance { get; private set; }
+        /// <summary>Forces a mirror glance in tests: "L", "Rear" or "R".</summary>
+        [NonSerialized] public string TestGlance;
+        [NonSerialized] public bool TestLookBack;
+        static readonly string[] MirrorParts = { "Mirror_L", "Mirror_Rear", "Mirror_R" };
+        Renderer[] mirrorParts;
+        float[] mirrorHalfWidth;
+        int glanceMirror = 1;
+        float glanceSwitch, fovSmooth = DefaultFov, glanceFov = 30f;
+        Vector3 glanceDir = Vector3.forward;
+        bool glancing, lookingBack;
+        string flash; float flashUntil;
+
+        // ---- cruise control on the mouse wheel
+        const float CruiseStepMph = 5f;
+        bool cruiseOn;
+        float cruiseSet, cruiseI;
+        public string CruiseStatus => cruiseOn ? $"cruise {Mathf.RoundToInt(cruiseSet * DriveSim.MetersPerSecondToMph)} mph" : "cruise off";
+
+        void Awake()
+        {
+            Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious();
+            BaseFov = Mathf.Clamp(PlayerPrefs.GetFloat("fov", DefaultFov), 40f, 80f); fovSmooth = BaseFov;
+            FindMirrors();
+        }
+
+        void FindMirrors()
+        {
+            mirrorParts = new Renderer[MirrorParts.Length]; mirrorHalfWidth = new float[MirrorParts.Length];
+            for (int i = 0; i < MirrorParts.Length; i++)
+            {
+                var t = transform.Find("Model/" + MirrorParts[i]);
+                if (t == null) continue;
+                mirrorParts[i] = t.GetComponent<Renderer>();
+                var mf = t.GetComponent<MeshFilter>();
+                if (mf == null || mf.sharedMesh == null) { mirrorHalfWidth[i] = .12f; continue; }
+                var e = Vector3.Scale(mf.sharedMesh.bounds.extents, t.lossyScale);
+                mirrorHalfWidth[i] = Mathf.Max(Mathf.Abs(e.x), Mathf.Abs(e.y), Mathf.Abs(e.z));
+            }
+        }
+
+        public void SetBaseFov(float fov)
+        {
+            BaseFov = Mathf.Clamp(Mathf.Round(fov), 40f, 80f);
+            PlayerPrefs.SetFloat("fov", BaseFov);
+            Flash($"Field of view {BaseFov:F0}°");
+        }
+
+        void Flash(string text) { flash = text; flashUntil = Time.unscaledTime + 1.6f; }
+
+        // ---------------------------------------------------------------- cruise control
+
+        /// <summary>Wheel up raises the set speed, wheel down lowers it. The first notch sets it from the current speed.</summary>
+        public void ScrollCruise(int notches)
+        {
+            if (notches == 0) return;
+            float step = CruiseStepMph / DriveSim.MetersPerSecondToMph;
+            if (!cruiseOn)
+            {
+                cruiseOn = true; cruiseI = .3f;
+                cruiseSet = Mathf.Round(Mathf.Max(0f, Sim.Speed) / step) * step;
+            }
+            cruiseSet = Mathf.Min(cruiseSet + notches * step, Sim.TopSpeed);
+            if (cruiseSet < 9.9f / DriveSim.MetersPerSecondToMph) { CruiseOff(); return; }
+            Flash("Cruise " + Mathf.RoundToInt(cruiseSet * DriveSim.MetersPerSecondToMph) + " mph");
+        }
+
+        void CruiseOff() { if (cruiseOn) Flash("Cruise off"); cruiseOn = false; }
+
+        /// <summary>Works the pedals while cruise is on. Braking cancels it; the gas pedal overrides it while held.</summary>
+        public DriveInput ApplyCruise(DriveInput input)
+        {
+            if (!cruiseOn) return input;
+            if (input.Brake > .05f || input.Handbrake || Sim.Disabled) { CruiseOff(); return input; }
+            if (input.Throttle > .05f) { cruiseI = Mathf.Max(cruiseI, .3f); return input; }
+            float err = cruiseSet - Sim.Speed, dt = Time.fixedDeltaTime;
+            cruiseI = Mathf.Clamp(cruiseI + .06f * err * dt, 0f, .9f);
+            input.Throttle = Mathf.Clamp01(.35f * err + cruiseI);
+            // A gentle brake when well over, so wheel-down slows the car without making anyone behind think it's a brake-check.
+            if (err < -1.3f) { input.Throttle = 0f; input.Brake = Mathf.Min(.18f, (-err - 1.3f) * .1f); }
+            return input;
+        }
+
+        void UpdateControls(Keyboard k, Gamepad pad)
+        {
+            var mouse = Mouse.current;
+            if (k != null)
+            {
+                if (k.leftBracketKey.wasPressedThisFrame || k.minusKey.wasPressedThisFrame) SetBaseFov(BaseFov - 2f);
+                if (k.rightBracketKey.wasPressedThisFrame || k.equalsKey.wasPressedThisFrame) SetBaseFov(BaseFov + 2f);
+            }
+            if (mouse != null)
+            {
+                // Windows reports 120 per notch; newer input settings report 1.
+                float y = mouse.scroll.ReadValue().y;
+                if (Mathf.Abs(y) > .01f) ScrollCruise((int)Mathf.Sign(y) * Mathf.Max(1, Mathf.RoundToInt(Mathf.Abs(y) >= 10f ? Mathf.Abs(y) / 120f : Mathf.Abs(y))));
+                if (mouse.middleButton.wasPressedThisFrame)
+                {
+                    if (cruiseOn) CruiseOff();
+                    else if (cruiseSet > 4f) { cruiseOn = true; cruiseI = .3f; Flash("Cruise resumed " + Mathf.RoundToInt(cruiseSet * DriveSim.MetersPerSecondToMph) + " mph"); }
+                }
+            }
+            if (pad != null)
+            {
+                if (pad.dpad.up.wasPressedThisFrame) ScrollCruise(1);
+                if (pad.dpad.down.wasPressedThisFrame) ScrollCruise(-1);
+            }
+
+            bool right = mouse != null && mouse.rightButton.isPressed;
+            bool wantGlance = Cockpit && (TestGlance != null || right || (pad != null && pad.leftShoulder.isPressed));
+            if (wantGlance && !glancing)
+            {
+                // Eyes go to the mirror nearest where the driver is already looking.
+                glanceMirror = TestGlance == "L" ? 0 : TestGlance == "R" ? 2 : TestGlance == "Rear" ? 1 : lookYaw < -18f ? 0 : lookYaw > 18f ? 2 : 1;
+                glanceSwitch = 0f;
+            }
+            glancing = wantGlance && mirrorParts != null && mirrorParts[glanceMirror] != null;
+            lookingBack = TestLookBack || (k != null && k.qKey.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
+            Glance = Mathf.MoveTowards(Glance, glancing && !lookingBack ? 1f : 0f, Time.deltaTime / .4f);
+        }
 
         void Setup()
         {
@@ -122,7 +246,7 @@ namespace SurviveI95.Game
                 input.Brake = Mathf.Max(input.Brake, pad.leftTrigger.ReadValue());
                 input.Handbrake |= pad.buttonSouth.isPressed;
             }
-            return input;
+            return ApplyCruise(input);
         }
 
         void Update()
@@ -133,6 +257,7 @@ namespace SurviveI95.Game
             if ((k != null && k.cKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame)) SetCockpit(!Cockpit);
             if (k != null && k.vKey.wasPressedThisFrame) { lookYaw = 0; lookPitch = 0; }
             if (k != null && k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
+            UpdateControls(k, pad);
             if (Cockpit) UpdateLook(pad);
 
             float t = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
@@ -267,6 +392,7 @@ namespace SurviveI95.Game
                 shownImpacts = Sim.ImpactCount;
                 float force = Mathf.Clamp01(Sim.LastImpact / 30f);
                 shake = Mathf.Max(shake, force);
+                if (Sim.LastImpact > 3f) CruiseOff(); // like a real car, a crash knocks cruise control off
                 if (burst != null && Sim.LastImpact > 4f) burst.Emit(Mathf.RoundToInt(10f + force * 60f));
             }
             if (Sim.RepairCount != shownRepairs) { shownRepairs = Sim.RepairCount; if (smoke != null) smoke.Clear(); }
@@ -327,6 +453,19 @@ namespace SurviveI95.Game
             mouseSettle -= Time.unscaledDeltaTime;
             Vector2 delta = mouse != null && mouseSettle <= 0 ? mouse.delta.ReadValue() * 0.09f : Vector2.zero;
             if (pad != null) delta += pad.rightStick.ReadValue() * 170f * Time.deltaTime;
+            if (glancing)
+            {
+                // While on a mirror, a flick of the mouse moves the eyes to the next mirror over.
+                glanceSwitch += delta.x;
+                if (Mathf.Abs(glanceSwitch) > 6f)
+                {
+                    int next = Mathf.Clamp(glanceMirror + (int)Mathf.Sign(glanceSwitch), 0, MirrorParts.Length - 1);
+                    if (mirrorParts[next] != null) glanceMirror = next;
+                    glanceSwitch = 0f;
+                }
+                lookIdle = 0;
+                return;
+            }
             if (delta.sqrMagnitude > 0.0004f) lookIdle = 0;
             else lookIdle += Time.deltaTime;
             lookYaw = Mathf.Clamp(lookYaw + delta.x, -135f, 135f);
@@ -392,8 +531,10 @@ namespace SurviveI95.Game
             camYaw = Mathf.LerpAngle(camYaw, yaw, 1f - Mathf.Exp(-Time.deltaTime * 7f));
             ApplyCamera();
             float ratio = Mathf.Clamp01(Sim.Speed / Sim.TopSpeed);
-            float fov = Cockpit ? 72f + 5f * ratio : 60f + 15f * ratio * ratio;
-            chaseCamera.fieldOfView = Mathf.Lerp(chaseCamera.fieldOfView, fov, 1f - Mathf.Exp(-Time.deltaTime * 4f));
+            float fov = Cockpit ? BaseFov + 4f * ratio : BaseFov - 6f + 10f * ratio * ratio;
+            fovSmooth = Mathf.Lerp(fovSmooth, fov, 1f - Mathf.Exp(-Time.deltaTime * 4f));
+            float g = Mathf.SmoothStep(0f, 1f, Glance);
+            chaseCamera.fieldOfView = lookingBack ? BaseFov : Mathf.Lerp(fovSmooth, glanceFov, g);
             if (shake > 0.01f) { chaseCamera.transform.position += UnityEngine.Random.insideUnitSphere * 0.22f * shake * shake; chaseCamera.transform.rotation *= Quaternion.Euler(UnityEngine.Random.insideUnitSphere * 2.5f * shake); }
             if (rumbleShake > 0.01f) chaseCamera.transform.position += UnityEngine.Random.insideUnitSphere * 0.022f * rumbleShake;
         }
@@ -434,11 +575,35 @@ namespace SurviveI95.Game
                 chaseCamera.transform.rotation = Quaternion.LookRotation(transform.position + transform.forward * 1.2f + Vector3.up * 0.65f - chaseCamera.transform.position);
                 return;
             }
+            if (lookingBack)
+            {
+                // From over the hood, back over the roof at whatever is coming.
+                var from = Cockpit ? transform.TransformPoint(0f, 1.9f, 1.4f) : transform.TransformPoint(0f, cameraUp, cameraBack * .85f);
+                chaseCamera.transform.position = from;
+                chaseCamera.transform.rotation = Quaternion.LookRotation(transform.TransformPoint(0f, 1.05f, -14f) - from, Vector3.up);
+                return;
+            }
             if (Cockpit)
             {
                 var head = transform.TransformPoint(cockpitEye + new Vector3(Mathf.Sin(lookYaw * Mathf.Deg2Rad) * 0.1f, 0, 0));
+                var rot = transform.rotation * Quaternion.Euler(1.5f - lookPitch, lookYaw, 0);
+                if (Glance > 0f && mirrorParts != null && mirrorParts[glanceMirror] != null)
+                {
+                    var mirror = mirrorParts[glanceMirror].bounds.center;
+                    // Lean a little toward the mirror, and ease the eyes from one mirror to the next.
+                    float g = Mathf.SmoothStep(0f, 1f, Glance);
+                    head += (mirror - head) * .1f * g;
+                    var toMirror = transform.InverseTransformDirection(mirror - head);
+                    float dist = toMirror.magnitude;
+                    glanceDir = Glance < .02f ? toMirror.normalized : Vector3.Slerp(glanceDir, toMirror.normalized, 1f - Mathf.Exp(-Time.deltaTime * 9f));
+                    // Zoom so the mirror fills most of the width of the screen.
+                    float hfov = 2f * Mathf.Atan(mirrorHalfWidth[glanceMirror] / .72f / dist) * Mathf.Rad2Deg;
+                    float want = Mathf.Clamp(Camera.HorizontalToVerticalFieldOfView(hfov, chaseCamera.aspect), 8f, 45f);
+                    glanceFov = Glance < .02f ? want : Mathf.Lerp(glanceFov, want, 1f - Mathf.Exp(-Time.deltaTime * 9f));
+                    rot = Quaternion.Slerp(rot, transform.rotation * Quaternion.LookRotation(glanceDir, Vector3.up), g);
+                }
                 chaseCamera.transform.position = head;
-                chaseCamera.transform.rotation = transform.rotation * Quaternion.Euler(1.5f - lookPitch, lookYaw, 0);
+                chaseCamera.transform.rotation = rot;
                 return;
             }
             var dir = Quaternion.Euler(0, camYaw, 0) * Vector3.forward;
@@ -458,10 +623,24 @@ namespace SurviveI95.Game
         {
             var style = new GUIStyle(GUI.skin.label) { fontSize = 32, fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
             GUI.Label(new Rect(Screen.width - 330, Screen.height - 70, 300, 56), Mathf.RoundToInt(Mathf.Abs(Sim.Speed) * DriveSim.MetersPerSecondToMph) + " MPH", style);
+            var info = new GUIStyle(style) { fontSize = 22 };
+            float line = Screen.height - 108;
+            if (cruiseOn)
+            {
+                var cruise = new GUIStyle(info); cruise.normal.textColor = new Color(.45f, 1f, .55f);
+                GUI.Label(new Rect(Screen.width - 330, line, 300, 40), "CRUISE " + Mathf.RoundToInt(cruiseSet * DriveSim.MetersPerSecondToMph), cruise);
+                line -= 34;
+            }
+            if (flash != null && Time.unscaledTime < flashUntil)
+            {
+                var mid = new GUIStyle(info) { alignment = TextAnchor.MiddleCenter };
+                GUI.Label(new Rect(0, Screen.height * .72f, Screen.width, 40), flash, mid);
+            }
+            if (lookingBack) { var mid = new GUIStyle(info) { alignment = TextAnchor.UpperCenter }; GUI.Label(new Rect(0, 18, Screen.width, 40), "LOOKING BACK", mid); }
             if (Sim.Damage > 0.01f)
             {
-                var small = new GUIStyle(style) { fontSize = 22 };
-                GUI.Label(new Rect(Screen.width - 330, Screen.height - 108, 300, 40), "DAMAGE " + Mathf.RoundToInt(Sim.Damage * 100f) + "%", small);
+                var small = info;
+                GUI.Label(new Rect(Screen.width - 330, line, 300, 40), "DAMAGE " + Mathf.RoundToInt(Sim.Damage * 100f) + "%", small);
                 if (Sim.Disabled) { var big = new GUIStyle(style) { alignment = TextAnchor.MiddleCenter, fontSize = 34 }; GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 60), "CAR DISABLED - PRESS R TO RECOVER", big); }
             }
         }

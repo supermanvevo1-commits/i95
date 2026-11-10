@@ -12,9 +12,10 @@ namespace SurviveI95.Game
         {
             cams = new[]
             {
-                Make("Mirror_L", 256, 256, 12f, 0.5f, null),
-                Make("Mirror_R", 256, 256, -12f, 0.5f, null),
-                Make("Mirror_Rear", 512, 192, 0f, 0.2f, new Vector3(0, 1.1f, -2.45f)),
+                // Sharp enough to read a car's color and shape when the driver zooms in on a mirror.
+                Make("Mirror_L", 512, 512, 12f, 0.5f, null),
+                Make("Mirror_R", 512, 512, -12f, 0.5f, null),
+                Make("Mirror_Rear", 1024, 384, 0f, 0.2f, new Vector3(0, 1.1f, -2.45f)),
             };
             SetActive(true);
         }
