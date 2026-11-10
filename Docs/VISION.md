@@ -3,6 +3,8 @@
 Status: the creator's direction for the whole game, written down on 2026-11-10. The roadmap places each part in a milestone. The NPC wishlist is in npc_behaviors.md.
 
 ## The idea
+The word for it is sonder: realizing that every passerby has a life as vivid as your own. The game started as a race to Jacksonville. It became surviving the I-95 to wherever your own story needs you to be. The race is one scenario (the cannonballer); survival is the thread through all of them.
+
 Every car on the highway is a life with somewhere to be. One driver is on a road trip with a girlfriend, one has three screaming kids, one is a trucker on a deadline, one is smuggling something and cut corners getting ready, one is a cannonballer in a supercar with extra fuel in the back. You play one of them. The others are AI now and other players later. Their stories collide: the smuggler who skipped the prep runs from a stop, the trooper swerves after him, and you're the one who gets clipped and sits in the jam.
 
 It's a driving life simulator in the way Death Stranding is a walking simulator, and the story comes out of the systems the way it does in RimWorld. No two runs are the same.

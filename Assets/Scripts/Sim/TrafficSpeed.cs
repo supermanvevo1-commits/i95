@@ -26,8 +26,8 @@ namespace SurviveI95.Sim
 
         float PickHabit(VehicleDefinition def, DriverKind kind, DriverTraits t)
         {
-            // Proud to be at the limit, in the fast lane.
-            if (kind == DriverKind.Camper) return Rand(-1f, 2f);
+            // A few over and sure that's fast enough, in the fast lane.
+            if (kind == DriverKind.Camper) return Rand(0f, 5f);
             // Trucks mostly run near the limit, and many are governed.
             if (kind == DriverKind.Truck) return Rand(-4f, 5f);
             float u = (float)rng.NextDouble() + (t.Aggression - .4f) * .25f;
@@ -41,6 +41,46 @@ namespace SurviveI95.Sim
         static float TopMph(VehicleDefinition def) => def.category == "freight" || def.category == "recreation" ? def.cruiseMph[1] : 110f;
 
         public float LimitMph(float s) => path.LimitMph(s);
+
+        /// <summary>Off only to compare against the old behavior in tests.</summary>
+        public static bool LaneSorting = true;
+
+        /// <summary>
+        /// The lane a driver settles in, counted from the right: about the limit or under keeps right,
+        /// 12+ over lives in the left lane, everyone else spreads across the middle.
+        /// </summary>
+        static int PreferredLane(TrafficCar c, int lanes) => Mathf.Clamp(Mathf.RoundToInt(Mathf.InverseLerp(-1f, 13f, c.SpeedHabit) * (lanes - 1)), 0, lanes - 1);
+
+        readonly int[] laneSamples = new int[8];
+        readonly float[] laneOver = new float[8], laneTop = new float[8];
+
+        /// <summary>Adds one sample of every car's speed by lane, for tests. Lanes count from the right; the left lane is reported as "left".</summary>
+        public void SampleLanes()
+        {
+            foreach (var c in Cars)
+            {
+                if (c.Speed < 4f || c.Changing) continue;
+                int lanes = LaneCount(c.S);
+                // Index from the left, so "left lane" means the same thing on 3, 4 and 5 lane stretches.
+                int fromLeft = Mathf.Clamp(lanes - 1 - c.Lane, 0, 7);
+                float over = c.Speed * DriveSim.MetersPerSecondToMph - path.LimitMph(c.S);
+                laneSamples[fromLeft]++; laneOver[fromLeft] += over; laneTop[fromLeft] = Mathf.Max(laneTop[fromLeft], over);
+            }
+        }
+
+        /// <summary>Average and fastest speed over the limit per lane, left lane first.</summary>
+        public int CamperYields;
+
+        public string LaneSpeeds()
+        {
+            var sb = new System.Text.StringBuilder($"camperYields={CamperYields} ");
+            for (int i = 0; i < 8; i++)
+                if (laneSamples[i] > 0)
+                    sb.Append(System.FormattableString.Invariant($"{(i == 0 ? "left" : "left+" + i)}: share={100f * laneSamples[i] / Mathf.Max(1, SumSamples()):F0}% avg={laneOver[i] / laneSamples[i]:+0.0;-0.0} top={laneTop[i]:+0} | "));
+            return sb.ToString();
+        }
+
+        int SumSamples() { int t = 0; foreach (int x in laneSamples) t += x; return t; }
 
         float CruiseAt(VehicleDefinition def, float habit, float s) => MphToMs(Mathf.Clamp(path.LimitMph(s) + habit, 25f, TopMph(def)));
         float CruiseAt(TrafficCar c, float s) => CruiseAt(c.Def, c.SpeedHabit, s);

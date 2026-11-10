@@ -37,6 +37,8 @@ namespace SurviveI95.Sim
         /// <summary>Who tends to drive this kind of vehicle, which shifted this driver's traits.</summary>
         public DriverProfile Profile;
         internal float RaceLeft, TapLeft, Age, GapSum;
+        // Left-lane campers: how long someone has ridden their bumper, how long they'll take it, and how long they stay over after giving in.
+        internal float Pressured, Patience = float.PositiveInfinity, YieldedFor;
         internal int Changes, GapSamples;
         internal bool Raced, PlayerWasBehind;
         public bool Racing => RaceLeft > 0f;
@@ -170,6 +172,7 @@ namespace SurviveI95.Sim
                 Signals = rng.NextDouble() < 0.25f + 0.75f * traits.LaneDiscipline
             };
             c.Profile = profile;
+            if (kind == DriverKind.Camper && rng.NextDouble() > .33) c.Patience = Rand(10f, 45f);
             c.Temper = PickTemper(def, kind, traits, profile.temper);
             c.Speed = speed >= 0f ? speed : c.Desired;
             c.Lateral = LaneCenter(s, lane);
@@ -381,7 +384,10 @@ namespace SurviveI95.Sim
             c.StartledLeft -= dt;
 
             float laneCenter = LaneCenter(c.S, c.Lane);
-            Scan(i, laneCenter, c.Width, out float gap, out float leadV, out float backGap, out _, out var leader);
+            Scan(i, laneCenter, c.Width, out float gap, out float leadV, out float backGap, out float backV, out var leader);
+            // A camper with someone riding their bumper wears down, unless they're the stubborn kind.
+            if (c.Kind == DriverKind.Camper)
+                c.Pressured = backGap < Mathf.Max(12f, c.Speed * .9f) && backV > c.Speed - 1f ? c.Pressured + dt : Mathf.Max(0f, c.Pressured - dt * .5f);
             bool leadPlayer = scanLeadPlayer, backPlayer = scanBackPlayer;
             if (Mathf.Abs(c.Lateral - laneCenter) > .4f)
             {
@@ -399,7 +405,7 @@ namespace SurviveI95.Sim
             float endGap = float.IsInfinity(end) ? float.PositiveInfinity : Mathf.Max(0f, end - c.S - 30f);
 
             // A driver with a grudge drives at the player, not just around them.
-            c.SinceChange += dt; c.HonkCooldown -= dt; c.BrakeCheckLeft -= dt; c.RageTimer -= dt; c.RamCooldown -= dt; c.GrudgeCooldown -= dt;
+            c.SinceChange += dt; c.HonkCooldown -= dt; c.BrakeCheckLeft -= dt; c.RageTimer -= dt; c.RamCooldown -= dt; c.GrudgeCooldown -= dt; c.YieldedFor -= dt;
             c.AngryFlash = false; c.TightFollow = false; c.RamAccel = float.NaN; c.WantLane = -1;
             bool near = !far && player.Present;
             float cap = float.PositiveInfinity;
@@ -479,7 +485,15 @@ namespace SurviveI95.Sim
             switch (c.Kind)
             {
                 case DriverKind.Camper:
-                    // Heads for the left lane and stays there, whatever is stacked up behind.
+                    // Heads for the left lane and sits there. Most give in and move over once someone has ridden their bumper long
+                    // enough, then drift back left a while later; about a third never do.
+                    if (c.Pressured > c.Patience)
+                    {
+                        if (dir > 0) return -1f;
+                        if (gain > -.6f) { c.Pressured = 0f; c.YieldedFor = Rand(25f, 70f); CamperYields++; return 2f + gain; }
+                        return -1f;
+                    }
+                    if (c.YieldedFor > 0f) return -1f;
                     return dir > 0 ? 3f + gain : -1f;
                 case DriverKind.Truck:
                     if (dir < 0) return c.Lane > 0 && gain > -.15f ? .4f + gain : -1f;
@@ -491,9 +505,25 @@ namespace SurviveI95.Sim
                 case DriverKind.Weaver:
                     return wantsPass && gain > .06f ? gain + .1f : -1f;
                 default:
-                    if (dir < 0) return gain > -.2f ? c.Traits.LaneDiscipline * .55f + gain : -1f;
+                {
+                    if (!LaneSorting)
+                    {
+                        if (dir < 0) return gain > -.2f ? c.Traits.LaneDiscipline * .55f + gain : -1f;
+                        return wantsPass && gain > .22f ? gain - .05f : -1f;
+                    }
+                    // Lanes sort by speed: each driver has a lane they settle in, further left the faster they like to go.
+                    int pref = PreferredLane(c, lanes);
+                    if (dir < 0)
+                    {
+                        if (gain <= -.2f) return -1f;
+                        // Keep right when they belong further right; a fast driver doesn't drop back just to be polite.
+                        return c.Lane > pref ? c.Traits.LaneDiscipline * .55f + .25f + gain : c.Traits.LaneDiscipline * .2f - .15f + gain;
+                    }
                     // Most drivers pull out to pass once the car ahead is clearly slower than they want to go.
-                    return wantsPass && gain > .22f ? gain - .05f : -1f;
+                    if (wantsPass && gain > .22f) return gain - .05f;
+                    // Fast drivers drift over toward their lane even without a car to pass, as long as it isn't slower.
+                    return c.Lane < pref && gain > -.05f ? .3f + gain : -1f;
+                }
             }
         }
 

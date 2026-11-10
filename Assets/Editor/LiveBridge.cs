@@ -73,6 +73,7 @@ namespace SurviveI95.EditorTools
                 case "refresh": AssetDatabase.Refresh(); return "refreshing";
                 case "play": EditorApplication.isPlaying = true; return "entering play";
                 case "stop": PlayerCar.AutoDriver = null; EditorApplication.isPlaying = false; return "stopping";
+                case "lanesort": TrafficSim.LaneSorting = a[2] == "on"; return "lane sorting " + a[2];
                 case "trafficbench": return TrafficBench(F(a, 2), (int)F(a, 3), a.Length > 4 ? F(a, 4) : 31f, a.Length > 5 ? (int)F(a, 5) : 95);
                 case "rebuild": if (EditorApplication.isPlaying) return "ERROR stop first"; FloridaSliceBuilder.Build(); return "rebuilt";
             }
@@ -185,6 +186,7 @@ namespace SurviveI95.EditorTools
                     float mean = 0f; foreach (var o in over) mean += o; mean /= Mathf.Max(1, over.Count);
                     return FormattableString.Invariant($"limit={lim:F0} nearCars={n} nearAvgOver={(n > 0 ? sum / n : 0f):F1} | all: n={over.Count} meanOver={mean:F1} p50={P(.5f):F1} p85={P(.85f):F1} p99={P(.99f):F1}{diag} | habits: {ts.SpeedSpread()}");
                 }
+                case "lanes": { var ts = car.GetComponent<TrafficManager>().Sim; ts.SampleLanes(); return ts.LaneSpeeds(); }
                 case "validate": SurviveI95.EditorTools.DataValidator.Validate(); return "validated (see console)";
                 case "profiles": { var ts = car.GetComponent<TrafficManager>().Sim; return $"races={ts.Races} " + ts.ProfileSpread(); }
                 case "forcerace": // carId: this driver always takes up a challenge
@@ -287,6 +289,7 @@ namespace SurviveI95.EditorTools
                 if (anchor > top) { anchor = 400f; }
                 sim.Step(dt, null, anchor, windowMs);
                 if (i % 60 != 0) continue;
+                sim.SampleLanes();
                 foreach (var c in sim.Cars)
                 {
                     int leftLane = sim.LaneCount(c.S) - 1;
@@ -297,7 +300,7 @@ namespace SurviveI95.EditorTools
                 foreach (var c in sim.Cars) if (c.Speed < 3f) { jams++; if (jams % 25 == 1) stops.AppendLine(FormattableString.Invariant($"t={i / 60} {c.Def.id} {c.Kind} s={c.S:F0} d={c.S - anchor:F0} lane={c.Lane} laneCount={sim.LaneCount(c.S)} ahead400={sim.LaneCount(c.S + 400f)} lanes={path.Lanes(c.S):F2} v={c.Speed:F1} desired={c.Desired:F1}")); }
             }
             watch.Stop();
-            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct\n  profiles: {sim.ProfileSpread()}");
+            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct\n  lanes: {sim.LaneSpeeds()}\n  profiles: {sim.ProfileSpread()}");
             File.WriteAllText(Path.Combine(Dir, "trafficbench.txt"), res + "\n" + stops);
             return res;
         }
