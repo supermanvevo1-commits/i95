@@ -148,6 +148,21 @@ namespace SurviveI95.Sim
             Speed = next;
         }
 
+        /// <summary>
+        /// The steering input that asks for a given cornering force at the current speed.
+        /// Used to make a keyboard key (all or nothing) ask for a turn the tires can hold, instead of full lock.
+        /// </summary>
+        public float SteerFor(float lateralAccel)
+        {
+            float v = Mathf.Max(1f, Mathf.Abs(Speed));
+            float delta = lateralAccel * Car.wheelbase / (v * v);
+            float shaped = delta * (1f + (v * v) / (SteerSpeedRef * SteerSpeedRef)) / MaxWheelAngle;
+            return Mathf.Clamp01(Mathf.Pow(Mathf.Clamp01(shaped), 1f / 1.35f));
+        }
+
+        /// <summary>Most cornering force the tires give on dry pavement, in m/s².</summary>
+        public float GripAccel => Car.gripG * G;
+
         static float Tire(float slip, float peak) => -peak * Mathf.Sin(TireC * Mathf.Atan(TireB * slip));
 
         void Integrate(RoutePath path, DriveInput input, float mu, float h)

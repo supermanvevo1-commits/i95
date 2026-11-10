@@ -67,6 +67,45 @@ namespace SurviveI95.Game
         bool glancing, lookingBack;
         string flash; float flashUntil;
 
+        // ---- keyboard steering
+        float keyHeld; int keyDir;
+
+        /// <summary>
+        /// A key is all or nothing, and full lock at highway speed asks for about three times the grip the tires have.
+        /// A held key asks for a firm turn the tires can hold, and holding it longer allows a little more for a
+        /// deliberate hard turn. At parking speeds it's still full lock. Gamepad sticks skip this: they're already analog.
+        /// </summary>
+        public float KeyboardSteer(int dir, bool handbrake)
+        {
+            if (dir != keyDir) { keyDir = dir; keyHeld = 0f; }
+            if (dir == 0) return 0f;
+            keyHeld += Time.fixedDeltaTime;
+            if (handbrake) return dir; // the handbrake is for throwing it around on purpose
+            // About half the tires' grip for a tap (a lane change needs far less), building toward 0.8 for a long, deliberate hold.
+            float grip = Sim.GripAccel * Mathf.Lerp(.5f, .8f, Mathf.InverseLerp(.5f, 1.8f, keyHeld));
+            return dir * Mathf.Max(Sim.SteerFor(grip), .12f);
+        }
+
+        // ---- signals, high beams
+        /// <summary>The player's turn signal: -1 left, +1 right, 0 off (same as traffic). Z and X toggle it.</summary>
+        public int Signal { get; private set; }
+        public bool HighBeams { get; private set; }
+        float signalSince, signalLat;
+
+        void UpdateSignals(Keyboard k)
+        {
+            if (k == null) return;
+            if (k.zKey.wasPressedThisFrame) SetSignal(Signal == -1 ? 0 : -1);
+            if (k.xKey.wasPressedThisFrame) SetSignal(Signal == 1 ? 0 : 1);
+            // Cancels itself once the lane change is done, or after a while, like a real stalk.
+            if (Signal != 0 && (Mathf.Abs(Sim.Lateral - signalLat) > 3.2f || Time.time - signalSince > 12f)) Signal = 0;
+            HighBeams = TestHighBeams || k.hKey.isPressed;
+        }
+
+        void SetSignal(int s) { Signal = s; signalSince = Time.time; signalLat = Sim.Lateral; }
+        [NonSerialized] public bool TestHighBeams;
+        public void TestSignal(int s) => SetSignal(s);
+
         // ---- cruise control on the mouse wheel
         const float CruiseStepMph = 5f;
         bool cruiseOn;
@@ -171,7 +210,8 @@ namespace SurviveI95.Game
                 glanceSwitch = 0f;
             }
             glancing = wantGlance && mirrorParts != null && mirrorParts[glanceMirror] != null;
-            lookingBack = TestLookBack || (k != null && k.cKey.isPressed) || (mouse != null && mouse.backButton.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
+            lookingBack = TestLookBack || (k != null && k.cKey.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
+            UpdateSignals(k);
             Honking = TestHorn || (k != null && k.eKey.isPressed) || (pad != null && pad.leftStickButton.isPressed);
             if (Honking && horn == null)
             {
@@ -245,12 +285,14 @@ namespace SurviveI95.Game
             {
                 input.Throttle = k.wKey.isPressed || k.upArrowKey.isPressed ? 1f : 0f;
                 input.Brake = k.sKey.isPressed || k.downArrowKey.isPressed ? 1f : 0f;
-                input.Steer = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1 : 0) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1 : 0);
+                int dir = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1 : 0) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1 : 0);
                 input.Handbrake = k.spaceKey.isPressed;
+                input.Steer = KeyboardSteer(dir, input.Handbrake);
             }
-            // Front side button on the mouse: floor it. With cruise on, the car goes back to the set speed on release.
+            // Mouse side buttons: front floors it (cruise picks up again on release), back brakes.
             var m = Mouse.current;
             if (m != null && m.forwardButton.isPressed) input.Throttle = 1f;
+            if (m != null && m.backButton.isPressed) { input.Brake = 1f; input.Throttle = 0f; }
             var pad = Gamepad.current;
             if (pad != null)
             {
@@ -651,6 +693,12 @@ namespace SurviveI95.Game
                 GUI.Label(new Rect(0, Screen.height * .72f, Screen.width, 40), flash, mid);
             }
             if (lookingBack) { var mid = new GUIStyle(info) { alignment = TextAnchor.UpperCenter }; GUI.Label(new Rect(0, 18, Screen.width, 40), "LOOKING BACK", mid); }
+            // Blinking signal arrows and a high-beam marker. Placeholders until the designed HUD (M5).
+            bool blink = Mathf.Repeat(Time.time * 1.6f, 1f) < .55f;
+            var arrow = new GUIStyle(info) { fontSize = 40 }; arrow.normal.textColor = new Color(.3f, 1f, .4f);
+            if (Signal == -1 && blink) GUI.Label(new Rect(Screen.width - 330, line - 44, 60, 50), "◄", arrow);
+            if (Signal == 1 && blink) GUI.Label(new Rect(Screen.width - 80, line - 44, 60, 50), "►", arrow);
+            if (HighBeams) { var hb = new GUIStyle(info); hb.normal.textColor = new Color(.45f, .7f, 1f); GUI.Label(new Rect(Screen.width - 330, line - 80, 300, 40), "HIGH BEAMS", hb); }
             if (Sim.Damage > 0.01f)
             {
                 var small = info;

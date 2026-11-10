@@ -29,9 +29,9 @@ namespace SurviveI95.Sim
         {
             if (def.drivers == null || def.drivers.Length == 0) return Profile("everyday");
             float total = 0f;
-            foreach (var d in def.drivers) total += d.weight;
+            foreach (var d in def.drivers) total += d.weight * ProfileFactor(d.profile);
             float r = Rand(0f, total);
-            foreach (var d in def.drivers) { r -= d.weight; if (r <= 0f) return Profile(d.profile); }
+            foreach (var d in def.drivers) { r -= d.weight * ProfileFactor(d.profile); if (r <= 0f) return Profile(d.profile); }
             return Profile(def.drivers[0].profile);
         }
 
@@ -81,7 +81,7 @@ namespace SurviveI95.Sim
                 if ((float)rng.NextDouble() < p.racer)
                 {
                     c.RaceLeft = Rand(12f, 25f); Races++;
-                    Notice?.Invoke($"The {Describe(c.Def, c.Paint)} wants to race.");
+                    Notice?.Invoke($"The {Describe(c.Def, c.Paint)}{PlateNote(c.PlateState)} wants to race.");
                 }
             }
         }

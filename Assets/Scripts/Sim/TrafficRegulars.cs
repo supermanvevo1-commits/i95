@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace SurviveI95.Sim
 {
-    public enum Grievance { None, CutOff, BrakeCheck, Tailgated, Blocked, Hit }
+    public enum Grievance { None, CutOff, BrakeCheck, Tailgated, Blocked, Hit, Honked }
 
     /// <summary>
     /// A driver who has had a run-in with the player. They stay in the run for good: off screen they keep driving,
@@ -28,6 +28,7 @@ namespace SurviveI95.Sim
         public int AgeYears;
         public float Skill;
         public LicenseStatus License;
+        public string PlateState;
         /// <summary>The highest level this driver's anger can reach. See <see cref="TrafficCar.Temper"/>.</summary>
         public int Temper;
         /// <summary>0 calm, 1 out for blood. Cools down slowly.</summary>
@@ -70,9 +71,14 @@ namespace SurviveI95.Sim
         /// <summary>Notes when the player changes lanes, and whether they have traffic right in front, which excuses braking.</summary>
         void WatchPlayer()
         {
+            TrackPlayerSignal();
             if (!player.Present) { playerLane = -1; return; }
             int lane = LaneAt(player.S, player.Lateral);
-            if (lane != playerLane) { if (playerLane >= 0) playerLaneChangedAt = clock; playerLane = lane; }
+            if (lane != playerLane)
+            {
+                if (playerLane >= 0) { playerLaneChangedAt = clock; playerChangeSignaled = SignaledFor(playerLane, lane); }
+                playerLane = lane;
+            }
             playerHasTrafficAhead = false;
             float room = Mathf.Max(12f, player.SpeedS * 1.5f);
             foreach (var o in Cars)
@@ -168,7 +174,7 @@ namespace SurviveI95.Sim
             var reg = new Regular
             {
                 Id = c.Id, Def = c.Def, Kind = c.Kind, Traits = c.Traits, Paint = c.Paint, Signals = c.Signals, Temper = c.Temper,
-                SpeedHabit = c.SpeedHabit, Profile = c.Profile, AgeBand = c.AgeBand, AgeYears = c.AgeYears, Skill = c.Skill, License = c.License, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
+                SpeedHabit = c.SpeedHabit, Profile = c.Profile, AgeBand = c.AgeBand, AgeYears = c.AgeYears, Skill = c.Skill, License = c.License, PlateState = c.PlateState, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint) + PlateNote(c.PlateState)
             };
             Regulars.Add(reg);
             c.Regular = reg;
@@ -222,6 +228,7 @@ namespace SurviveI95.Sim
                 case Grievance.BrakeCheck: return $"You brake-checked {WithArticle(r.Name)}.";
                 case Grievance.Tailgated: return $"You're riding the bumper of {WithArticle(r.Name)}.";
                 case Grievance.Blocked: return $"You've been holding up {WithArticle(r.Name)}.";
+                case Grievance.Honked: return $"You leaned on the horn at {WithArticle(r.Name)}.";
                 default: return $"You hit {WithArticle(r.Name)}.";
             }
         }
@@ -281,7 +288,7 @@ namespace SurviveI95.Sim
                 if (!SpotIsClear(r.S, lane, r.Def.lengthM)) continue;
                 var c = Create(r.Def, r.Kind, r.S, lane, r.Speed, r.Profile);
                 Spawned--; // the same driver, not new traffic
-                c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.SpeedHabit = r.SpeedHabit; c.AgeBand = r.AgeBand; c.AgeYears = r.AgeYears; c.Skill = r.Skill; c.License = r.License; c.Desired = CruiseAt(r, r.S); c.Temper = r.Temper;
+                c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.SpeedHabit = r.SpeedHabit; c.AgeBand = r.AgeBand; c.AgeYears = r.AgeYears; c.Skill = r.Skill; c.License = r.License; c.PlateState = r.PlateState; c.Desired = CruiseAt(r, r.S); c.Temper = r.Temper;
                 c.Regular = r; r.Car = c;
                 if (r.Wrecked) { c.Wrecked = true; c.Involved = true; c.Hazards = true; c.Speed = 0f; }
                 r.Announce = true;
@@ -398,24 +405,37 @@ namespace SurviveI95.Sim
         /// <summary>Watches what the player does to this driver.</summary>
         void Judge(TrafficCar c, float a, float gap, bool leadPlayer, float backGap, bool backPlayer, float dt)
         {
+            // How much room the player left the moment they became the car in front: seconds of following distance.
+            if (leadPlayer && c.PlayerLeadTime == 0f) c.EntryHeadway = Mathf.Max(0f, gap) / Mathf.Max(5f, c.Speed);
             c.PlayerLeadTime = leadPlayer ? c.PlayerLeadTime + dt : 0f;
             if (c.Wrecked || c.GrudgeCooldown > 0f) return;
-            if (Mathf.Abs(player.S - c.S) > 150f) { c.TailTime = c.BlockTime = 0f; return; }
+            if (Mathf.Abs(player.S - c.S) > 150f) { c.TailTime = c.BlockTime = c.HonkedAt = 0f; return; }
             float aggression = c.Traits.Aggression;
 
             // Made to brake hard: the player just pulled in front (cut off), or braked on them for no reason.
             if (leadPlayer && gap < 60f && a < -3.2f && clock - c.RamAt > 1.5f)
             {
-                // A cut-off means the player just changed into this lane; pulling in behind the player is the driver's own doing.
-                bool cut = c.PlayerLeadTime < 3.5f && clock - playerLaneChangedAt < 3.5f && c.SinceChange > 3f;
+                // A cut-off means the player just changed into this lane and took a gap too tight for this driver's speed.
+                // Pulling in behind the player is the driver's own doing. Signaling first earns a little more room, and
+                // a player who's already pulling away fast isn't forcing anyone to brake.
+                bool tight = c.EntryHeadway < (playerChangeSignaled ? .6f : .9f);
+                bool pullingAway = player.SpeedS > c.Speed + 3f && gap > 4f;
+                bool cut = c.PlayerLeadTime < 3.5f && clock - playerLaneChangedAt < 3.5f && c.SinceChange > 3f && tight && !pullingAway;
                 // A brake-check is hard braking with nothing in front of the player. A crash stop is not one.
                 bool check = playerDecel > 2.5f && playerDecel < 12f && !playerHasTrafficAhead;
                 if (cut || check)
                 {
-                    Grudge(c, cut ? Grievance.CutOff : Grievance.BrakeCheck, .16f + .14f * aggression + Mathf.Min(.25f, (-a - 3.2f) * .05f));
+                    float amount = .16f + .14f * aggression + Mathf.Min(.25f, (-a - 3.2f) * .05f);
+                    if (cut && playerChangeSignaled) amount *= .6f;
+                    Grudge(c, cut ? Grievance.CutOff : Grievance.BrakeCheck, amount);
                     return;
                 }
             }
+
+            // Leaning on the horn at them from behind. Most shrug; a few take it personally.
+            if (backPlayer && PlayerHorn && backGap < 30f) c.HonkedAt += dt;
+            else c.HonkedAt = Mathf.Max(0f, c.HonkedAt - dt * .5f);
+            if (c.HonkedAt > 2.5f) { c.HonkedAt = 0f; Grudge(c, Grievance.Honked, .05f + .1f * aggression); return; }
 
             // Stuck behind a player who won't go any faster or move over.
             float wants = CruiseAt(c, c.S);

@@ -92,6 +92,8 @@ namespace SurviveI95.Game
         void FixedUpdate()
         {
             if (Sim == null) return;
+            // What other drivers can see and hear from the player.
+            Sim.PlayerSignal = player.Signal; Sim.PlayerHorn = player.Honking; Sim.PlayerFlash = player.HighBeams;
             Sim.Step(Time.fixedDeltaTime, player.Sim);
             Sim.HitPlayer(player.Sim);
         }

@@ -25,7 +25,7 @@ An arcade survival driving game along I-95, from Miami to Maine. Unity 6 (6000.6
 ## Unity live bridge
 - `Tools/live.ps1 <command> [args]` sends commands to the open editor through `.livebridge/`. Commands are in `Assets/Editor/LiveBridge.cs` (`Run`): play, stop, refresh, rebuild, launch, drive, cruise, place, shot, status, traffic, cars, speeds, profiles, tempers, regulars, notices, trafficbench and more.
 - Screenshots land in `.livebridge/shots/`.
-- `trafficbench <seconds> <cars> <anchor m/s> <seed>` runs traffic without rendering, much faster than real time. Unprovoked and chain crashes must stay at 0.
+- `trafficbench <seconds> <cars> <anchor m/s> <seed> [season]` runs traffic without rendering, much faster than real time, and reports lane speeds, age bands, plates and driver profiles. Unprovoked and chain crashes must stay at 0.
 - `Tools/compile.ps1` stops Play mode, refreshes, and waits for the compile.
 - Compile errors do NOT appear in `.livebridge/console.log`. After a refresh, compare the timestamps of `Library/ScriptAssemblies/Assembly-CSharp.dll` and `Assembly-CSharp-Editor.dll` with your edit. A stale dll means the compile failed: Unity keeps running old code and Play mode silently won't start.
 - `LiveBridge.Run` is one big switch. Unbraced cases declare locals (`r`, `s`) for the whole switch, so don't reuse those names.

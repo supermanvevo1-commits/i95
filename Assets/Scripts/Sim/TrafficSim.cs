@@ -42,7 +42,11 @@ namespace SurviveI95.Sim
         public int AgeYears = 40;
         public float Skill = .75f;
         public LicenseStatus License;
+        /// <summary>Where the plate is from: "FL", "NY", "QC" and so on.</summary>
+        public string PlateState = "FL";
         internal float WanderLeft, WanderTarget, WanderNow;
+        // Getting out of the way: how much they've noticed someone faster behind, and how long they're moving over for.
+        internal float Noticed, YieldFor, EntryHeadway = 9f, HonkedAt;
         // Left-lane campers: how long someone has ridden their bumper, how long they'll take it, and how long they stay over after giving in.
         internal float Pressured, Patience = float.PositiveInfinity, YieldedFor;
         internal int Changes, GapSamples;
@@ -119,10 +123,12 @@ namespace SurviveI95.Sim
 
         // --------------------------------------------------------------- creating drivers
 
-        VehicleDefinition PickVehicle()
+        VehicleDefinition PickVehicle(float s)
         {
-            float r = Rand(0f, totalWeight);
-            for (int i = 0; i < pool.Count; i++) { r -= weights[i]; if (r <= 0f) return pool[i]; }
+            float total = 0f;
+            for (int i = 0; i < pool.Count; i++) total += weights[i] * VehicleFactor(pool[i], s);
+            float r = Rand(0f, total);
+            for (int i = 0; i < pool.Count; i++) { r -= weights[i] * VehicleFactor(pool[i], s); if (r <= 0f) return pool[i]; }
             return pool[pool.Count - 1];
         }
 
@@ -180,6 +186,9 @@ namespace SurviveI95.Sim
             c.Profile = profile;
             PickPerson(c, profile);
             ApplyPerson(c);
+            PickPlate(c);
+            ApplyPlate(c);
+            LogSpawn(c);
             // Fewer low-skill drivers bother with the blinker.
             c.Signals = rng.NextDouble() < (.35f + .65f * c.Traits.LaneDiscipline) * Mathf.Lerp(.75f, 1.05f, c.Skill);
             c.Desired = CruiseAt(def, c.SpeedHabit, s);
@@ -217,7 +226,7 @@ namespace SurviveI95.Sim
         bool TrySpawn(float s, float anchorSpeed, bool behindPlayer)
         {
             if (s < RouteStart || s > path.Length - RouteMargin) return false;
-            var def = PickVehicle();
+            var def = PickVehicle(s);
             var profile = PickProfile(def);
             var kind = PickKind(def, profile);
             int lanes = LaneCount(s);
@@ -399,9 +408,14 @@ namespace SurviveI95.Sim
             float laneCenter = LaneCenter(c.S, c.Lane);
             Scan(i, laneCenter, c.Width, out float gap, out float leadV, out float backGap, out float backV, out var leader);
             // A camper with someone riding their bumper wears down, unless they're the stubborn kind.
-            if (c.Kind == DriverKind.Camper)
-                c.Pressured = backGap < Mathf.Max(12f, c.Speed * .9f) && backV > c.Speed - 1f ? c.Pressured + dt : Mathf.Max(0f, c.Pressured - dt * .5f);
             bool leadPlayer = scanLeadPlayer, backPlayer = scanBackPlayer;
+            if (c.Kind == DriverKind.Camper)
+            {
+                // The player's horn and high beams wear a camper down faster.
+                float push = backPlayer ? 1f + (PlayerHorn ? 2f : 0f) + (PlayerFlash ? 1.5f : 0f) : 1f;
+                c.Pressured = backGap < Mathf.Max(12f, c.Speed * .9f) && backV > c.Speed - 1f ? c.Pressured + dt * push : Mathf.Max(0f, c.Pressured - dt * .5f);
+            }
+            else Yielding(c, backGap, backV, backPlayer, dt);
             if (Mathf.Abs(c.Lateral - laneCenter) > .4f)
             {
                 Scan(i, c.Lateral, c.Width, out float g2, out float v2, out _, out _, out var l2);
@@ -418,7 +432,7 @@ namespace SurviveI95.Sim
             float endGap = float.IsInfinity(end) ? float.PositiveInfinity : Mathf.Max(0f, end - c.S - 30f);
 
             // A driver with a grudge drives at the player, not just around them.
-            c.SinceChange += dt; c.HonkCooldown -= dt; c.BrakeCheckLeft -= dt; c.RageTimer -= dt; c.RamCooldown -= dt; c.GrudgeCooldown -= dt; c.YieldedFor -= dt;
+            c.SinceChange += dt; c.HonkCooldown -= dt; c.BrakeCheckLeft -= dt; c.RageTimer -= dt; c.RamCooldown -= dt; c.GrudgeCooldown -= dt; c.YieldedFor -= dt; c.YieldFor -= dt;
             c.AngryFlash = false; c.TightFollow = false; c.RamAccel = float.NaN; c.WantLane = -1;
             bool near = !far && player.Present;
             float cap = float.PositiveInfinity;
@@ -495,6 +509,8 @@ namespace SurviveI95.Sim
         {
             if (laneEnding && dir < 0) return 10f + gain;
             if (c.WantLane >= 0) return c.WantLane != c.Lane && Math.Sign(c.WantLane - c.Lane) == dir ? 2.5f + gain * .2f : -1f;
+            // Moving over for someone faster: right is the only way, even into a slightly slower lane.
+            if (c.YieldFor > 0f && c.Kind != DriverKind.Camper && c.Kind != DriverKind.Truck) return dir < 0 && gain > -.8f ? 3f + gain : -1f;
             bool wantsPass = c.Speed < c.Desired - 1f;
             switch (c.Kind)
             {

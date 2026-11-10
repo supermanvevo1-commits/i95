@@ -74,7 +74,7 @@ namespace SurviveI95.EditorTools
                 case "play": EditorApplication.isPlaying = true; return "entering play";
                 case "stop": PlayerCar.AutoDriver = null; EditorApplication.isPlaying = false; return "stopping";
                 case "lanesort": TrafficSim.LaneSorting = a[2] == "on"; return "lane sorting " + a[2];
-                case "trafficbench": return TrafficBench(F(a, 2), (int)F(a, 3), a.Length > 4 ? F(a, 4) : 31f, a.Length > 5 ? (int)F(a, 5) : 95);
+                case "trafficbench": return TrafficBench(F(a, 2), (int)F(a, 3), a.Length > 4 ? F(a, 4) : 31f, a.Length > 5 ? (int)F(a, 5) : 95, a.Length > 6 ? (Season)Enum.Parse(typeof(Season), a[6], true) : Season.Winter);
                 case "rebuild": if (EditorApplication.isPlaying) return "ERROR stop first"; FloridaSliceBuilder.Build(); return "rebuilt";
             }
             if (car == null) return "ERROR not in play mode";
@@ -119,7 +119,7 @@ namespace SurviveI95.EditorTools
                 case "place": car.Place(F(a, 2)); return "placed";
                 case "status":
                     var s = car.Sim;
-                    string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} onRamp={s.Current != null} rampS={(s.Current != null ? s.S : 0f):F0} roadY={(s.Current ?? car.Path).Center(s.S).y:F1} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph");
+                    string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} onRamp={s.Current != null} rampS={(s.Current != null ? s.S : 0f):F0} roadY={(s.Current ?? car.Path).Center(s.S).y:F1} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph slide={s.Sliding} latG={s.LateralAccel / 9.81f:F2} slipDeg={s.Beta * Mathf.Rad2Deg:F1}");
                     slowest = 0;
                     return r;
                 case "fps":
@@ -189,6 +189,17 @@ namespace SurviveI95.EditorTools
                 case "lanes": { var ts = car.GetComponent<TrafficManager>().Sim; ts.SampleLanes(); return ts.LaneSpeeds(); }
                 case "validate": SurviveI95.EditorTools.DataValidator.Validate(); return "validated (see console)";
                 case "profiles": { var ts = car.GetComponent<TrafficManager>().Sim; return $"races={ts.Races} " + ts.ProfileSpread(); }
+                case "season": { var ts = car.GetComponent<TrafficManager>().Sim; ts.Season = (Season)Enum.Parse(typeof(Season), a[2], true); ts.Clear(); return "season " + ts.Season; }
+                case "plates": return car.GetComponent<TrafficManager>().Sim.PlateSpread();
+                case "yields": { var ts = car.GetComponent<TrafficManager>().Sim; return $"yields={ts.Yields} refusals={ts.YieldRefusals} grudges={ts.Grudges} shrugs={ts.Shrugs}"; }
+                case "signal": car.TestSignal((int)F(a, 2)); return "signal " + a[2];
+                case "highbeams": car.TestHighBeams = a[2] == "on"; return "high beams " + a[2];
+                case "kbsteer": // dir mph: keyboard steering held in one direction, throttle holding mph
+                {
+                    int kd = (int)F(a, 2); float km = F(a, 3);
+                    PlayerCar.AutoDriver = (p, c) => new DriveInput { Steer = car.KeyboardSteer(kd, false), Throttle = c.Speed * DriveSim.MetersPerSecondToMph < km ? 1f : 0f };
+                    return "keyboard steering " + kd;
+                }
                 case "person": // carId years skill: who's driving that car, for tests
                 {
                     var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2));
@@ -250,7 +261,7 @@ namespace SurviveI95.EditorTools
         {
             var sb = new System.Text.StringBuilder();
             foreach (var c in car.GetComponent<TrafficManager>().Sim.Cars)
-                if (Mathf.Abs(c.S - car.Sim.S) < 90f) sb.Append(FormattableString.Invariant($"[#{c.Id} {c.Def.id} {c.Kind} {(c.Profile != null ? c.Profile.id : "-")} {c.AgeYears}y skill={c.Skill:F2} {c.License}{(c.Racing ? " RACING" : "")} off={(c.Changing ? "chg" : (c.Lateral - car.GetComponent<TrafficManager>().Sim.LaneCenter(c.S, c.Lane)).ToString("F2", CultureInfo.InvariantCulture))}{(c.Regular != null ? " REG" + c.Regular.Level : "")} d={c.S - car.Sim.S:F0} lane={c.Lane} lat={c.Lateral:F1} {c.Speed * 2.237f:F0}mph sig={c.Signal} brk={c.Braking} flash={c.FlashingHighBeams} wreck={c.Wrecked}] "));
+                if (Mathf.Abs(c.S - car.Sim.S) < 90f) sb.Append(FormattableString.Invariant($"[#{c.Id} {c.Def.id} {c.Kind} {(c.Profile != null ? c.Profile.id : "-")} {c.AgeYears}y skill={c.Skill:F2} {c.License} {c.PlateState}{(c.Racing ? " RACING" : "")} off={(c.Changing ? "chg" : (c.Lateral - car.GetComponent<TrafficManager>().Sim.LaneCenter(c.S, c.Lane)).ToString("F2", CultureInfo.InvariantCulture))}{(c.Regular != null ? " REG" + c.Regular.Level : "")} d={c.S - car.Sim.S:F0} lane={c.Lane} lat={c.Lateral:F1} {c.Speed * 2.237f:F0}mph sig={c.Signal} brk={c.Braking} flash={c.FlashingHighBeams} wreck={c.Wrecked}] "));
             return sb.ToString();
         }
 
@@ -282,11 +293,11 @@ namespace SurviveI95.EditorTools
         }
 
         // Runs traffic with no rendering and no player, following a moving window down the whole route.
-        static string TrafficBench(float seconds, int cars, float windowMs, int seed)
+        static string TrafficBench(float seconds, int cars, float windowMs, int seed, Season season = Season.Winter)
         {
             var path = RoutePath.Load("miami_ftl");
             var chapter = SurviveI95.Data.GameData.LoadStateTraffic().chapters.Find(c => c.id == "florida");
-            var sim = new TrafficSim(path, SurviveI95.Data.GameData.LoadVehicles(), chapter, seed) { Target = cars };
+            var sim = new TrafficSim(path, SurviveI95.Data.GameData.LoadVehicles(), chapter, seed) { Target = cars, Season = season };
             const float dt = 1f / 60f;
             float anchor = 400f, top = path.Length - 1500f, minGapAll = 999f; int steps = Mathf.RoundToInt(seconds / dt), under = 0, totalCars = 0, jams = 0;
             var stops = new System.Text.StringBuilder(); int campers = 0, campersLeft = 0, trucks = 0, trucksLeft = 0;
@@ -308,7 +319,7 @@ namespace SurviveI95.EditorTools
                 foreach (var c in sim.Cars) if (c.Speed < 3f) { jams++; if (jams % 25 == 1) stops.AppendLine(FormattableString.Invariant($"t={i / 60} {c.Def.id} {c.Kind} s={c.S:F0} d={c.S - anchor:F0} lane={c.Lane} laneCount={sim.LaneCount(c.S)} ahead400={sim.LaneCount(c.S + 400f)} lanes={path.Lanes(c.S):F2} v={c.Speed:F1} desired={c.Desired:F1}")); }
             }
             watch.Stop();
-            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct\n  lanes: {sim.LaneSpeeds()}\n  ages: {sim.AgeSpread()}\n  profiles: {sim.ProfileSpread()}");
+            string res = FormattableString.Invariant($"seconds={seconds:F0} target={cars} avgCars={totalCars / Mathf.Max(1f, seconds):F1} under90pct={under} unprovoked={sim.UnprovokedCrashes} chain={sim.ChainCrashes} stoppedCarSamples={jams} laneChanges={sim.LaneChanges} signaled={sim.LaneChangesSignaled} spawned={sim.Spawned} msPerStep={watch.Elapsed.TotalMilliseconds / steps:F4} campersInLeftLane={100f * campersLeft / Mathf.Max(1, campers):F0}pct trucksInLeftLane={100f * trucksLeft / Mathf.Max(1, trucks):F1}pct\n  lanes: {sim.LaneSpeeds()}\n  ages: {sim.AgeSpread()}\n  plates: {sim.PlateSpread()}\n  profiles: {sim.ProfileSpread()}");
             File.WriteAllText(Path.Combine(Dir, "trafficbench.txt"), res + "\n" + stops);
             return res;
         }
