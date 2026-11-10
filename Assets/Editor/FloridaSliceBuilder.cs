@@ -518,8 +518,17 @@ namespace SurviveI95.EditorTools
             if (baseMile != null)
                 for (int mile = Mathf.CeilToInt(baseMile.Value); (mile - baseMile.Value) * 1609.34f < p.Length; mile++)
                     Sign(g.transform, p, Mathf.Max(5, (mile - baseMile.Value) * 1609.34f), 5.2f, .55f, 1.0f, 1.3f, "MILE\n" + mile, .17f, m.signGreen, Color.white, m);
-            for (float s = 620f; s < p.Length - 300f; s += 2400f)
-                Sign(g.transform, p, s, 6.5f, 1.7f, 2.2f, 1.6f, "SPEED\nLIMIT\n65", .42f, m.white, SignInk, m);
+            // Real posted limits: a sign just past every change, then repeats along the way.
+            float lastSign = -9999f, lastMph = -1f;
+            for (float s = 120f; s < p.Length - 300f; s += 50f)
+            {
+                float mph = p.LimitMph(s);
+                bool changed = mph != lastMph && lastMph > 0f;
+                if (!changed && s - lastSign < 2400f && lastMph > 0f) continue;
+                if (p.Junctions.Any(j => s > j.divergeS - 60f && s < j.divergeS + 160f)) continue; // keep the exit gore clear
+                Sign(g.transform, p, s + (changed ? 60f : 0f), 6.5f, 1.7f, 2.2f, 1.6f, "SPEED\nLIMIT\n" + mph.ToString("0"), .42f, m.white, SignInk, m);
+                lastSign = s; lastMph = mph;
+            }
             string[] ads = { "HURT ON I-95?\nCALL BIG RICK", "GATOR WORLD\nNEXT EXIT", "FIREWORKS\nFIREWORKS\nFIREWORKS", "EARLY BIRD\nBUFFET 3:45PM" };
             for (int i = 0; i < 9; i++)
             {

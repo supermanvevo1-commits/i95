@@ -1,0 +1,22 @@
+{
+ "id": "miami_ftl",
+ "source": "OpenStreetMap contributors (ODbL), maxspeed",
+ "limits": [
+  {
+   "s": 0,
+   "mph": 55
+  },
+  {
+   "s": 6800,
+   "mph": 60
+  },
+  {
+   "s": 17550,
+   "mph": 55
+  },
+  {
+   "s": 26250,
+   "mph": 65
+  }
+ ]
+}

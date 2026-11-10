@@ -17,6 +17,9 @@ namespace SurviveI95.World
     [Serializable] public class RouteExitFile { public RouteExitRow[] items; }
     [Serializable] public class RouteObstacle { public float s, lat, halfS, halfLat; public string kind; }
     [Serializable] public class RouteObstacleFile { public RouteObstacle[] items; }
+    /// <summary>A posted speed limit that holds from s until the next entry.</summary>
+    [Serializable] public class RouteLimit { public float s, mph; }
+    [Serializable] public class RouteLimitFile { public RouteLimit[] limits; }
 
     /// <summary>Smoothed centerline of one carriageway, built from real map data.</summary>
     public class RoutePath
@@ -62,6 +65,19 @@ namespace SurviveI95.World
             return new RoutePath(file, 1, 1, true); // already a smooth curve; more averaging would pull it off the pavement it joins
         }
         public float Length => (pos.Length - 1) * Step;
+
+        /// <summary>Posted limits along the road, from real map data. Empty means the default applies.</summary>
+        public RouteLimit[] Limits { get; private set; } = new RouteLimit[0];
+        public const float DefaultLimitMph = 65f, RampLimitMph = 45f;
+
+        /// <summary>The posted speed limit at this point, in mph.</summary>
+        public float LimitMph(float s)
+        {
+            if (IsRamp) return RampLimitMph;
+            float mph = Limits.Length > 0 ? Limits[0].mph : DefaultLimitMph;
+            foreach (var l in Limits) { if (l.s > s) break; mph = l.mph; }
+            return mph;
+        }
 
         public RoutePath(RouteFile file, int xzRadius = 14, int yRadius = 50, bool isRamp = false)
         {
@@ -187,6 +203,8 @@ namespace SurviveI95.World
             if (solids != null) path.Obstacles = JsonUtility.FromJson<RouteObstacleFile>(solids.text).items;
             var loops = Resources.Load<TextAsset>("Data/Routes/" + id + "_exits");
             if (loops != null) path.LoadJunctions(JsonUtility.FromJson<RouteExitFile>(loops.text));
+            var limits = Resources.Load<TextAsset>("Data/Routes/" + id + "_limits");
+            if (limits != null) path.Limits = JsonUtility.FromJson<RouteLimitFile>(limits.text).limits;
             foreach (var o in path.Obstacles) path.MaxObstacleHalfS = Mathf.Max(path.MaxObstacleHalfS, o.halfS);
             return path;
         }

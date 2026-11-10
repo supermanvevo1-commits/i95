@@ -49,7 +49,7 @@ Each state has its own speed limits, weather, police, tolls and character. See S
 Co-op first (a second player as passenger or in another car), then shared highways. The sim already runs in plain C# with a fixed step and no scene objects, which is the right base for a server. Keep it that way.
 
 ## Screen and look
-The HUD and on-screen text need a real design pass: clean type, a proper speedometer, styled notices, and a minimap that shows your scenario's destination. The art direction is semi-realistic for now. The final look is decided at the art pass. Game code doesn't depend on it.
+The HUD and on-screen text need a real design pass: clean type, a proper speedometer, styled notices, and a minimap that shows your scenario's destination. The art direction is semi-realistic. The target is a mix of two games: the grounded, readable highway world of American Truck Simulator (signs, traffic, lanes and laws), and the road feel and presentation of Need for Speed Underground 2 as its modern remaster mods show it (a road you feel through the car, wet reflections, drama in the light). The look target is set on the Miami test road in the vertical slice (M5), then matched across the route in production. Game code doesn't depend on it.
 
 ---
 

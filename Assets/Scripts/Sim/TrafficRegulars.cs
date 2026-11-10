@@ -21,7 +21,8 @@ namespace SurviveI95.Sim
         public DriverTraits Traits;
         public int Paint;
         public bool Signals;
-        public float BaseDesired;
+        /// <summary>mph over the posted limit they like to drive.</summary>
+        public float SpeedHabit;
         /// <summary>The highest level this driver's anger can reach. See <see cref="TrafficCar.Temper"/>.</summary>
         public int Temper;
         /// <summary>0 calm, 1 out for blood. Cools down slowly.</summary>
@@ -92,10 +93,11 @@ namespace SurviveI95.Sim
         }
 
         static bool Chases(Regular r) => r.Kind == DriverKind.Normal || r.Kind == DriverKind.Tailgater || r.Kind == DriverKind.Weaver;
-        static float ChaseSpeed(Regular r, float target) => Mathf.Min(MphToMs(r.Def.cruiseMph[1] + 18f), Mathf.Max(r.BaseDesired, target + 3f));
+        // An angry driver keeps up with the player, up to about 18 mph past their usual speed.
+        float ChaseSpeed(Regular r, float target, float s) => Mathf.Min(CruiseAt(r, s) + MphToMs(18f), Mathf.Max(CruiseAt(r, s), target + 3f));
 
         /// <summary>The speed this driver wants: an angry one behind the player keeps up with them.</summary>
-        float CruiseFor(Regular r, float s) => r.Level >= 2 && Chases(r) && player.Present && s < player.S ? ChaseSpeed(r, player.SpeedS) : r.BaseDesired;
+        float CruiseFor(Regular r, float s) => r.Level >= 2 && Chases(r) && player.Present && s < player.S ? ChaseSpeed(r, player.SpeedS, s) : CruiseAt(r, s);
 
         int LaneAt(float s, float lat) => Mathf.Clamp(Mathf.FloorToInt((path.HalfWidth(s) - lat) / RoutePath.LaneWidth), 0, LaneCount(s) - 1);
 
@@ -153,10 +155,16 @@ namespace SurviveI95.Sim
                 if (drop == null) return null;
                 Regulars.Remove(drop);
             }
+            if (c.HoldDesired)
+            {
+                // A test car placed at a fixed speed keeps that speed as its habit from here on.
+                c.SpeedHabit = c.Desired * DriveSim.MetersPerSecondToMph - path.LimitMph(c.S);
+                c.HoldDesired = false;
+            }
             var reg = new Regular
             {
                 Id = c.Id, Def = c.Def, Kind = c.Kind, Traits = c.Traits, Paint = c.Paint, Signals = c.Signals, Temper = c.Temper,
-                BaseDesired = c.Desired, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
+                SpeedHabit = c.SpeedHabit, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
             };
             Regulars.Add(reg);
             c.Regular = reg;
@@ -245,7 +253,7 @@ namespace SurviveI95.Sim
                     continue;
                 }
                 bool chasing = r.Level >= 2 && Chases(r) && r.S < anchor;
-                float want = chasing ? ChaseSpeed(r, anchorSpeed) : r.BaseDesired;
+                float want = chasing ? ChaseSpeed(r, anchorSpeed, r.S) : CruiseAt(r, r.S);
                 r.Speed = Mathf.MoveTowards(r.Speed, want, 1.5f * dt);
                 r.S += r.Speed * dt;
                 if (r.S > path.Length - RouteMargin) Regulars.RemoveAt(k);
@@ -269,7 +277,7 @@ namespace SurviveI95.Sim
                 if (!SpotIsClear(r.S, lane, r.Def.lengthM)) continue;
                 var c = Create(r.Def, r.Kind, r.S, lane, r.Speed);
                 Spawned--; // the same driver, not new traffic
-                c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.Desired = r.BaseDesired; c.Temper = r.Temper;
+                c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.SpeedHabit = r.SpeedHabit; c.Desired = CruiseAt(r, r.S); c.Temper = r.Temper;
                 c.Regular = r; r.Car = c;
                 if (r.Wrecked) { c.Wrecked = true; c.Involved = true; c.Hazards = true; c.Speed = 0f; }
                 r.Announce = true;
@@ -406,7 +414,7 @@ namespace SurviveI95.Sim
             }
 
             // Stuck behind a player who won't go any faster or move over.
-            float wants = c.Regular != null ? c.Regular.BaseDesired : c.Desired;
+            float wants = CruiseAt(c, c.S);
             if (leadPlayer && gap < 45f && player.SpeedS < wants - 3f && c.Speed > 10f && c.Kind != DriverKind.Truck) c.BlockTime += dt * (.4f + aggression);
             else c.BlockTime = Mathf.Max(0f, c.BlockTime - dt);
             if (c.BlockTime > 14f) { c.BlockTime = 0f; Grudge(c, Grievance.Blocked, .1f + .1f * aggression); return; }

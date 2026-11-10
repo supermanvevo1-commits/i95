@@ -1,6 +1,21 @@
 # Survive the I-95: production roadmap
 
-One milestone at a time. Each step is tested live in the editor, then committed. Before a step is checked off, it gets a second look: does it behave like real driving and real drivers on that road? Does it still make sense next to the steps before it? If not, it's reworked, and earlier steps are reopened when needed. A milestone closes only after the creator plays it and every "Done when" item passes. New ideas go in the Ideas list, not the current milestone.
+The game is built in phases, the way studios do it:
+1. **Prototype:** prove the core systems.
+2. **Vertical slice:** make the Miami test road look, sound and play like the finished game.
+3. **Production:** build the rest of the content to that standard.
+4. **Demo and co-op**, then **release**.
+
+Graphics and sound are not one late milestone. The slice sets their target on one road, and production makes everything else match it.
+
+How each step is worked:
+- One milestone at a time. Each step is tested live in the editor, then committed.
+- Before a step is checked off, it gets a second look. Does it behave like real driving and real drivers on that road? Does it still make sense next to the steps before it? If not, it's reworked, and earlier steps are reopened when needed.
+- Visual steps come with before-and-after screenshots from the same spot.
+- A milestone closes only after the creator plays it and every "Done when" item passes.
+- New ideas go in the Ideas list, not the current milestone.
+
+# Phase 1: Prototype (done)
 
 ## M0 Foundation (done)
 - [x] Unity URP project and Git
@@ -17,7 +32,6 @@ One milestone at a time. Each step is tested live in the editor, then committed.
 - [x] Working gauges and mirrors
 - [x] Gear lever follows a staggered P, R, N, D gate
 - [x] Creator confirms steering feel and no wheel stutter
-- [x] Commit
 
 Done when: creator approves the feel, and the car can be driven and lost.
 
@@ -32,17 +46,16 @@ Done when: creator approves the feel, and the car can be driven and lost.
 Done when: hits at 30, 70 and 120 mph all feel different, and damage changes how the car drives.
 
 ## M2b Miami test road (done)
-Move testing to where the game starts, so traffic and police are tuned in the real setting.
 - [x] Import Downtown Miami to Fort Lauderdale as the test road
 - [x] Elevated highway sections and bridges with height
-- [x] 12 drivable exits with one engineered shape: speed-change lanes, clean splits, wide curves and merges (road network that traffic will also use)
+- [x] 12 drivable exits with one engineered shape: speed-change lanes, clean splits, wide curves and merges
 - [x] Exit cues: road arrows, striped split areas, advance, split, merge, ramp speed and speed limit signs
 - [x] First-pass skyline and buildings from real map footprints
 - [x] Sound walls and urban roadside
 
 Done when: it reads as Miami from the driver's seat and holds its frame rate.
 
-## M3 Traffic
+## M3 Traffic (done)
 - [x] 3.1 Spawn and remove cars around the player
 - [x] 3.2 Lane keeping and following distance
 - [x] 3.3 Placeholder models from the vehicle catalog
@@ -54,132 +67,149 @@ Done when: it reads as Miami from the driver's seat and holds its frame rate.
 
 Done when: 40 cars run smoothly, no crashes happen without a cause, and a camper is recognizable.
 
-## M3b Road Life (current)
-Traffic with memory, real road rules, and places where it piles up. Comes before police, so police have scenes, speeders and road rage to react to. See VISION.md for the research behind each number.
-- [x] 3b.1 Regulars: drivers you have a run-in with stay in the run with the same car, keep driving out of sight, and can catch up later
-- [x] 3b.2 Grudges: cutting off, brake-checking, tailgating, holding up or hitting someone makes them angry, and they cool off slowly
-- [x] 3b.3 Road rage that escalates: horn and high beams, riding your bumper, pulling alongside to yell, cutting in and brake-checking, ramming
-- [x] 3b.4 Short on-screen lines when it matters ("The red pickup truck is back.")
-- [x] 3b.4a Temperaments from real survey odds: most drivers shrug it off or honk, few follow, very few ram
-- [x] 3b.4b From playtest notes: narrower field of view ([ and ] adjust it), right-click mirror glances, look back, mouse-wheel cruise control
-- [x] 3b.4c GTA-style keyboard and mouse: V camera, C or back side button to look back, E horn, front side button to floor it
-- [ ] 3b.5 Real speed limits per section, and drivers who mostly run 5-9 over, with a few far over in any lane
-- [ ] 3b.6 Distracted drivers: about 3 in 100 on their phone, drifting, reacting late, causing a share of crashes
-- [ ] 3b.7 Accidents between other drivers in real proportions (rear-end, sideswipe, run off the road, debris, rare freak events like a gator or a spill), blocking lanes, with rubbernecking in both directions
-- [ ] 3b.8 Construction zones: lane closures, merges, lower limits, and cones and barrels you can hit and scatter
-- [ ] 3b.9 95 Express lanes: pay-by-plate toll lanes that cost more as traffic builds. Pay to skip the jam, or cut through the poles
-- [ ] 3b.10 Time of day and rush hour: morning and evening peaks near Miami and Fort Lauderdale with stop-and-go jams from volume alone, and cheaper distant cars so a jam can hold hundreds
+# Phase 2: Vertical slice (current)
+Ten minutes on the Miami test road that look, sound and play like the finished game. Milestones run in this order.
 
-Done when: a driver you wronged comes back and you recognize them, a jam forms and clears believably, and the frame rate holds in a jam.
+## M4 Road life (current)
+Drivers with memory and character, and real speed limits.
+- [x] 4.1 Regulars: drivers you have a run-in with stay in the run with the same car, keep driving out of sight, and can catch up later
+- [x] 4.2 Grudges: cutting off, brake-checking, tailgating, holding up or hitting someone makes them angry, and they cool off slowly
+- [x] 4.3 Road rage that escalates: horn and high beams, riding your bumper, pulling alongside to yell, cutting in and brake-checking, ramming
+- [x] 4.4 Short on-screen lines when it matters ("The red pickup truck is back.")
+- [x] 4.5 Temperaments from real survey odds: most drivers shrug it off or honk, few follow, very few ram
+- [x] 4.6 Playtest notes: narrower field of view, mirror glances, look back, mouse-wheel cruise control, GTA-style keys, horn
+- [x] 4.7 Real speed limits per section. Drivers mostly run 5-9 over, a few far over in any lane
+    - Second look: in the 65 zone, measured traffic averages +3 over with the 85th percentile at +8 (real roads: about +5 and +9-10). About half of drivers are held behind slower cars, and the 55 zone downtown sags to the limit. Revisit traffic flow in M6 (rush hour)
+- [ ] 4.7b Lanes sort by speed like a real highway: slower drivers keep right, faster ones settle left, so the left lane runs noticeably quicker. Its pace varies with who's leading, and now and then one driver is flat-out booking it
+- [ ] 4.8 The car says something about the driver, as odds, never certainties. Covers every vehicle on the road: minivans calm (a rare crash-out, not never), sports and muscle cars race and take risks, luxury cars own the road, lifted trucks on oversized wheels push people around, plus work vans, taxis, rentals, RVs and snowbirds, trucks, motorcycles. Adds the lifted truck
+- [ ] 4.9 Who's on the road depends on where and why: more freight near ports and Jacksonville, more RVs, snowbirds and Quebec plates heading to Florida in winter, commuters and delivery vans near cities, beach and vacation traffic in season
 
-## M3c Vehicle stats
-Every vehicle drives like what it is. The same stats drive the player car and traffic. Comes before police, so pursuit balance is set against real cars.
-- [ ] 3c.1 A stats sheet for every vehicle from real specifications: top speed, 0-60, 60-0 braking distance, cornering grip, weight, wheelbase, steering speed, handbrake, fuel tank and mileage
-- [ ] 3c.1a Weighty feel in the spirit of GTA IV: soft suspension, body roll and dive, weight that shifts in corners and under braking, momentum you have to manage. Our own model, tuned per vehicle. No game's code or files are copied
-- [ ] 3c.2 Variety inside a class: a family sedan and a sport sedan feel different
-- [ ] 3c.3 Heavy vehicles: semis, box trucks, RVs and anything towing accelerate slowly, brake long, lean, and trailers sway
-- [ ] 3c.4 Motorcycles: quick, light, lean into turns, and fragile in a crash
-- [ ] 3c.5 Traffic accelerates, brakes and corners by the same stats
-- [ ] 3c.6 Stat bars on a car card, ready for car select
+Done when: a driver you wronged comes back and you recognize them, and you can tell a minivan mom from a lifted-truck guy by how they drive.
+
+## M5 Look, sound and screen target
+Sets the target for how the whole game looks and sounds, on the Miami test road, in daylight. Bar: at least Midnight Club II, aiming toward GTA V over time.
+- [ ] 5.1 Lighting and atmosphere: sun and sky, haze in the distance, color grading, bloom, soft shadows, ambient occlusion
+- [ ] 5.2 Road and roadside: real asphalt and concrete textures, worn paint, patches and slab joints, concrete Jersey barriers and guardrails, steel sign gantries
+- [ ] 5.3 Signs built like real US highway signs: green reflective panels with a white border and rounded corners, a highway-style font (a free, openly licensed lookalike of the official one), route shields (I-95), exit number tabs, control cities and distances, plus billboards with designed satirical ads. The full set a driver reads: overhead gantries naming the road and control cities, distance signs ("Fort Lauderdale 12"), exit and merge signs, mile markers (exit numbers match them), and the small reference markers every tenth of a mile that tell 911 and tow trucks where you are
+- [ ] 5.4 Buildings with textured walls, windows and roofs, so the skyline isn't flat boxes
+- [ ] 5.5 HUD in one visual style: a live analog speedometer as in Forza, with a needle and both mph and km/h, plus gear, cruise and damage, on designed panels with a proper font. Shown in third person, and its corner can be moved in settings
+- [ ] 5.6 Speed limit sign in the corner, as in a map app, that turns red and pulses when you're over
+- [ ] 5.7 Title card at the start, and "Welcome to Miami" style cards for cities and states
+- [ ] 5.8 Styled notices and a minimap
+- [ ] 5.9 Core sounds from real recordings: engines by vehicle class, tires, wind, and horns that fit the vehicle (sedan beep, truck air horn)
+
+Done when: the creator calls the screen polished, side by side the game looks at least as good as Midnight Club II, and nothing sounds synthetic.
+
+## M6 Road events
+Places where traffic piles up for real reasons.
+- [ ] 6.1 Distracted drivers: about 3 in 100 on their phone, drifting and reacting late. Honking at one can snap them out of it
+- [ ] 6.2 Accidents between other drivers in real proportions (rear-end, sideswipe, run off the road, debris, rare freak events like a gator or a spill), blocking lanes, with rubbernecking in both directions
+- [ ] 6.3 Construction zones: lane closures, merges, lower limits, and cones and barrels you can hit and scatter
+- [ ] 6.4 95 Express lanes: pay-by-plate toll lanes that cost more as traffic builds. Pay to skip the jam, or cut through the poles
+- [ ] 6.5 Rush hour: morning and evening peaks with stop-and-go jams from volume alone, and cheaper distant cars so a jam can hold hundreds
+
+Done when: a jam forms and clears believably, and the frame rate holds in a jam.
+
+## M7 Vehicles and feel
+Every vehicle drives like what it is. The same stats drive the player and traffic.
+- [ ] 7.1 A stats sheet for every vehicle from real specifications: top speed, 0-60, 60-0 braking distance, cornering grip, weight, wheelbase, steering speed, handbrake, fuel tank and mileage
+- [ ] 7.2 Weighty feel in the spirit of GTA IV: soft suspension, body roll and dive, weight that shifts in corners and under braking, momentum you have to manage. Our own model, tuned per vehicle. The road talks back: concrete slab joints thump, patches and dips move the car a little
+- [ ] 7.3 Variety inside a class: a family sedan and a sport sedan feel different
+- [ ] 7.4 Heavy vehicles: slow to speed up, long to stop, lean, trailers sway
+- [ ] 7.5 Motorcycles: quick, light, lean into turns, fragile in a crash
+- [ ] 7.6 Traffic accelerates, brakes and corners by the same stats
 
 Done when: a sedan, a pickup, a semi and a motorcycle each feel clearly different to drive.
 
-## M3d Screen design
-Every playtest looks at this, so it comes early.
-- [ ] 3d.1 A designed HUD: speedometer, gear, cruise, damage, in one visual style with proper fonts
-- [ ] 3d.2 Styled notices for run-ins and events, replacing plain text
-- [ ] 3d.3 Minimap with the road ahead, exits, and later your destination and police
-- [ ] 3d.4 Settings screen: field of view, controls, mouse and controller
-
-Done when: the creator calls the screen polished.
-
-## M4 Police and traffic law
+## M8 Police and traffic law
 Florida law first. Police are part of traffic, not only a chase.
-- [ ] 4.1 Florida rules the game checks: speed tiers (100+ mph or 50+ over is criminal), Move Over, hands-free phone law, left lane, doubled fines in work zones with workers
-- [ ] 4.2 Patrol cars in traffic, hidden in medians and behind overpasses. Everyone slows near them
-- [ ] 4.3 Police pull over AI drivers too, with lights on the shoulder, and Move Over applies
-- [ ] 4.4 Being noticed: a trooper sees you, a plate reader or aircraft spotter flags you and a unit is sent, other drivers call in what they see
-- [ ] 4.5 Traffic stops: the officer walks up and talks, you pick answers, the officer runs your plate. Wait it out or run
-- [ ] 4.6 Heat meter, tickets and their cost
-- [ ] 4.7 Pursuit driving, PIT maneuver, roadblocks and spike strips, and bystanders who get caught in it
-- [ ] 4.8 Busted and escaped outcomes
-- [ ] 4.9 Per-state police profiles: Florida troopers in regular cruisers, Georgia State Patrol fast and quick to PIT
+- [ ] 8.1 Florida rules the game checks: speed tiers (100+ mph or 50+ over is criminal), Move Over, hands-free phone law, left lane, doubled fines in work zones with workers
+- [ ] 8.2 Patrol cars in traffic, hidden in medians and behind overpasses. Everyone slows near them
+- [ ] 8.3 Police pull over AI drivers too, with lights on the shoulder, and Move Over applies
+- [ ] 8.4 Being noticed: a trooper sees you, a plate reader or aircraft spotter flags you, other drivers call you in
+- [ ] 8.5 Traffic stops: the officer walks up and talks, you pick answers, the officer runs your plate. Wait it out or run
+- [ ] 8.6 Heat, tickets and their cost
+- [ ] 8.7 Pursuit driving, PIT maneuver, roadblocks and spike strips, and bystanders who get caught in it
+- [ ] 8.8 Busted and escaped outcomes
 
-Done when: a chase can be won or lost, a stop can be talked through, and 5 minutes on the Miami test road shows police presence without a chase.
+Done when: a chase can be won or lost, a stop can be talked through, and the road shows police presence without a chase.
 
-## M5 Run loop
-- [ ] 5.1 Gas by real tank size and mileage, with prices by state
-- [ ] 5.2 Bathroom, food and sleep
-- [ ] 5.3 Money: start funds, gas, food, tickets, repairs
-- [ ] 5.4 Gas stations and rest stops at real spacing, with pull-off ramps, signs, and exits that reach city streets
-- [ ] 5.5 A passenger who can take the wheel while you sleep, driving by their own skill
-- [ ] 5.6 Main menu, pause and car select
-- [ ] 5.7 Save and load
+## M9 First full run (slice gate)
+One scenario, the road trip, playable from menu to finish on the Miami test road.
+- [ ] 9.1 Gas by real tank size and mileage, with a station on the test road
+- [ ] 9.2 Money: start funds, gas, food, tickets, repairs
+- [ ] 9.3 Bathroom, food and sleep at a basic level
+- [ ] 9.4 Main menu with scenario, season and car select, pause, save and load
 
-Done when: one complete run works from menu to finish on the Miami test road, and running out of gas or money ends it.
+Done when: someone who has never seen the game (Crispy, Noah) plays the slice without help, and wants to keep going.
 
-## M6 Lives on the road
-Every car is someone with somewhere to be. The story comes out of the systems, so every run is different.
-- [ ] 6.1 Every AI driver has a life: who they are, where they're going, what they carry, and how they drive because of it
-- [ ] 6.2 An event director that spaces out incidents and lets them feed each other: a crash, then a jam, then road rage in the jam
-- [ ] 6.3 Mood and stress for your character: kids screaming, traffic, a crash. Stress changes how you drive and talk
-- [ ] 6.4 The phone: first-person texting mini-game with choices and typing while you keep your eyes on the road, and the risk of being seen
-- [ ] 6.5 Scenario: road trip with a partner
-- [ ] 6.6 Scenario: family with kids and a crying baby
-- [ ] 6.7 Scenario: trucker with cargo jobs, deadlines and trucker events
-- [ ] 6.8 Scenario: smuggler, where preparation decides how a stop goes
-- [ ] 6.9 Scenario: cannonballer, unlocked by money and upgrades (engine, tank, auxiliary fuel)
-- [ ] 6.10 Free drive with no objective
+# Phase 3: Production (Florida)
 
-Done when: three different scenarios on the Miami test road feel like three different games, and an AI driver's story visibly causes trouble for you.
+## M10 Lives on the road
+Every car is someone with somewhere to be. The story comes out of the systems.
+- [ ] 10.1 Every AI driver has a life: who they are, where they're going, what they carry, and how they drive because of it
+- [ ] 10.2 An event director that spaces out incidents and lets them feed each other
+- [ ] 10.3 Mood and stress for your character
+- [ ] 10.4 The phone: first-person texting mini-game, with the risk of being seen
+- [ ] 10.5 Scenarios: family with kids and a crying baby, trucker, smuggler, cannonballer (unlocked with money and upgrades), free drive
+- [ ] 10.6 A passenger who can take the wheel while you sleep, driving by their own skill
+- [ ] 10.7 Animated people in the car: the driver steers and shifts, a partner in the passenger seat, kids in the back, reacting to the road
 
-## M7 Weather and time
-- [ ] 7.1 Day and night, with a Miami night look: lit street lamps, lit building windows, neon
-- [ ] 7.2 Headlights
-- [ ] 7.3 Rain, wipers and windshield drops
-- [ ] 7.4 Wet grip, hydroplaning and spray
-- [ ] 7.5 NPC weather behavior: slowing, hazards on, pulling under overpasses, spinning out
-- [ ] 7.6 Seasons and per-state weather odds (STATES.md): storms, lightning, fog, smoke, glare, flash floods
-- [ ] 7.7 Rare big events, warned about on the radio first: tropical storm and hurricane evacuation, tornado
-- [ ] 7.8 Snow and ice, for the northern states and winter runs: plows, black ice, cars in the median
+Done when: three scenarios feel like three different games, and an AI driver's story visibly causes trouble for you.
 
-Done when: a Florida downpour changes how you drive, and a hurricane evacuation feels like an event, not a filter.
+## M11 Time and weather
+- [ ] 11.1 Day and night: a Miami night look with lit street lamps, lit windows and neon, plus headlights
+- [ ] 11.2 Rain, wipers, windshield drops, wet grip, hydroplaning and spray
+- [ ] 11.3 Seasons, chosen per run, and per-state weather odds (STATES.md): storms, lightning, fog, smoke, glare, flash floods
+- [ ] 11.4 Rare big events, warned about on the radio first: hurricane evacuation, tornado
+- [ ] 11.5 Snow and ice for the northern states and winter runs
+- [ ] 11.6 NPC weather behavior: slowing, hazards on, pulling under overpasses, spinning out
 
-## M8 Miami to Jacksonville
-See FLORIDA_ROUTE.md for the map and section list.
-- [ ] 8.1 Road generator handles interchanges, ramps and lane changes
-- [ ] 8.2 Compression tool that shortens empty stretches, keeps landmark order
-- [ ] 8.3 Bridges with height and water
-- [ ] 8.4 Build sections in route order, one at a time, with real speed limits
-- [ ] 8.5 Regional scenery: palms, swamp, coastal, pine
-- [ ] 8.6 City skylines and roadside buildings from real map building data
-- [ ] 8.7 Florida events: gators, downpours, Florida Man
-- [ ] 8.8 Full NPC behavior list (npc_behaviors.md)
-- [ ] 8.9 Art pass: decide the final look (semi-real or stylized), fictional car designs with no real badges, roadside variety, lighting, proper trees
-- [ ] 8.10 Animated people in the car: the driver steers and shifts, a partner in the passenger seat, kids in the back, reacting to the road
-- [ ] 8.11 Audio pass: engines, tires, crashes, horns, cabin
-- [ ] 8.11a Radio: stations by genre, talk and podcasts, hosts who warn about weather and traffic, original or independently licensed music
-- [ ] 8.12 Whole-run balance
+Done when: a Florida downpour changes how you drive, and a hurricane evacuation feels like an event.
+
+## M12 Miami to Jacksonville (demo)
+The whole Florida route, built to the slice's look and sound. See FLORIDA_ROUTE.md.
+- [ ] 12.1 Road generator handles interchanges, ramps and lane changes, with real speed limits
+- [ ] 12.2 Compression: empty stretches shortened about 3 to 1, cities near real size, landmark order kept (Florida about 2 hours)
+- [ ] 12.3 Bridges with height and water
+- [ ] 12.4 Build sections in route order, one at a time
+- [ ] 12.5 Regional scenery: palms, swamp, coastal, pine
+- [ ] 12.6 Gas stations and rest stops at real spacing, with pull-off ramps, signs, and exits that reach city streets
+- [ ] 12.7 Florida events: gators, downpours, Florida Man
+- [ ] 12.8 Full NPC behavior list (npc_behaviors.md)
+- [ ] 12.9 Art for everything: fictional car designs with no real badges, roadside variety, proper trees
+- [ ] 12.10 Full sound: every vehicle, ambience, cabin, and the radio (stations by genre, talk and podcasts, original or independently licensed music)
+- [ ] 12.11 Settings screen, performance on modest PCs
+- [ ] 12.12 Whole-run balance
 
 Done when: a stranger can play Miami to Jacksonville and understand the game. This is the demo and trailer build.
 
-## M9 Co-op
-- [ ] 9.1 Check the sim runs the same on a server as on a client
-- [ ] 9.2 Second player as passenger: phone, navigation, distracting the driver
-- [ ] 9.3 Second player in their own car on the same road, each with their own scenario
+# Phase 4: Co-op and the rest of I-95
+
+## M13 Co-op
+- [ ] 13.1 Check the sim runs the same on a server as on a client
+- [ ] 13.2 Second player as passenger: phone, navigation, radio, distracting the driver, taking the wheel
+- [ ] 13.3 Second player in their own car on the same road, each with their own scenario
 
 Done when: two friends finish a run together.
 
-## M10 Remaining states
-Georgia first (and Georgia State Patrol), then one state per milestone, in route order.
+## M14 Remaining states
+Georgia first (and Georgia State Patrol), then one state per milestone, in route order, to Houlton, Maine. Each state gets its limits, weather, police, tolls and character from STATES.md, checked against current sources.
 
-## M11 Release
-Steam page, itch demo, performance on modest PCs, legal review, credits, launch.
+# Phase 5: Release
 
-## M12 Post-launch
+## M15 Release
+Steam page, itch demo, legal review (car lookalikes, music licenses), credits, launch.
+
+## M16 Post-launch
 More interstates, ghost races, open multiplayer highways, artist and podcast partnerships on the radio.
 
 ## Ideas list
 - Optional manual transmission with a clutch
 - Florida's Turnpike as an alternate route with toll plazas
 - School-zone speed cameras on city streets off the exits
+- A Montreal-to-Miami scenario start: Quebec plates, the long drive south
+- Druidus (Crispy's band) as a first artist on the radio, with a written license
+- End-of-run recap: the story of your trip ("the gray sedan chased you for 14 miles"), made to be shared
+- Photo mode and crash replays, for clips and screenshots
+- Streamer mode: Twitch chat can send events onto the road (a Florida Man sighting, a sudden downpour)

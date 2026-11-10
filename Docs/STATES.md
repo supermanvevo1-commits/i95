@@ -1,6 +1,6 @@
 # I-95 state by state
 
-Status: design reference, written 2026-11-10 from general knowledge. Every number is checked against current sources when that state is built (M10). Florida has its own research notes in VISION.md.
+Status: design reference, written 2026-11-10 from general knowledge. Every number is checked against current sources when that state is built (M14). Florida has its own research notes in VISION.md.
 
 I-95 runs about 1,900 miles from Miami to Houlton, Maine, where it ends at the Canadian border. It crosses 15 states, plus a few hundred feet of Washington, D.C. on the Woodrow Wilson Bridge.
 

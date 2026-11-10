@@ -158,12 +158,33 @@ namespace SurviveI95.EditorTools
                     for (int i = from; i < all.Count && n < (int)F(a, 3); i++, n++)
                     {
                         int lane = n % 3; var c = ts.Create(all[i], DriverKind.Normal, car.Sim.S + z + all[i].lengthM / 2f, lane, 0f);
-                        c.Desired = 0.01f; if (lane == 2) z += 26f;
+                        c.Desired = 0.01f; c.HoldDesired = true; if (lane == 2) z += 26f;
                     }
                     return "lineup " + n;
                 }
                 case "trafficclear": { var ts = car.GetComponent<TrafficManager>().Sim; ts.Target = 0; ts.ForgetRegulars(); ts.Clear(); return "traffic cleared"; }
                 case "regulars": return Regulars(car);
+                case "speeds": // the posted limit here, and how far over it drivers are going
+                {
+                    var ts = car.GetComponent<TrafficManager>().Sim;
+                    float lim = car.Path.LimitMph(car.Sim.S), sum = 0f; int n = 0;
+                    foreach (var c in ts.Cars) if (Mathf.Abs(c.S - car.Sim.S) < 400f && c.Kind != DriverKind.Truck) { sum += c.Speed * DriveSim.MetersPerSecondToMph - car.Path.LimitMph(c.S); n++; }
+                    // Measured the way road studies do: actual speed over the limit, every car but trucks.
+                    var over = new System.Collections.Generic.List<float>();
+                    float wantOver = 0f; int held = 0, inWindow = 0;
+                    foreach (var c in ts.Cars) if (c.Kind != DriverKind.Truck && c.Speed > 4f)
+                    {
+                        over.Add(c.Speed * DriveSim.MetersPerSecondToMph - car.Path.LimitMph(c.S));
+                        wantOver += c.Desired * DriveSim.MetersPerSecondToMph - car.Path.LimitMph(c.S);
+                        if (c.Speed < c.Desired - 1.3f) held++;
+                    }
+                    wantOver /= Mathf.Max(1, over.Count);
+                    string diag = FormattableString.Invariant($" wantOver={wantOver:F1} heldBack={100 * held / Mathf.Max(1, over.Count)}%");
+                    over.Sort();
+                    float P(float q) => over.Count == 0 ? 0f : over[Mathf.Clamp((int)(q * over.Count), 0, over.Count - 1)];
+                    float mean = 0f; foreach (var o in over) mean += o; mean /= Mathf.Max(1, over.Count);
+                    return FormattableString.Invariant($"limit={lim:F0} nearCars={n} nearAvgOver={(n > 0 ? sum / n : 0f):F1} | all: n={over.Count} meanOver={mean:F1} p50={P(.5f):F1} p85={P(.85f):F1} p99={P(.99f):F1}{diag} | habits: {ts.SpeedSpread()}");
+                }
                 case "tempers": { var n = car.GetComponent<TrafficManager>().Sim.TemperCounts(); return $"shrug={n[0]} honk={n[1]} follow={n[2]} yell={n[3]} ram={n[4]}"; }
                 case "temper": { var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2)); if (c == null) return "ERROR no car"; c.Temper = (int)F(a, 3); return "temper " + c.Temper; }
                 case "wheel": car.ScrollCruise((int)F(a, 2)); return car.CruiseStatus;
@@ -197,7 +218,7 @@ namespace SurviveI95.EditorTools
                     var kind = (DriverKind)Enum.Parse(typeof(DriverKind), a[3]);
                     int spawnLane = F(a, 5) < 0f ? ts.LaneCount(car.Sim.S) - 1 : (int)F(a, 5);
                     var c = ts.Create(def, kind, car.Sim.S + F(a, 4), spawnLane, F(a, 6) / DriveSim.MetersPerSecondToMph);
-                    c.Desired = c.Speed;
+                    c.Desired = c.Speed; c.HoldDesired = true;
                     return $"spawned {def.id} {kind} id={c.Id}";
                 }
             }

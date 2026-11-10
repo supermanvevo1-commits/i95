@@ -30,6 +30,10 @@ namespace SurviveI95.Sim
         public Regular Regular;
         /// <summary>The furthest this driver will ever take a grudge: 0 shrugs it off, 1 honks, 2 follows and blocks, 3 yells and cuts in, 4 rams.</summary>
         public int Temper;
+        /// <summary>How many mph over the posted limit this driver likes to go. Negative is under.</summary>
+        public float SpeedHabit;
+        /// <summary>Keeps Desired as set, ignoring the limit. For tests that place a car at a fixed speed.</summary>
+        public bool HoldDesired;
         public object View;
 
         internal int PendingLane, Paint;
@@ -108,7 +112,8 @@ namespace SurviveI95.Sim
             return pool[pool.Count - 1];
         }
 
-        static float Weight(string personality) => personality == "normal" ? 58f : personality == "camper" ? 18f : personality == "rager" ? 13f : personality == "weaver" ? 11f : 100f;
+        // Campers are memorable, not common: about one driver in ten who could be one is.
+        static float Weight(string personality) => personality == "normal" ? 58f : personality == "camper" ? 9f : personality == "rager" ? 13f : personality == "weaver" ? 11f : 100f;
 
         DriverKind PickKind(VehicleDefinition def)
         {
@@ -145,17 +150,16 @@ namespace SurviveI95.Sim
         public TrafficCar Create(VehicleDefinition def, DriverKind kind, float s, int lane, float speed = -1f)
         {
             var traits = MakeTraits(kind);
-            float mph = Mathf.Lerp(def.cruiseMph[0], def.cruiseMph[1], Mathf.Clamp01(traits.Aggression * .8f + Rand(0f, .25f)));
-            if (kind == DriverKind.Camper) mph = Rand(60f, 65f); // right at the limit, in the fast lane, and proud of it
+            float habit = PickHabit(def, kind, traits);
             var c = new TrafficCar
             {
-                Id = ++nextId, Def = def, Kind = kind, Traits = traits, S = s, Lane = lane, PendingLane = -1,
-                Desired = MphToMs(mph), Length = def.lengthM, Width = def.widthM, Mass = MassOf(def),
+                Id = ++nextId, Def = def, Kind = kind, Traits = traits, S = s, Lane = lane, PendingLane = -1, SpeedHabit = habit,
+                Desired = CruiseAt(def, habit, s), Length = def.lengthM, Width = def.widthM, Mass = MassOf(def),
                 Phase = Rand(0f, 6.28f), Paint = rng.Next(0, 1000), Cooldown = Rand(1f, 8f),
                 Signals = rng.NextDouble() < 0.25f + 0.75f * traits.LaneDiscipline
             };
             c.Temper = PickTemper(def, kind, traits);
-            c.Speed = speed >= 0f ? speed : c.Desired * .95f;
+            c.Speed = speed >= 0f ? speed : c.Desired;
             c.Lateral = LaneCenter(s, lane);
             c.PrevS = c.S; c.PrevLateral = c.Lateral;
             Insert(c);
@@ -386,8 +390,9 @@ namespace SurviveI95.Sim
             c.AngryFlash = false; c.TightFollow = false; c.RamAccel = float.NaN; c.WantLane = -1;
             bool near = !far && player.Present;
             float cap = float.PositiveInfinity;
+            // The speed this driver wants follows the posted limit as it changes.
+            if (!c.HoldDesired) c.Desired = c.Regular != null ? CruiseFor(c.Regular, c.S) : CruiseAt(c, c.S);
             if (near) cap = Personal(c, gap, leadPlayer, backGap, backPlayer, dt);
-            else if (c.Regular != null) c.Desired = CruiseFor(c.Regular, c.S);
 
             float a = c.TightFollow && leadPlayer ? Idm(c.Speed, c.Desired, MaxAccel(c), 2.6f, .35f, 1.5f, gap, seen) : AccelFor(c, gap, seen);
             if (endGap < 160f) a = Mathf.Min(a, AccelFor(c, endGap, 0f));
@@ -469,7 +474,8 @@ namespace SurviveI95.Sim
                     return wantsPass && gain > .06f ? gain + .1f : -1f;
                 default:
                     if (dir < 0) return gain > -.2f ? c.Traits.LaneDiscipline * .55f + gain : -1f;
-                    return wantsPass && gain > .35f ? gain - .1f : -1f;
+                    // Most drivers pull out to pass once the car ahead is clearly slower than they want to go.
+                    return wantsPass && gain > .22f ? gain - .05f : -1f;
             }
         }
 
@@ -506,7 +512,7 @@ namespace SurviveI95.Sim
             c.Lane = lane; c.PendingLane = -1; c.SinceChange = 0f;
             c.ChangeTime = 0f;
             c.ChangeDuration = c.Kind == DriverKind.Truck ? 5.5f : c.Kind == DriverKind.Weaver ? 1.9f : Mathf.Lerp(3.8f, 2.4f, c.Traits.Aggression);
-            float wait = c.Regular != null && c.Regular.Level >= 2 ? 1.2f : c.Kind == DriverKind.Weaver ? 2.5f : c.Kind == DriverKind.Tailgater ? 5f : c.Kind == DriverKind.Camper ? 1.5f : Mathf.Lerp(16f, 7f, c.Traits.Aggression);
+            float wait = c.Regular != null && c.Regular.Level >= 2 ? 1.2f : c.Kind == DriverKind.Weaver ? 2.5f : c.Kind == DriverKind.Tailgater ? 5f : c.Kind == DriverKind.Camper ? 1.5f : Mathf.Lerp(11f, 5f, c.Traits.Aggression);
             c.Cooldown = c.ChangeDuration + Rand(wait * .6f, wait * 1.5f);
             // With another lane closing just beyond this one, there is no time to dawdle.
             if (!float.IsInfinity(LaneEnd(c.S, lane, LaneEndLook))) c.Cooldown = c.ChangeDuration + .4f;
