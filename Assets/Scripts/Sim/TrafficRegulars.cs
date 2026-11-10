@@ -24,6 +24,10 @@ namespace SurviveI95.Sim
         /// <summary>mph over the posted limit they like to drive.</summary>
         public float SpeedHabit;
         public DriverProfile Profile;
+        public AgeBand AgeBand;
+        public int AgeYears;
+        public float Skill;
+        public LicenseStatus License;
         /// <summary>The highest level this driver's anger can reach. See <see cref="TrafficCar.Temper"/>.</summary>
         public int Temper;
         /// <summary>0 calm, 1 out for blood. Cools down slowly.</summary>
@@ -164,7 +168,7 @@ namespace SurviveI95.Sim
             var reg = new Regular
             {
                 Id = c.Id, Def = c.Def, Kind = c.Kind, Traits = c.Traits, Paint = c.Paint, Signals = c.Signals, Temper = c.Temper,
-                SpeedHabit = c.SpeedHabit, Profile = c.Profile, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
+                SpeedHabit = c.SpeedHabit, Profile = c.Profile, AgeBand = c.AgeBand, AgeYears = c.AgeYears, Skill = c.Skill, License = c.License, Car = c, Plate = MakePlate(), Name = Describe(c.Def, c.Paint)
             };
             Regulars.Add(reg);
             c.Regular = reg;
@@ -277,7 +281,7 @@ namespace SurviveI95.Sim
                 if (!SpotIsClear(r.S, lane, r.Def.lengthM)) continue;
                 var c = Create(r.Def, r.Kind, r.S, lane, r.Speed, r.Profile);
                 Spawned--; // the same driver, not new traffic
-                c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.SpeedHabit = r.SpeedHabit; c.Desired = CruiseAt(r, r.S); c.Temper = r.Temper;
+                c.Traits = r.Traits; c.Paint = r.Paint; c.Signals = r.Signals; c.SpeedHabit = r.SpeedHabit; c.AgeBand = r.AgeBand; c.AgeYears = r.AgeYears; c.Skill = r.Skill; c.License = r.License; c.Desired = CruiseAt(r, r.S); c.Temper = r.Temper;
                 c.Regular = r; r.Car = c;
                 if (r.Wrecked) { c.Wrecked = true; c.Involved = true; c.Hazards = true; c.Speed = 0f; }
                 r.Announce = true;

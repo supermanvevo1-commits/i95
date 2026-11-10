@@ -37,6 +37,12 @@ namespace SurviveI95.Sim
         /// <summary>Who tends to drive this kind of vehicle, which shifted this driver's traits.</summary>
         public DriverProfile Profile;
         internal float RaceLeft, TapLeft, Age, GapSum;
+        /// <summary>Who's driving: age, how good they are (0-1, mostly from experience), and their license.</summary>
+        public AgeBand AgeBand = AgeBand.Adult;
+        public int AgeYears = 40;
+        public float Skill = .75f;
+        public LicenseStatus License;
+        internal float WanderLeft, WanderTarget, WanderNow;
         // Left-lane campers: how long someone has ridden their bumper, how long they'll take it, and how long they stay over after giving in.
         internal float Pressured, Patience = float.PositiveInfinity, YieldedFor;
         internal int Changes, GapSamples;
@@ -172,8 +178,13 @@ namespace SurviveI95.Sim
                 Signals = rng.NextDouble() < 0.25f + 0.75f * traits.LaneDiscipline
             };
             c.Profile = profile;
+            PickPerson(c, profile);
+            ApplyPerson(c);
+            // Fewer low-skill drivers bother with the blinker.
+            c.Signals = rng.NextDouble() < (.35f + .65f * c.Traits.LaneDiscipline) * Mathf.Lerp(.75f, 1.05f, c.Skill);
+            c.Desired = CruiseAt(def, c.SpeedHabit, s);
             if (kind == DriverKind.Camper && rng.NextDouble() > .33) c.Patience = Rand(10f, 45f);
-            c.Temper = PickTemper(def, kind, traits, profile.temper);
+            c.Temper = PickTemper(def, kind, c.Traits, profile.temper);
             c.Speed = speed >= 0f ? speed : c.Desired;
             c.Lateral = LaneCenter(s, lane);
             c.PrevS = c.S; c.PrevLateral = c.Lateral;
@@ -190,7 +201,7 @@ namespace SurviveI95.Sim
             Cars[i] = c;
         }
 
-        void RemoveAt(int i) { var c = Cars[i]; Cars.RemoveAt(i); Detach(c); LogProfile(c); Removed?.Invoke(c); }
+        void RemoveAt(int i) { var c = Cars[i]; Cars.RemoveAt(i); Detach(c); LogProfile(c); LogAge(c); Removed?.Invoke(c); }
 
         public void Clear() { for (int i = Cars.Count - 1; i >= 0; i--) RemoveAt(i); }
 
@@ -375,7 +386,9 @@ namespace SurviveI95.Sim
             return 1.75f - .85f * c.Traits.Aggression + (1f - c.Traits.Attention) * .35f;
         }
         static float MinGap(TrafficCar c) => c.Kind == DriverKind.Truck ? 5f : c.Kind == DriverKind.Tailgater ? 1.6f : 3f;
-        float AccelFor(TrafficCar c, float gap, float leadV) => Idm(c.Speed, c.Desired, MaxAccel(c), 2.6f, Headway(c), MinGap(c), gap, leadV);
+        // Unskilled drivers don't ease off early: they leave the braking late and then brake harder.
+        static float ComfortBrake(TrafficCar c) => Mathf.Lerp(3.8f, 2.3f, c.Skill);
+        float AccelFor(TrafficCar c, float gap, float leadV) => Idm(c.Speed, c.Desired, MaxAccel(c), ComfortBrake(c), Headway(c), MinGap(c), gap, leadV);
 
         void Think(TrafficCar c, int i, float dt, bool far)
         {
@@ -413,6 +426,7 @@ namespace SurviveI95.Sim
             if (!c.HoldDesired) c.Desired = c.Regular != null ? CruiseFor(c.Regular, c.S) : CruiseAt(c, c.S);
             if (near) cap = Personal(c, gap, leadPlayer, backGap, backPlayer, dt);
             if (near) Challenge(c, dt);
+            StartWander(c, i, dt);
             // For tests: how long this driver has been around, and the gap they keep when following at speed.
             c.Age += dt;
             if (!float.IsInfinity(gap) && gap < 80f && c.Speed > 15f) { c.GapSum += gap / c.Speed; c.GapSamples++; }
@@ -533,12 +547,14 @@ namespace SurviveI95.Sim
             Scan(i, lat, c.Width, out float gap, out float leadV, out float backGap, out float backV, out _);
             newAccel = AccelFor(c, gap, leadV);
             float boldness = c.Traits.Aggression;
-            float front = (urgent ? 4f : 7f) + c.Speed * Mathf.Lerp(.55f, .28f, boldness);
+            // Unskilled drivers misjudge gaps and squeeze into tighter ones.
+            float judge = Mathf.Lerp(.75f, 1.05f, c.Skill);
+            float front = ((urgent ? 4f : 7f) + c.Speed * Mathf.Lerp(.55f, .28f, boldness)) * judge;
             // Closing in on the player is the whole point for someone with a grudge.
             if (scanLeadPlayer && c.WantLane == lane && c.Regular != null && c.Regular.Level >= 2) front = 4f + c.Speed * .12f;
             else if (leadV < c.Speed && gap / Mathf.Max(.1f, c.Speed - leadV) < 3.5f) return false;
             if (gap < front) return false;
-            float rear = (urgent ? 5f : 8f) + backV * Mathf.Lerp(.5f, .25f, boldness) + Mathf.Max(0f, backV - c.Speed) * 2.4f;
+            float rear = ((urgent ? 5f : 8f) + backV * Mathf.Lerp(.5f, .25f, boldness) + Mathf.Max(0f, backV - c.Speed) * 2.4f) * judge;
             // Cutting in on the player on purpose leaves them a fraction of the room anyone else would get.
             if (c.CutIn && scanBackPlayer) rear = 3f + Mathf.Max(0f, backV - c.Speed) * .8f;
             return backGap >= rear;
@@ -559,7 +575,7 @@ namespace SurviveI95.Sim
             c.ChangeFrom = c.Lateral - LaneCenter(c.S, lane);
             c.Lane = lane; c.PendingLane = -1; c.SinceChange = 0f; c.Changes++;
             c.ChangeTime = 0f;
-            c.ChangeDuration = c.Kind == DriverKind.Truck ? 5.5f : c.Kind == DriverKind.Weaver ? 1.9f : Mathf.Lerp(3.8f, 2.4f, c.Traits.Aggression);
+            c.ChangeDuration = c.Kind == DriverKind.Truck ? 5.5f : (c.Kind == DriverKind.Weaver ? 1.9f : Mathf.Lerp(3.8f, 2.4f, c.Traits.Aggression)) * Mathf.Lerp(.8f, 1.05f, c.Skill);
             float wait = c.Regular != null && c.Regular.Level >= 2 ? 1.2f : c.Kind == DriverKind.Weaver ? 2.5f : c.Kind == DriverKind.Tailgater ? 5f : c.Kind == DriverKind.Camper ? 1.5f : Mathf.Lerp(11f, 5f, c.Traits.Aggression);
             c.Cooldown = c.ChangeDuration + Rand(wait * .6f, wait * 1.5f);
             // With another lane closing just beyond this one, there is no time to dawdle.
@@ -600,7 +616,8 @@ namespace SurviveI95.Sim
             }
             else { c.ShoveLeft = 0f; c.OffsetVelocity += (-c.Offset * 3f - c.OffsetVelocity * 3.2f) * dt; }
             c.Offset += c.OffsetVelocity * dt;
-            float drift = Mathf.Sin(clock * .55f + c.Phase) * (1f - c.Traits.Attention) * .32f;
+            // Everyone sways a little in the lane; inattentive and unskilled drivers sway more, and now and then drift onto the line.
+            float drift = Mathf.Sin(clock * .55f + c.Phase) * ((1f - c.Traits.Attention) * .32f + (1f - c.Skill) * .2f) + WanderOffset(c, dt);
             float lat = LaneCenter(c.S, c.Lane) + from + drift + c.Offset;
             float side = (lat - c.Lateral) / Mathf.Max(.001f, dt);
             c.Lateral = lat;

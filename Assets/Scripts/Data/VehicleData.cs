@@ -33,6 +33,8 @@ namespace SurviveI95.Data
     {
         public string id, name;
         public float habit, aggression, temper, discipline, attention, rager, racer, brakeTaps;
+        /// <summary>Chances the driver is under 25, or 65 and over.</summary>
+        public float youngShare, oldShare;
     }
 
     [Serializable]
