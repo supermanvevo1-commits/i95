@@ -143,7 +143,8 @@ namespace SurviveI95.Game
         }
 
         // A two-tone horn built from odd harmonics, so the game needs no sound files for it.
-        static AudioClip MakeHorn(float seconds, float low, float high)
+        /// <summary>A two-tone horn. With loop on there's no fade, so whole-number frequencies and a whole-second length loop without a click.</summary>
+        public static AudioClip MakeHorn(float seconds, float low, float high, bool loop = false)
         {
             const int Rate = 44100;
             int n = Mathf.RoundToInt(Rate * seconds);
@@ -152,7 +153,7 @@ namespace SurviveI95.Game
             {
                 float t = i / (float)Rate, s = 0f;
                 for (int h = 1; h <= 7; h += 2) s += (Mathf.Sin(2f * Mathf.PI * low * h * t) + Mathf.Sin(2f * Mathf.PI * high * h * t)) / h;
-                float env = Mathf.Clamp01(t / .02f) * Mathf.Clamp01((seconds - t) / .05f);
+                float env = loop ? 1f : Mathf.Clamp01(t / .02f) * Mathf.Clamp01((seconds - t) / .05f);
                 data[i] = (float)System.Math.Tanh(s * .9f) * .7f * env;
             }
             var clip = AudioClip.Create("Horn", n, 1, Rate, false);

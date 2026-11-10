@@ -7,6 +7,15 @@ Every car on the highway is a life with somewhere to be. One driver is on a road
 
 It's a driving life simulator in the way Death Stranding is a walking simulator, and the story comes out of the systems the way it does in RimWorld. No two runs are the same.
 
+## Decisions so far
+- A full Miami-to-Maine run is about 10-12 hours of play over several sessions, saved at rest stops. Florida is about 2 hours. Rural stretches are shortened about 3 to 1. Cities stay close to real size.
+- Seasons are chosen at the start of a run, not taken from the computer's clock. A shared multiplayer world could follow the calendar later.
+- Third person is allowed everywhere. Texting is first person only.
+- Every car has cruise control.
+- Controls follow GTA's keyboard-and-mouse layout: W/S, A/D, Space handbrake, V camera, C look back, E horn. Additions: mouse wheel for cruise speed with gentle braking on the way down, front side button to floor it, back side button to look back, right-click for mirrors.
+- Driver and passengers are animated in the car: partner up front, kids in the back.
+- The shareable game design document is the Claude Doc "Survive the I-95: Game Design".
+
 ## Who you can be (scenarios)
 - **Road trip:** a partner in the passenger seat. They can take the wheel while you sleep. They may be a poor driver, or have no license, and that can get you pulled over.
 - **Family:** kids and a crying baby in the back. Stress builds in traffic and after a crash, and it affects your character.

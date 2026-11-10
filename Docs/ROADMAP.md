@@ -61,7 +61,8 @@ Traffic with memory, real road rules, and places where it piles up. Comes before
 - [x] 3b.3 Road rage that escalates: horn and high beams, riding your bumper, pulling alongside to yell, cutting in and brake-checking, ramming
 - [x] 3b.4 Short on-screen lines when it matters ("The red pickup truck is back.")
 - [x] 3b.4a Temperaments from real survey odds: most drivers shrug it off or honk, few follow, very few ram
-- [x] 3b.4b From playtest notes: narrower field of view ([ and ] adjust it), right-click mirror glances, Q to look back, mouse-wheel cruise control
+- [x] 3b.4b From playtest notes: narrower field of view ([ and ] adjust it), right-click mirror glances, look back, mouse-wheel cruise control
+- [x] 3b.4c GTA-style keyboard and mouse: V camera, C or back side button to look back, E horn, front side button to floor it
 - [ ] 3b.5 Real speed limits per section, and drivers who mostly run 5-9 over, with a few far over in any lane
 - [ ] 3b.6 Distracted drivers: about 3 in 100 on their phone, drifting, reacting late, causing a share of crashes
 - [ ] 3b.7 Accidents between other drivers in real proportions (rear-end, sideswipe, run off the road, debris, rare freak events like a gator or a spill), blocking lanes, with rubbernecking in both directions
@@ -155,7 +156,7 @@ See FLORIDA_ROUTE.md for the map and section list.
 - [ ] 8.7 Florida events: gators, downpours, Florida Man
 - [ ] 8.8 Full NPC behavior list (npc_behaviors.md)
 - [ ] 8.9 Art pass: decide the final look (semi-real or stylized), fictional car designs with no real badges, roadside variety, lighting, proper trees
-- [ ] 8.10 Driver and passenger models in the cockpit, arms that steer and shift
+- [ ] 8.10 Animated people in the car: the driver steers and shifts, a partner in the passenger seat, kids in the back, reacting to the road
 - [ ] 8.11 Audio pass: engines, tires, crashes, horns, cabin
 - [ ] 8.11a Radio: stations by genre, talk and podcasts, hosts who warn about weather and traffic, original or independently licensed music
 - [ ] 8.12 Whole-run balance

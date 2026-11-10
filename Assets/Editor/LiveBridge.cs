@@ -175,6 +175,8 @@ namespace SurviveI95.EditorTools
                 }
                 case "glance": car.TestGlance = a[2] == "off" ? null : a[2]; return "glance " + a[2];
                 case "lookback": car.TestLookBack = a[2] == "on"; return "look back " + a[2];
+                case "horn": car.TestHorn = a[2] == "on"; return "horn " + a[2];
+                case "hornstate": { var src = car.GetComponent<AudioSource>(); return $"honking={car.Honking} playing={(src != null && src.isPlaying)} loop={(src != null && src.loop)}"; }
                 case "fovset": car.SetBaseFov(F(a, 2)); return "fov " + car.BaseFov;
                 case "camera": return FormattableString.Invariant($"fov={car.chaseCamera.fieldOfView:F1} glance={car.Glance:F2} pos={car.chaseCamera.transform.position} fwd={car.chaseCamera.transform.forward}");
                 case "notices": { var log = car.GetComponent<TrafficManager>().NoticeLog; var res = string.Join(" | ", log); log.Clear(); return res; }

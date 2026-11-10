@@ -54,7 +54,10 @@ namespace SurviveI95.Game
         public float Glance { get; private set; }
         /// <summary>Forces a mirror glance in tests: "L", "Rear" or "R".</summary>
         [NonSerialized] public string TestGlance;
-        [NonSerialized] public bool TestLookBack;
+        [NonSerialized] public bool TestLookBack, TestHorn;
+        /// <summary>True while the player is on the horn.</summary>
+        public bool Honking { get; private set; }
+        AudioSource horn;
         static readonly string[] MirrorParts = { "Mirror_L", "Mirror_Rear", "Mirror_R" };
         Renderer[] mirrorParts;
         float[] mirrorHalfWidth;
@@ -168,7 +171,15 @@ namespace SurviveI95.Game
                 glanceSwitch = 0f;
             }
             glancing = wantGlance && mirrorParts != null && mirrorParts[glanceMirror] != null;
-            lookingBack = TestLookBack || (k != null && k.qKey.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
+            lookingBack = TestLookBack || (k != null && k.cKey.isPressed) || (mouse != null && mouse.backButton.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
+            Honking = TestHorn || (k != null && k.eKey.isPressed) || (pad != null && pad.leftStickButton.isPressed);
+            if (Honking && horn == null)
+            {
+                horn = gameObject.AddComponent<AudioSource>();
+                horn.clip = TrafficManager.MakeHorn(1f, 415f, 518f, loop: true);
+                horn.loop = true; horn.spatialBlend = 0f; horn.volume = .55f; horn.playOnAwake = false;
+            }
+            if (horn != null && Honking != horn.isPlaying) { if (Honking) horn.Play(); else horn.Stop(); }
             Glance = Mathf.MoveTowards(Glance, glancing && !lookingBack ? 1f : 0f, Time.deltaTime / .4f);
         }
 
@@ -237,6 +248,9 @@ namespace SurviveI95.Game
                 input.Steer = ((k.dKey.isPressed || k.rightArrowKey.isPressed) ? 1 : 0) - ((k.aKey.isPressed || k.leftArrowKey.isPressed) ? 1 : 0);
                 input.Handbrake = k.spaceKey.isPressed;
             }
+            // Front side button on the mouse: floor it. With cruise on, the car goes back to the set speed on release.
+            var m = Mouse.current;
+            if (m != null && m.forwardButton.isPressed) input.Throttle = 1f;
             var pad = Gamepad.current;
             if (pad != null)
             {
@@ -254,8 +268,8 @@ namespace SurviveI95.Game
             var k = Keyboard.current;
             var pad = Gamepad.current;
             if (k != null && k.rKey.wasPressedThisFrame) { Sim.Reset(Path, Sim.S); StorePrevious(); }
-            if ((k != null && k.cKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame)) SetCockpit(!Cockpit);
-            if (k != null && k.vKey.wasPressedThisFrame) { lookYaw = 0; lookPitch = 0; }
+            // GTA-style layout: V changes the camera, C looks back, E is the horn.
+            if ((k != null && k.vKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame)) SetCockpit(!Cockpit);
             if (k != null && k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
             UpdateControls(k, pad);
             if (Cockpit) UpdateLook(pad);
