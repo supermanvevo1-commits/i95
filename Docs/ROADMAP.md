@@ -109,6 +109,7 @@ Sets the target for how the whole game looks and sounds, on the Miami test road,
 - [ ] 5.7 Title card at the start, and "Welcome to Miami" style cards for cities and states
 - [ ] 5.8 Styled notices and a minimap
 - [ ] 5.9 Core sounds from real recordings: engines by vehicle class, tires, wind, and horns that fit the vehicle (sedan beep, truck air horn)
+- [ ] 5.10 Controllers: gamepad works today (analog triggers and stick); add full button mapping, plus steering wheels and pedals (force feedback where the wheel supports it)
 
 Done when: the creator calls the screen polished, side by side the game looks at least as good as Midnight Club II, and nothing sounds synthetic.
 
@@ -195,7 +196,7 @@ The whole Florida route, built to the slice's look and sound. See FLORIDA_ROUTE.
 - [ ] 12.8 Full NPC behavior list (npc_behaviors.md)
 - [ ] 12.9 Art for everything: fictional car designs with parody brand names and no real badges, as GTA does, roadside variety, proper trees
 - [ ] 12.10 Full sound: every vehicle, ambience, cabin, and the radio (stations by genre, talk and podcasts, original or independently licensed music)
-- [ ] 12.11 Settings screen, performance on modest PCs
+- [ ] 12.11 Settings screen (field of view, key rebinding, volume, keyboard steering help on or off), performance on modest PCs
 - [ ] 12.12 Whole-run balance
 
 Done when: a stranger can play Miami to Jacksonville and understand the game. This is the demo and trailer build.
