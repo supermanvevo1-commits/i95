@@ -1,0 +1,10 @@
+{
+  "note": "Where a 'Welcome to' card shows, in meters along the route. Placed at the exit nearest each real city limit or county line on I-95 northbound; within a few hundred meters of the real line.",
+  "places": [
+    { "s": 0,     "name": "MIAMI",            "sub": "Miami-Dade County, Florida" },
+    { "s": 25300, "name": "HALLANDALE BEACH", "sub": "Broward County, Florida", "line": "BROWARD COUNTY LINE" },
+    { "s": 28000, "name": "HOLLYWOOD",        "sub": "Broward County, Florida" },
+    { "s": 33900, "name": "DANIA BEACH",      "sub": "Broward County, Florida" },
+    { "s": 38200, "name": "FORT LAUDERDALE",  "sub": "Broward County, Florida" }
+  ]
+}

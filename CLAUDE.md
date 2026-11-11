@@ -19,7 +19,7 @@ An arcade survival driving game along I-95, from Miami to Maine. Unity 6 (6000.6
 ## Git
 - Commit only when the creator says "commit". Never commit on your own: the permission check blocks it.
 - Branch `m3-traffic`. Remote: `github.com/supermanvevo1-commits/i95`.
-- git on the command line has no saved login. Push through GitHub Desktop with `Tools/desktop_push.ps1 -Send`, which brings its window forward and presses Ctrl+P. Then confirm with `git ls-remote --heads origin`.
+- git on the command line has no saved login. Push through GitHub Desktop with `Tools/desktop_push.ps1 -Send`, which brings its window forward and presses Ctrl+P. Then confirm with `git ls-remote --heads origin`. If the push didn't land, look at `.livebridge/desktop.png`: a window on top (a Windows Update dialog did this once) swallows the key press.
 - PowerShell 5.1 can't pass a here-string to `git commit -F -`. Write the message to a file and use `-F <file>`.
 
 ## Unity live bridge

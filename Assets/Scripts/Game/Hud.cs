@@ -20,8 +20,8 @@ namespace SurviveI95.Game
         static readonly Color CruiseGreen = new Color(.35f, 1f, .5f), LimitAmber = new Color(1f, .74f, .16f), BeamBlue = new Color(.35f, .62f, 1f);
 
         PlayerCar car;
-        Texture2D dial, needle, hub, mark, arrow, beam, white;
-        GUIStyle big, small, tiny, label, notice, limitDigits;
+        Texture2D dial, needle, hub, mark, arrow, beam, white, soft;
+        GUIStyle big, small, tiny, label, notice, limitDigits, cardStyle;
         float needleMph, scale;
         /// <summary>0 bottom right, 1 bottom left, 2 top right, 3 top left. F2 cycles it until the settings screen exists (M12).</summary>
         public int Corner { get; private set; }
@@ -31,8 +31,9 @@ namespace SurviveI95.Game
         void Start()
         {
             Corner = Mathf.Clamp(PlayerPrefs.GetInt("hudCorner", 0), 0, 3);
+            LoadPlaces();
             dial = MakeDial(512); needle = MakeNeedle(); hub = MakeDisc(64, new Color(.12f, .13f, .14f), new Color(.32f, .34f, .36f));
-            mark = MakeMark(); arrow = MakeArrow(); beam = MakeBeam(); white = Solid(Color.white);
+            mark = MakeMark(); arrow = MakeArrow(); beam = MakeBeam(); white = Solid(Color.white); soft = MakeSoft();
         }
 
         void Update()
@@ -42,7 +43,71 @@ namespace SurviveI95.Game
             // The needle has a little weight to it, like a real gauge.
             float mph = Mathf.Abs(car.Sim.Speed) * DriveSim.MetersPerSecondToMph;
             needleMph = Mathf.Lerp(needleMph, mph, 1f - Mathf.Exp(-Time.deltaTime * 9f));
+            UpdateCards();
         }
+
+        // ---------------------------------------------------------------- title and place cards
+
+        [System.Serializable] class Place { public float s; public string name, sub, line; }
+        [System.Serializable] class PlaceFile { public Place[] places; }
+        Place[] places = new Place[0];
+        string cardBig, cardSmall, cardTop; float cardStart = -99f, cardLength;
+        float lastS = float.NaN; int shownPlace = -1;
+        const float CardIn = .7f, CardOut = 1.2f;
+
+        /// <summary>Shows a card in the middle of the screen: a small line above, a big name, and a line below.</summary>
+        public void ShowCard(string top, string big, string small, float seconds = 4.5f) { cardTop = top; cardBig = big; cardSmall = small; cardStart = Time.unscaledTime; cardLength = seconds; }
+
+        void LoadPlaces()
+        {
+            var asset = Resources.Load<TextAsset>("Data/Routes/" + car.routeId + "_places");
+            if (asset != null) places = JsonUtility.FromJson<PlaceFile>(asset.text).places ?? new Place[0];
+        }
+
+        int PlaceAt(float s) { int at = -1; for (int i = 0; i < places.Length; i++) if (places[i].s <= s) at = i; return at; }
+
+        // The title first, then the place you start in; after that a card each time you cross into a new place driving north.
+        void UpdateCards()
+        {
+            if (car.Sim.Current != null) return; // on an exit ramp
+            float s = car.Sim.S;
+            if (float.IsNaN(lastS))
+            {
+                ShowCard("", "SURVIVE THE I-95", "MIAMI  →  HOULTON, MAINE   ·   1,908 MILES", 4.5f);
+                shownPlace = PlaceAt(s); lastS = s; pendingPlace = shownPlace; return;
+            }
+            if (pendingPlace >= 0 && Time.unscaledTime > cardStart + cardLength + .3f) { var p = places[pendingPlace]; ShowCard(p.line ?? "WELCOME TO", p.name, p.sub); pendingPlace = -1; }
+            int now = PlaceAt(s);
+            if (Mathf.Abs(s - lastS) > 60f) shownPlace = now; // a jump (reset or test teleport) is not a drive across a line
+            else if (now > shownPlace) { shownPlace = now; var p = places[now]; ShowCard(p.line ?? "WELCOME TO", p.name, p.sub); }
+            else if (now < shownPlace) shownPlace = now; // backing up across a line quietly
+            lastS = s;
+        }
+        int pendingPlace = -1;
+
+        void DrawCard()
+        {
+            if (cardBig == null) return;
+            float t = Time.unscaledTime - cardStart;
+            if (t < 0f || t > cardLength) return;
+            float a = Mathf.Min(Mathf.Clamp01(t / CardIn), Mathf.Clamp01((cardLength - t) / CardOut));
+            float s = scale, cy = Screen.height * .3f;
+            // The name rises slightly into place as it fades in.
+            float rise = (1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / CardIn))) * 12f * s;
+            var big = new GUIStyle(cardStyle) { fontSize = Mathf.RoundToInt((cardBig.Length > 12 ? 64 : 76) * s) };
+            float w = Mathf.Max(big.CalcSize(new GUIContent(cardBig)).x, 300f * s);
+            // A soft dark band behind the words, so they read over bright clouds.
+            var shade = GUI.color; GUI.color = new Color(0f, 0f, 0f, .5f * a);
+            GUI.DrawTexture(new Rect((Screen.width - w * 1.9f) / 2f, cy - 90f * s, w * 1.9f, 200f * s), soft); GUI.color = shade;
+            if (!string.IsNullOrEmpty(cardTop)) Text(new Rect(0, cy - 58f * s + rise, Screen.width, 26f * s), Spaced(cardTop), small, new Color(1f, .96f, .88f, .9f * a));
+            Text(new Rect(0, cy - 36f * s + rise, Screen.width, 80f * s), cardBig, big, new Color(1f, 1f, 1f, a));
+            var keep = GUI.color; GUI.color = new Color(Accent.r, Accent.g, Accent.b, a);
+            float lw = Mathf.Lerp(40f * s, w, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((t - .2f) / .9f)));
+            GUI.DrawTexture(new Rect((Screen.width - lw) / 2f, cy + 46f * s + rise, lw, 3f * s), white); GUI.color = keep;
+            if (!string.IsNullOrEmpty(cardSmall)) Text(new Rect(0, cy + 54f * s + rise, Screen.width, 30f * s), cardSmall, label, new Color(.88f, .9f, .92f, a));
+        }
+
+        static string Spaced(string s) => string.Join(" ", s.ToCharArray()).Replace("   ", "     ");
 
         public void SetCorner(int c) { Corner = Mathf.Clamp(c, 0, 3); PlayerPrefs.SetInt("hudCorner", Corner); }
 
@@ -60,6 +125,7 @@ namespace SurviveI95.Game
                 label = new GUIStyle(big) { fontSize = Px(24) };
                 notice = new GUIStyle(big) { fontSize = Px(30), wordWrap = true };
                 limitDigits = new GUIStyle(big) { fontSize = Px(40) };
+                cardStyle = new GUIStyle(big);
             }
         }
 
@@ -182,9 +248,11 @@ namespace SurviveI95.Game
             if (l) Rotated(arrow, new Rect(ax, ay, 40f * s, 36f * s), new Vector2(ax + 20f * s, ay + 18f * s), 180f, on);
             if (rr) { GUI.color = on; GUI.DrawTexture(new Rect(ax + 100f * s, ay, 40f * s, 36f * s), arrow); GUI.color = Color.white; }
 
+            DrawCard();
+
             // Center messages: short confirmations, looking back, and a disabled car.
             if (car.FlashText != null)
-                Text(new Rect(0, Screen.height * .74f, Screen.width, 40f * s), car.FlashText, label, Ink);
+                Text(new Rect(0, Screen.height - 64f * s, Screen.width, 40f * s), car.FlashText, label, Ink); // below the car, clear of it
             if (car.LookingBack) Text(new Rect(0, 18f * s, Screen.width, 40f * s), "LOOKING BACK", label, Ink);
             if (car.Sim.Disabled) Text(new Rect(0, Screen.height * .3f, Screen.width, 60f * s), "CAR DISABLED  ·  PRESS R TO RECOVER", notice, Accent);
         }
@@ -294,6 +362,18 @@ namespace SurviveI95.Game
                     var c = Color.Lerp(inner, ring, Mathf.Clamp01((r - .7f) / .3f)); c.a = Edge((r - .97f) * half, 1.2f);
                     px[y * n + x] = c;
                 }
+            t.SetPixels(px); t.Apply(); return t;
+        }
+
+        // An oval that fades out to nothing at its edges.
+        static Texture2D MakeSoft()
+        {
+            int w = 128, h = 64; var t = New(w, h); var px = new Color[w * h];
+            for (int y = 0; y < h; y++) for (int x = 0; x < w; x++)
+            {
+                float dx = (x + .5f) / w * 2f - 1f, dy = (y + .5f) / h * 2f - 1f, d = Mathf.Sqrt(dx * dx + dy * dy);
+                px[y * w + x] = new Color(1f, 1f, 1f, Mathf.Pow(Mathf.Clamp01(1f - d), 1.6f));
+            }
             t.SetPixels(px); t.Apply(); return t;
         }
 

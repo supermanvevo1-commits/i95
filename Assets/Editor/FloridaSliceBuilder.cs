@@ -92,7 +92,7 @@ namespace SurviveI95.EditorTools
             var path = RoutePath.Load(RouteId);
             var m = LoadMats();
             placed.Clear();
-            if (part == "hud") { }
+            if (part == "hud") AssignHudFonts(UnityEngine.Object.FindAnyObjectByType<PlayerCar>());
             else if (part == "signs")
             {
                 var old = GameObject.Find("Signs"); if (old != null) UnityEngine.Object.DestroyImmediate(old);
@@ -106,7 +106,6 @@ namespace SurviveI95.EditorTools
                     UnityEngine.Object.DestroyImmediate(old);
                 BuildBarriers(road, path, m);
             }
-            else if (part == "hud") AssignHudFonts(UnityEngine.Object.FindAnyObjectByType<PlayerCar>());
             else return "ERROR unknown part " + part;
             placed.Clear();
             var scene = EditorSceneManager.GetActiveScene();

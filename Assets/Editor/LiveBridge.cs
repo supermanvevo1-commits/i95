@@ -235,6 +235,7 @@ namespace SurviveI95.EditorTools
                 case "lamps": return car.LampState;
                 case "screen": { string sp = Path.Combine(Dir, "shots", a[2] + ".png"); if (File.Exists(sp)) File.Delete(sp); ScreenCapture.CaptureScreenshot(sp); return sp + " (game view, with the HUD; written at the end of the frame)"; }
                 case "notice": car.GetComponent<TrafficManager>().Show(string.Join(" ", a, 2, a.Length - 2)); return "notice shown";
+                case "card": { var cp = string.Join(" ", a, 2, a.Length - 2).Split('|'); car.Hud.ShowCard(cp[0], cp.Length > 1 ? cp[1] : "", cp.Length > 2 ? cp[2] : "", 30f); return "card"; } // top|BIG|small, held 30 s for screenshots
                 case "hudcorner": car.Hud.SetCorner((int)F(a, 2)); return "hud corner " + a[2];
                 case "flashtest": car.ScrollCruise(0); return "ok";
                 case "blink": CarLamps.BlinkTest = a[2] == "auto" ? (bool?)null : a[2] == "on"; return "blink " + a[2];
