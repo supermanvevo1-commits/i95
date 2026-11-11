@@ -8,7 +8,7 @@ namespace SurviveI95.EditorTools
     [InitializeOnLoad]
     public static class SliceAutoRebuild
     {
-        public const int Version = 12;
+        public const int Version = 14;
         const string Stamp = "Assets/Generated/build_version.txt";
 
         static SliceAutoRebuild()

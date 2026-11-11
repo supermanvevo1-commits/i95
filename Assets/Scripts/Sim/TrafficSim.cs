@@ -387,7 +387,9 @@ namespace SurviveI95.Sim
             return a * (free - ratio * ratio);
         }
 
-        static float MaxAccel(TrafficCar c) => c.Kind == DriverKind.Truck ? .55f + .3f * c.Traits.Aggression : 1.3f + 1.3f * c.Traits.Aggression;
+        static float MaxAccel(TrafficCar c) => c.Racing ? RaceAccel(c) : c.Kind == DriverKind.Truck ? .55f + .3f * c.Traits.Aggression : 1.3f + 1.3f * c.Traits.Aggression;
+        // A sporty car with the pedal down: strong off the line, fading at speed as a real one does (about 2 m/s² at 115 mph).
+        static float RaceAccel(TrafficCar c) => Mathf.Lerp(5f, 1.2f, Mathf.InverseLerp(20f, 62f, c.Speed));
         static float Headway(TrafficCar c)
         {
             if (c.Kind == DriverKind.Tailgater) return .42f + (1f - c.Traits.Aggression) * .4f;

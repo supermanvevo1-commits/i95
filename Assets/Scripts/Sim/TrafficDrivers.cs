@@ -53,6 +53,8 @@ namespace SurviveI95.Sim
         }
 
         public int Races;
+        // A racer is flat out: far past the cruising cap of ordinary traffic, and kept in the race until 500 m apart.
+        const float RaceTopMph = 150f, RaceSight = 500f;
 
         /// <summary>A sporty driver the player blows past may take it as a challenge and race them for a while.</summary>
         void Challenge(TrafficCar c, float dt)
@@ -63,10 +65,17 @@ namespace SurviveI95.Sim
             if (c.RaceLeft > 0f)
             {
                 c.RaceLeft -= dt;
-                // Keep pace with the player and try to edge ahead. Gives up when the player backs off or gets away.
-                float want = Mathf.Min(player.SpeedS + 2.5f, MphToMs(TopMph(c.Def)));
-                if (player.SpeedS < MphToMs(path.LimitMph(c.S)) || Mathf.Abs(dS) > 140f) c.RaceLeft = 0f;
+                // Chase the player down and try to edge ahead. It ends when the player backs off, one of them is out of
+                // sight, or the racer has had enough. The player was already past them when it began, so they need room to catch up.
+                float want = Mathf.Min(player.SpeedS + (dS > 15f ? 9f : 2.5f), MphToMs(RaceTopMph));
+                bool backedOff = player.SpeedS < MphToMs(path.LimitMph(c.S));
+                if (backedOff || Mathf.Abs(dS) > RaceSight) c.RaceLeft = 0f;
                 else c.Desired = Mathf.Max(c.Desired, want);
+                if (c.RaceLeft <= 0f)
+                {
+                    string who = $"the {Describe(c.Def, c.Paint)}{PlateNote(c.PlateState)}";
+                    Notice?.Invoke(dS > 60f ? $"You left {who} behind." : dS < -60f ? $"You lost to {who}." : backedOff ? $"You backed off. {char.ToUpper(who[0]) + who.Substring(1)} takes it." : $"{char.ToUpper(who[0]) + who.Substring(1)} eases off.");
+                }
                 return;
             }
             // Remember that the player came up from behind until they are clearly gone, so the pass itself registers.
@@ -80,7 +89,7 @@ namespace SurviveI95.Sim
                 c.Raced = true;
                 if ((float)rng.NextDouble() < p.racer)
                 {
-                    c.RaceLeft = Rand(12f, 25f); Races++;
+                    c.RaceLeft = Rand(50f, 90f); Races++;
                     Notice?.Invoke($"The {Describe(c.Def, c.Paint)}{PlateNote(c.PlateState)} wants to race.");
                 }
             }

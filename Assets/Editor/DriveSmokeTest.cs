@@ -45,7 +45,8 @@ namespace SurviveI95.EditorTools
             s = new DriveSim(car); s.Reset(path, 300f);
             bot = new LaneBot { SpeedMph = 100f }; // a keyboard bot can genuinely lose it flat-out, as a person can
             float rms = 0, maxErr = 0, maxLat = 0; int n = 0, swaps = 0, last = 0, walls = 0, off = 0; t = 0;
-            while (s.S < path.Length - 80f && t < 600f)
+            float limit = path.Length / 35f; // enough time for the whole road at well under the 100 mph it aims for
+            while (s.S < path.Length - 80f && t < limit)
             {
                 var input = bot.Think(path, s);
                 int sign = (int)input.Steer; if (sign != 0 && sign != last) { swaps++; last = sign; }
@@ -77,7 +78,7 @@ namespace SurviveI95.EditorTools
             Debug.Log($"[DriveTest] {id}: handbrake peak slip {peakBeta * Mathf.Rad2Deg:F0} deg, exit {exitMph:F0} mph, slip after 3s {settledBeta * Mathf.Rad2Deg:F1} deg");
             Debug.Log($"[DriveTest] {id}: 0-60 {t60:F1}s, 0-100 {t100:F1}s, 40s speed {reached:F0} mph, 60-0 {brakeFt:F0} ft, lane change settle {settle:F1}s; " +
                       $"route {t:F0}s, lane error rms {Mathf.Sqrt(rms / n):F2} m max {maxErr:F2} m, steer flips/min {swaps / (t / 60f):F0}, max lateral {maxLat / 9.81f:F2} g, wall ticks {walls}, offroad ticks {off}");
-            if (t >= 600f || walls > 0 || off > 0) { Debug.LogError("[DriveTest] FAILED " + id); if (Application.isBatchMode) EditorApplication.Exit(1); }
+            if (t >= limit || walls > 0 || off > 0) { Debug.LogError("[DriveTest] FAILED " + id); if (Application.isBatchMode) EditorApplication.Exit(1); }
         }
     }
 }

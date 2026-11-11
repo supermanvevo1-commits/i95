@@ -14,8 +14,11 @@ const BRANDS = /porsche|mercedes|bmw|ford|chevrolet|chevy|chrysler|dodge|toyota|
 
 const ENV = {
   textures: ['asphalt_02', 'worn_asphalt', 'road_damaged', 'gravel_road', 'asphalt_snow', 'grass_ground', 'brushed_concrete'],
-  hdris: ['derelict_highway_noon', 'evening_road_01', 'citrus_orchard_road_puresky', 'autumn_field_puresky'],
-  models: ['concrete_road_barrier', 'street_lamp_01', 'pine_tree_01', 'grass_medium_01']
+  // "id@4k" asks for a sharper file; the sky fills the screen, so the main one needs it.
+  hdris: ['derelict_highway_noon', 'evening_road_01', 'citrus_orchard_road_puresky', 'autumn_field_puresky', 'kloofendal_48d_partly_cloudy_puresky@4k'],
+  models: ['concrete_road_barrier', 'street_lamp_01', 'pine_tree_01', 'grass_medium_01'],
+  // Overpass is an open-license lookalike of the US highway sign typeface.
+  fonts: [{ file: 'Overpass-Bold.ttf', url: 'https://github.com/RedHatOfficial/Overpass/raw/master/fonts/ttf/Overpass-Bold.ttf', credit: 'Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org' }]
 };
 const VEHICLES = {
   sedan: 'sedan car', coupe: 'coupe car', hatchback: 'hatchback', convertible: 'convertible car', station_wagon: 'station wagon',
@@ -54,10 +57,15 @@ async function environment() {
     }
     console.log('texture', id); credit(id + ' (texture), Poly Haven, CC0, https://polyhaven.com/a/' + id);
   }
-  for (const id of ENV.hdris) {
+  for (const entry of ENV.hdris) {
+    const [id, size = '2k'] = entry.split('@');
     const f = await json('https://api.polyhaven.com/files/' + id);
-    await save(f.hdri['2k'].hdr.url, path.join(base, 'Skies', id + '.hdr'));
+    await save(f.hdri[size].hdr.url, path.join(base, 'Skies', id + '.hdr'));
     console.log('sky', id); credit(id + ' (HDRI), Poly Haven, CC0, https://polyhaven.com/a/' + id);
+  }
+  for (const font of ENV.fonts) {
+    await save(font.url, path.join(ROOT, 'Assets', 'ThirdParty', 'Fonts', font.file));
+    console.log('font', font.file); credit(font.credit);
   }
   for (const id of ENV.models) {
     const g = (await json('https://api.polyhaven.com/files/' + id)).gltf['2k'].gltf;

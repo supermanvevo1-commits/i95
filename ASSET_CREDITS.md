@@ -45,3 +45,5 @@
 - grass_ground (texture), Poly Haven, CC0, https://polyhaven.com/a/grass_ground
 - brushed_concrete (texture), Poly Haven, CC0, https://polyhaven.com/a/brushed_concrete
 - Road geometry: OpenStreetMap contributors, ODbL. Elevation: USGS 3DEP, public domain.
+- kloofendal_48d_partly_cloudy_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
+- Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org

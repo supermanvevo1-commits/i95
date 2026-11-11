@@ -1,0 +1,27 @@
+{
+  "looks": [
+    {
+      "id": "miami_day",
+      "sky": "kloofendal_48d_partly_cloudy_puresky",
+      "skyExposure": 1.0,
+      "sunAzimuth": 235,
+      "sunIntensity": 2.4,
+      "sunColor": { "r": 1.0, "g": 0.96, "b": 0.88, "a": 1.0 },
+      "shadowStrength": 0.92,
+      "ambient": 1.0,
+      "groundBounce": 0.2,
+      "hazeDensity": 0.0003,
+      "hazeBrightness": 1.0,
+      "tonemap": "aces",
+      "exposure": 0.35,
+      "contrast": 5,
+      "saturation": 4,
+      "temperature": 6,
+      "tint": 0,
+      "bloomThreshold": 1.0,
+      "bloomIntensity": 0.25,
+      "bloomScatter": 0.65,
+      "vignette": 0.16
+    }
+  ]
+}

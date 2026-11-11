@@ -12,9 +12,9 @@ using UnityEngine.Rendering;
 namespace SurviveI95.EditorTools
 {
     /// <summary>Generates the Florida test stretch from route data. Safe to re-run at any time.</summary>
-    public static class FloridaSliceBuilder
+    public static partial class FloridaSliceBuilder
     {
-        public const string RouteId = "miami_ftl";
+        public const string RouteId = "miami_ftl", Look = "miami_day";
         const string Gen = "Assets/Generated", PH = "Assets/ThirdParty/PolyHaven";
         const string CarPath = "Assets/ThirdParty/Sketchfab/corolla/scene.gltf";
         const float CarYawFix = 0f; // degrees, corrects the imported model's facing
@@ -31,7 +31,6 @@ namespace SurviveI95.EditorTools
             var m = MakeMaterials();
 
             placed.Clear();
-            BuildEnvironment();
             var road = new GameObject("Road");
             Func<float, float> half = path.HalfWidth;
             Func<float, float> south = s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap);
@@ -55,6 +54,7 @@ namespace SurviveI95.EditorTools
 
             var cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
             cam.tag = "MainCamera"; cam.farClipPlane = 3000f; cam.fieldOfView = 62f;
+            Debug.Log("[FloridaSlice] " + LookBuilder.Apply(Look, cam));
             var car = BuildCar(cam, m);
             car.Place(3000f);
 
@@ -67,6 +67,41 @@ namespace SurviveI95.EditorTools
 
             var shots = ArgValue("-shotDir");
             if (shots != null) Screenshots(car, cam, path, shots);
+        }
+
+        static Mats LoadMats()
+        {
+            Material M(string name) => AssetDatabase.LoadAssetAtPath<Material>($"{Gen}/Materials/{name}.mat");
+            return new Mats { asphalt = M("Asphalt"), shoulder = M("Shoulder"), grass = M("Grass"), concrete = M("Concrete"), white = M("PaintWhite"), yellow = M("PaintYellow"), rumble = M("Rumble"), signGreen = M("SignGreen"), post = M("Post"), billboard = M("Billboard"), text = M("SignText") };
+        }
+
+        /// <summary>
+        /// Rebuilds only the signs or the barriers in the open scene, in seconds, for trying out a look.
+        /// What you can hit is not rewritten, so finish with a full rebuild before checking a step off.
+        /// </summary>
+        public static string RebuildPart(string part)
+        {
+            var path = RoutePath.Load(RouteId);
+            var m = LoadMats();
+            placed.Clear();
+            if (part == "signs")
+            {
+                var old = GameObject.Find("Signs"); if (old != null) UnityEngine.Object.DestroyImmediate(old);
+                BuildSigns(path, m);
+            }
+            else if (part == "barriers")
+            {
+                // Exit ramps have parts called "Road" too, so take the one at the top of the scene, and clear every old set.
+                var road = EditorSceneManager.GetActiveScene().GetRootGameObjects().First(o => o.name == "Road");
+                foreach (var old in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(o => o.name == "Barriers").Select(o => o.gameObject).ToList())
+                    UnityEngine.Object.DestroyImmediate(old);
+                BuildBarriers(road, path, m);
+            }
+            else return "ERROR unknown part " + part;
+            placed.Clear();
+            var scene = EditorSceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene); EditorSceneManager.SaveScene(scene); AssetDatabase.SaveAssets();
+            return "rebuilt " + part;
         }
 
         // Everything solid is recorded as it is placed, so what you see and what you hit can never disagree.
@@ -192,7 +227,7 @@ namespace SurviveI95.EditorTools
             {
                 asphalt = Lit("Asphalt", new Color(.62f, .62f, .62f), .18f, "asphalt_02"),
                 shoulder = Lit("Shoulder", new Color(.9f, .9f, .88f), .12f, "asphalt_02"),
-                grass = Lit("Grass", new Color(.66f, .94f, .5f), .08f, "grass_ground"),
+                grass = Lit("Grass", new Color(.72f, .88f, .52f), .08f, "grass_ground"), // a stronger green tint turns neon in full sun
                 concrete = Textured("Concrete", MakeConcrete("ConcreteTex", new Color(.74f, .73f, .7f), 0), .18f),
                 white = Lit("PaintWhite", new Color(.95f, .95f, .92f), .3f),
                 yellow = Lit("PaintYellow", new Color(.95f, .72f, .1f), .3f),
@@ -376,26 +411,145 @@ namespace SurviveI95.EditorTools
             Add(g, "SkirtL", WallStrip(p, s => c(s) - h(s) - leftShoulder, 0f, p.Length, -1.6f, 0f), m.concrete);
         }
 
+        // Jersey barrier cross-section in meters: 0.6 wide at the foot, 0.81 tall. Each flat face gets its own corners,
+        // so the creases stay crisp instead of being smoothed into a blur.
+        static readonly Vector2[] BarrierProfile = { new Vector2(-.3f, 0), new Vector2(-.1f, .3f), new Vector2(-.08f, .81f), new Vector2(.08f, .81f), new Vector2(.1f, .3f), new Vector2(.3f, 0) };
+        const float BarrierSkin = 1.9f, BarrierSection = 6f; // meters of surface across the wall, and the length of one cast section
+
         static Mesh Extrude(RoutePath p, float lateral, float from, float to)
         {
-            Vector2[] profile = { new Vector2(-.3f, 0), new Vector2(-.1f, .3f), new Vector2(-.08f, .81f), new Vector2(.08f, .81f), new Vector2(.1f, .3f), new Vector2(.3f, 0) };
             var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
-            int rows = Mathf.Max(1, Mathf.CeilToInt((to - from) / 5f)), w = profile.Length;
-            for (int r = 0; r <= rows; r++)
+            int rows = Mathf.Max(1, Mathf.CeilToInt((to - from) / 5f));
+            float across = 0f;
+            for (int j = 0; j + 1 < BarrierProfile.Length; j++)
             {
-                float s = from + (to - from) * r / rows;
-                for (int j = 0; j < w; j++)
+                float len = Vector2.Distance(BarrierProfile[j], BarrierProfile[j + 1]);
+                int start = v.Count;
+                for (int r = 0; r <= rows; r++)
                 {
-                    v.Add(p.Point(s, (lateral < 0 ? lateral - p.HalfWidth(s) : lateral + p.HalfWidth(s)) + profile[j].x) + Vector3.up * profile[j].y);
-                    uv.Add(new Vector2(j * .35f, s / 2f));
-                    if (r > 0 && j > 0)
+                    float s = from + (to - from) * r / rows;
+                    float lat = lateral < 0 ? lateral - p.HalfWidth(s) : lateral + p.HalfWidth(s);
+                    for (int e = 0; e < 2; e++)
                     {
-                        int d = r * w + j, c = r * w + j - 1, b = (r - 1) * w + j, a = (r - 1) * w + j - 1;
-                        t.AddRange(new[] { a, c, b, b, c, d });
+                        var q = BarrierProfile[j + e];
+                        v.Add(p.Point(s, lat + q.x) + Vector3.up * q.y);
+                        uv.Add(new Vector2((across + e * len) / BarrierSkin, s / BarrierSection));
                     }
+                    if (r > 0) { int a = start + (r - 1) * 2; t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 }); }
                 }
+                across += len;
             }
             return Finish(v, uv, t);
+        }
+
+        static Color32[] ReadImage(string file, out int w, out int h)
+        {
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            tex.LoadImage(File.ReadAllBytes(file));
+            w = tex.width; h = tex.height;
+            var px = tex.GetPixels32();
+            UnityEngine.Object.DestroyImmediate(tex);
+            return px;
+        }
+
+        // Height above the road at a point across the barrier's skin (0 at one foot, BarrierSkin at the other).
+        static float BarrierHeight(float across)
+        {
+            float d = 0f;
+            for (int j = 0; j + 1 < BarrierProfile.Length; j++)
+            {
+                float len = Vector2.Distance(BarrierProfile[j], BarrierProfile[j + 1]);
+                if (across <= d + len) return Mathf.Lerp(BarrierProfile[j].y, BarrierProfile[j + 1].y, (across - d) / len);
+                d += len;
+            }
+            return 0f;
+        }
+
+        /// <summary>
+        /// The skin of a highway barrier: real concrete, plus what a median wall collects. A joint every cast section,
+        /// rain streaks down from the top, road grime along the foot, and black tire scuffs where cars have rubbed it.
+        /// </summary>
+        static Material BarrierMaterial()
+        {
+            const int W = 512, H = 2048;
+            string set = PH + "/Textures/brushed_concrete/brushed_concrete_";
+            var src = ReadImage(set + "Diffuse.jpg", out int sw, out int sh);
+            var nrm = ReadImage(set + "nor_gl.jpg", out int nw, out int nh);
+            double sum = 0; for (int i = 0; i < src.Length; i += 37) sum += (src[i].r + src[i].g + src[i].b) / 765.0;
+            float gain = .84f / (float)(sum / Mathf.Ceil(src.Length / 37f)); // the same light gray whatever the photo's exposure
+            var rnd = new System.Random(95);
+            var streak = new float[H];
+            for (int k = 0; k < 60; k++)
+            {
+                int at = rnd.Next(H), wide = rnd.Next(4, 60); float strength = .25f + (float)rnd.NextDouble() * .75f;
+                for (int y = -wide; y <= wide; y++) { int q = ((at + y) % H + H) % H; streak[q] = Mathf.Max(streak[q], strength * (1f - Mathf.Abs(y) / (float)wide)); }
+            }
+            var blotch = new float[9, 17];
+            for (int a = 0; a < 9; a++) for (int b = 0; b < 17; b++) blotch[a, b] = (float)rnd.NextDouble();
+            for (int a = 0; a < 9; a++) blotch[a, 16] = blotch[a, 0];
+            var scuffs = new List<(int y, int len, float x, float thick, float strength)>();
+            for (int k = 0; k < 9; k++)
+            {
+                float across = Mathf.Lerp(.42f, .7f, (float)rnd.NextDouble()); // 0.35 to 0.65 m up the face, bumper and tire height
+                if (k % 2 == 1) across = BarrierSkin - across;
+                scuffs.Add((rnd.Next(H), rnd.Next(120, 700), across / BarrierSkin * W, 3f + (float)rnd.NextDouble() * 9f, .35f + (float)rnd.NextDouble() * .45f));
+            }
+            var col = new Color32[W * H]; var nor = new Color32[W * H];
+            int stepX = sw / W, stepY = Mathf.Max(1, sh * 3 / H);
+            for (int y = 0; y < H; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    // One photo tile across the wall and three along a section, averaged down so the grain doesn't sparkle.
+                    int bx = x * stepX, by = (int)((long)y * sh * 3 / H);
+                    int r = 0, g = 0, b = 0, n = 0, nx = 0, ny = 0, nz = 0;
+                    for (int dy = 0; dy < stepY; dy++)
+                        for (int dx = 0; dx < stepX; dx += 2)
+                        {
+                            int sx = (bx + dx) % sw, sy = (by + dy) % sh;
+                            var c = src[sy * sw + sx]; r += c.r; g += c.g; b += c.b;
+                            var q = nrm[(sy * nh / sh) * nw + (sx * nw / sw)]; nx += q.r; ny += q.g; nz += q.b; n++;
+                        }
+                    float height = BarrierHeight((x + .5f) / W * BarrierSkin);
+                    float gx = (x + .5f) / W * 8f, gy = (y + .5f) / H * 16f; int ix = (int)gx, iy = (int)gy; float fx = gx - ix, fy = gy - iy;
+                    float soft = Mathf.Lerp(Mathf.Lerp(blotch[ix, iy], blotch[ix + 1, iy], fx), Mathf.Lerp(blotch[ix, iy + 1], blotch[ix + 1, iy + 1], fx), fy);
+                    float f = gain * (.94f + soft * .12f);
+                    f *= Mathf.Lerp(.5f, 1f, Mathf.SmoothStep(0f, 1f, height / .34f));                   // grime thrown up along the foot
+                    f *= 1f - .2f * streak[y] * Mathf.Pow(Mathf.Clamp01(height / .81f), .7f);             // rain streaks, strongest near the top
+                    int edge = Mathf.Min(y, H - 1 - y);
+                    if (edge < 4) f *= .32f; else if (edge < 9) f *= .82f;                                  // the joint between cast sections
+                    float rf = r / (float)n / 255f * f, gf = g / (float)n / 255f * f * .995f, bf = b / (float)n / 255f * f * .98f;
+                    foreach (var s in scuffs)
+                    {
+                        int along = ((y - s.y) % H + H) % H;
+                        if (along >= s.len) continue;
+                        float d = Mathf.Abs(x - s.x) / s.thick;
+                        if (d >= 1f) continue;
+                        float ends = Mathf.Min(1f, Mathf.Min(along, s.len - along) / 60f);
+                        float a = s.strength * (1f - d * d) * ends * (.6f + .4f * soft);
+                        rf = Mathf.Lerp(rf, .07f, a); gf = Mathf.Lerp(gf, .07f, a); bf = Mathf.Lerp(bf, .07f, a);
+                    }
+                    col[y * W + x] = new Color32((byte)Mathf.Clamp(rf * 255f, 0, 255), (byte)Mathf.Clamp(gf * 255f, 0, 255), (byte)Mathf.Clamp(bf * 255f, 0, 255), 255);
+                    nor[y * W + x] = new Color32((byte)(nx / n), (byte)(ny / n), (byte)(nz / n), 255);
+                }
+            Directory.CreateDirectory(Gen + "/Materials");
+            foreach (var (name, px, normal) in new[] { ("BarrierTex", col, false), ("BarrierNormal", nor, true) })
+            {
+                var tex = new Texture2D(W, H, TextureFormat.RGBA32, false); tex.SetPixels32(px); tex.Apply();
+                string file = $"{Gen}/Materials/{name}.png";
+                File.WriteAllBytes(file, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(file);
+                var imp = (TextureImporter)AssetImporter.GetAtPath(file);
+                imp.anisoLevel = 8; imp.wrapMode = TextureWrapMode.Repeat; imp.maxTextureSize = 2048; imp.sRGBTexture = !normal;
+                if (normal) imp.textureType = TextureImporterType.NormalMap;
+                imp.SaveAndReimport();
+            }
+            var mat = Lit("Barrier", Color.white, .12f);
+            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(Gen + "/Materials/BarrierTex.png"));
+            mat.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(Gen + "/Materials/BarrierNormal.png"));
+            mat.EnableKeyword("_NORMALMAP");
+            EditorUtility.SetDirty(mat);
+            return mat;
         }
 
         static void BuildBarriers(GameObject root, RoutePath p, Mats m)
@@ -409,11 +563,12 @@ namespace SurviveI95.EditorTools
                 if (on && start < 0) start = s;
                 if (!on && start >= 0) { spans.Add((start, s)); start = -1; }
             }
+            var skin = BarrierMaterial();
             foreach (var (a, b) in spans)
             {
-                Add(g, "Right", Extrude(p, 4.0f, a, b), m.concrete, true);
+                Add(g, "Right", Extrude(p, 4.0f, a, b), skin, true);
             }
-            Add(g, "Median", Extrude(p, -RoutePath.BarrierLeft, 0, p.Length), m.concrete, true);
+            Add(g, "Median", Extrude(p, -RoutePath.BarrierLeft, 0, p.Length), skin, true);
             Debug.Log("[FloridaSlice] barrier spans " + spans.Count);
         }
 
@@ -444,102 +599,6 @@ namespace SurviveI95.EditorTools
             }
             Debug.Log("[FloridaSlice] overpasses " + count);
         }
-
-        static void Text(Transform parent, Vector3 pos, Quaternion rot, string text, float height, Color color, Material mat)
-        {
-            var go = new GameObject("Text", typeof(TextMesh));
-            go.transform.SetParent(parent); go.transform.SetPositionAndRotation(pos, rot);
-            var tm = go.GetComponent<TextMesh>();
-            tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            tm.text = text; tm.fontSize = 96; tm.characterSize = height / 9.6f / 1.0f * 1f;
-            tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.color = color;
-            go.GetComponent<MeshRenderer>().sharedMaterial = mat;
-        }
-
-        static void Sign(Transform parent, RoutePath p, float s, float lateralFromEdge, float width, float height, float elevation, string text, float textH, Material panel, Color tc, Mats m, bool solid = true, bool placedForExit = false)
-        {
-            if (!placedForExit) foreach (var j in p.Junctions) if (s > j.divergeS - 2f && s < j.mergeS + 10f) return; // would stand in the exit lane
-            var rot = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
-            var c = p.Point(s, p.HalfWidth(s) + lateralFromEdge);
-            var mid = c + Vector3.up * (elevation + height / 2);
-            Box(parent, mid, rot, new Vector3(width, height, .08f), panel, "Panel").GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
-            var right = p.Right(s);
-            if (solid) foreach (var d in new[] { -width * .32f, width * .32f })
-                Solid(s, p.HalfWidth(s) + lateralFromEdge + d, 0.12f, 0.12f, width > 10f ? "pole" : "post");
-            foreach (var d in new[] { -width * .32f, width * .32f })
-                { var foot = c + right * d + p.Tangent(s) * .14f; float top = c.y + elevation + height; foot.y = top / 2f; Box(parent, foot, rot, new Vector3(.14f, top, .14f), m.post, "Post"); }
-            Text(parent, mid - p.Tangent(s) * .06f, rot, text, textH, tc, m.text);
-        }
-
-        static readonly Color SignInk = new Color(.06f, .06f, .05f);
-
-        static void Diamond(Transform parent, RoutePath p, float s, float lateralFromEdge, string text, Mats m, bool solid)
-        {
-            const float size = 1.7f, elevation = 2.3f;
-            var rot = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
-            var c = p.Point(s, p.HalfWidth(s) + lateralFromEdge);
-            var mid = c + Vector3.up * (elevation + size * .71f);
-            Box(parent, mid, rot * Quaternion.Euler(0f, 0f, 45f), new Vector3(size, size, .08f), m.yellow, "Panel").GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
-            var foot = c + p.Tangent(s) * .14f; float top = mid.y; foot.y = top / 2f;
-            Box(parent, foot, rot, new Vector3(.14f, top, .14f), m.post, "Post");
-            if (solid) Solid(s, p.HalfWidth(s) + lateralFromEdge, .12f, .12f, "post");
-            Text(parent, mid - p.Tangent(s) * .06f, rot, text, .32f, SignInk, m.text);
-        }
-
-        static string CleanRef(string r) => r == null ? "" : System.Text.RegularExpressions.Regex.Replace(r, "[^0-9A-Z]", "");
-
-        static void BuildSigns(RoutePath p, Mats m)
-        {
-            var g = new GameObject("Signs");
-            // Yellow signs mark the exits you can actually drive.
-            foreach (var j in p.Junctions)
-            {
-                var real = p.File.exits.Where(e => !string.IsNullOrEmpty(e.@ref)).OrderBy(e => Mathf.Abs(e.s - j.divergeS)).FirstOrDefault();
-                string name = real != null && Mathf.Abs(real.s - j.divergeS) < 300f ? "EXIT " + CleanRef(real.@ref) : "EXIT";
-                string label = name + "\nKEEP RIGHT";
-                Sign(g.transform, p, Mathf.Max(5f, j.divergeS - 805f), 7.5f, 6.5f, 2.6f, 2.6f, name + "\n1/2 MILE", .55f, m.signGreen, Color.white, m);
-                foreach (float back in new[] { 420f, 130f })
-                    Sign(g.transform, p, Mathf.Max(5f, j.divergeS - back), 7f, 6.5f, 2.6f, 2.6f, label, .5f, m.yellow, SignInk, m);
-                Sign(g.transform, p, j.divergeS + 175f, 3.8f, 2.8f, 1.5f, 1.7f, name + "\n>>>", .42f, m.signGreen, Color.white, m, placedForExit: true);
-                Diamond(g.transform, p, j.mergeS - 310f, 7f, "MERGING\nTRAFFIC", m, true);
-                Sign(g.transform, j.road, 235f, 3.2f, 2.2f, 1.5f, 1.5f, "RAMP\n45 MPH", .38f, m.yellow, SignInk, m, solid: false);
-                Diamond(g.transform, j.road, j.road.Length - 250f, 3.4f, "MERGE", m, false);
-            }
-            float? baseMile = null;
-            foreach (var e in p.File.exits)
-            {
-                if (string.IsNullOrEmpty(e.@ref)) continue;
-                var digits = new string(e.@ref.TakeWhile(char.IsDigit).ToArray());
-                if (baseMile == null && digits.Length > 0) baseMile = float.Parse(digits) - e.s / 1609.34f;
-                var label = "EXIT " + CleanRef(e.@ref) + "\n" + Wrap(e.name);
-                Sign(g.transform, p, e.s - 340f, 8f, 7.5f, 3.8f, 2.4f, label, .62f, m.signGreen, Color.white, m);
-                Sign(g.transform, p, Mathf.Max(5, e.s - 15f), 10f, 4.5f, 1.7f, 2.4f, "EXIT\n" + CleanRef(e.@ref), .55f, m.signGreen, Color.white, m);
-            }
-            if (baseMile != null)
-                for (int mile = Mathf.CeilToInt(baseMile.Value); (mile - baseMile.Value) * 1609.34f < p.Length; mile++)
-                    Sign(g.transform, p, Mathf.Max(5, (mile - baseMile.Value) * 1609.34f), 5.2f, .55f, 1.0f, 1.3f, "MILE\n" + mile, .17f, m.signGreen, Color.white, m);
-            // Real posted limits: a sign just past every change, then repeats along the way.
-            float lastSign = -9999f, lastMph = -1f;
-            for (float s = 120f; s < p.Length - 300f; s += 50f)
-            {
-                float mph = p.LimitMph(s);
-                bool changed = mph != lastMph && lastMph > 0f;
-                if (!changed && s - lastSign < 2400f && lastMph > 0f) continue;
-                if (p.Junctions.Any(j => s > j.divergeS - 60f && s < j.divergeS + 160f)) continue; // keep the exit gore clear
-                Sign(g.transform, p, s + (changed ? 60f : 0f), 6.5f, 1.7f, 2.2f, 1.6f, "SPEED\nLIMIT\n" + mph.ToString("0"), .42f, m.white, SignInk, m);
-                lastSign = s; lastMph = mph;
-            }
-            string[] ads = { "HURT ON I-95?\nCALL BIG RICK", "GATOR WORLD\nNEXT EXIT", "FIREWORKS\nFIREWORKS\nFIREWORKS", "EARLY BIRD\nBUFFET 3:45PM" };
-            for (int i = 0; i < 9; i++)
-            {
-                // Billboards keep clear of exit signs, so nothing competes with them.
-                float at = 1400f + i * 2500f;
-                while (p.Junctions.Any(j => at > j.divergeS - 900f && at < j.mergeS + 40f)) at += 100f;
-                Sign(g.transform, p, at, 22f, 15f, 6f, 6f, ads[i % ads.Length], 1.15f, m.billboard, new Color(.08f, .08f, .08f), m);
-            }
-        }
-
-        static string Wrap(string name) => string.IsNullOrEmpty(name) ? "" : name.Replace(";", "\n").ToUpperInvariant();
 
         // Lightweight stand-ins until proper game-ready Florida vegetation is sourced.
         static void Cone(List<Vector3> v, List<int> t, Vector3 c, float r0, float r1, float h, int sides = 7)
@@ -1298,6 +1357,18 @@ namespace SurviveI95.EditorTools
             var r = go.GetComponent<MeshRenderer>(); r.sharedMaterial = mat; r.shadowCastingMode = ShadowCastingMode.Off;
         }
 
+        // Dashboard lettering, in the built-in font. Road signs have their own (see FloridaSliceBuilder.Signs.cs).
+        static void Text(Transform parent, Vector3 pos, Quaternion rot, string text, float height, Color color, Material mat)
+        {
+            var go = new GameObject("Text", typeof(TextMesh));
+            go.transform.SetParent(parent); go.transform.SetPositionAndRotation(pos, rot);
+            var tm = go.GetComponent<TextMesh>();
+            tm.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            tm.text = text; tm.fontSize = 96; tm.characterSize = height / 9.6f;
+            tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.color = color;
+            go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+        }
+
         static void Label(Transform parent, string name, Vector3 pos, string text, float height, Mats m)
         {
             Text(parent, Vector3.zero, Quaternion.identity, text, height, Color.white, m.text);
@@ -1457,28 +1528,5 @@ namespace SurviveI95.EditorTools
             foreach (var r in parts) r.transform.SetParent(pivot, true);
         }
 
-        static void BuildEnvironment()
-        {
-            // Mipmaps make a visible vertical seam where the panorama's edges meet.
-            const string skyFile = PH + "/Skies/citrus_orchard_road_puresky.hdr";
-            if (AssetImporter.GetAtPath(skyFile) is TextureImporter skyImp && (skyImp.mipmapEnabled || skyImp.wrapMode != TextureWrapMode.Repeat))
-            { skyImp.mipmapEnabled = false; skyImp.wrapMode = TextureWrapMode.Repeat; skyImp.SaveAndReimport(); }
-            var sky = new Material(Shader.Find("Skybox/Panoramic"));
-            sky.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture>(PH + "/Skies/citrus_orchard_road_puresky.hdr"));
-            sky.SetFloat("_Exposure", 1f);
-            Save(sky, "Sky");
-            RenderSettings.skybox = sky;
-            RenderSettings.ambientMode = AmbientMode.Skybox;
-            RenderSettings.ambientIntensity = 1f;
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogDensity = .00045f;
-            RenderSettings.fogColor = new Color(.78f, .85f, .92f);
-            var sun = new GameObject("Sun", typeof(Light)).GetComponent<Light>();
-            sun.type = LightType.Directional; sun.intensity = 2.2f; sun.color = new Color(1f, .95f, .86f); sun.shadows = LightShadows.Soft;
-            sun.transform.rotation = Quaternion.Euler(52, -35, 0);
-            RenderSettings.sun = sun;
-            DynamicGI.UpdateEnvironment();
-        }
     }
 }

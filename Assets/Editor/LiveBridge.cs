@@ -22,6 +22,7 @@ namespace SurviveI95.EditorTools
         static float slowest;
         static int fpsFrames; static float fpsTime;
         static LaneBot bot;
+        static string swerve = "";
 
         static LiveBridge()
         {
@@ -76,6 +77,21 @@ namespace SurviveI95.EditorTools
                 case "lanesort": TrafficSim.LaneSorting = a[2] == "on"; return "lane sorting " + a[2];
                 case "trafficbench": return TrafficBench(F(a, 2), (int)F(a, 3), a.Length > 4 ? F(a, 4) : 31f, a.Length > 5 ? (int)F(a, 5) : 95, a.Length > 6 ? (Season)Enum.Parse(typeof(Season), a[6], true) : Season.Winter);
                 case "rebuild": if (EditorApplication.isPlaying) return "ERROR stop first"; FloridaSliceBuilder.Build(); return "rebuilt";
+                case "steerbench": // [car] [keyTap keyBuild]: keyboard steering compared across laws, without rendering
+                    if (a.Length > 4) { DriveSim.KeyTap = F(a, 3); DriveSim.KeyBuild = F(a, 4); }
+                    if (a.Length > 6) { DriveSim.EscSlip = F(a, 5); DriveSim.EscYaw = F(a, 6); }
+                    SteerBench.Verbose = a.Length > 7;
+                    return SteerBench.Run(a.Length > 2 ? a[2] : "sedan", Path.Combine(Dir, "steerbench.txt"));
+                case "rebuildpart": if (EditorApplication.isPlaying) return "ERROR stop first"; return FloridaSliceBuilder.RebuildPart(a[2]); // signs | barriers: seconds, not minutes
+                case "signcheck": return FloridaSliceBuilder.CheckSigns(); // sign text that sticks out past its panel; must be 0
+                case "relight": return LookBuilder.Relight(a.Length > 2 ? a[2] : FloridaSliceBuilder.Look); // re-applies sky, sun, haze and grade from looks.json
+                case "ambient": // the light that reaches shade, as the renderer has it: facing up, sideways and down
+                {
+                    var dirs = new[] { Vector3.up, Vector3.right, Vector3.forward, Vector3.down }; var got = new Color[4];
+                    RenderSettings.ambientProbe.Evaluate(dirs, got);
+                    return FormattableString.Invariant($"mode={RenderSettings.ambientMode} up={got[0]} east={got[1]} north={got[2]} down={got[3]} reflections={RenderSettings.defaultReflectionMode} x{RenderSettings.reflectionIntensity:F2} fog={RenderSettings.fogColor} density={RenderSettings.fogDensity}");
+                }
+                case "sunshot": return Shot(a[2], true); // a screenshot aimed straight at the sun, to check the sky and the shadows agree
             }
             if (car == null) return "ERROR not in play mode";
             switch (a[1])
@@ -200,6 +216,22 @@ namespace SurviveI95.EditorTools
                     PlayerCar.AutoDriver = (p, c) => new DriveInput { Steer = car.KeyboardSteer(kd, false), Throttle = c.Speed * DriveSim.MetersPerSecondToMph < km ? 1f : 0f };
                     return "keyboard steering " + kd;
                 }
+                case "kbswerve": // mph secondsRight secondsLeft: a timed dodge on the keys, then hands off. Read the result with swerveresult
+                {
+                    float sm = F(a, 2), tr = F(a, 3), tl = F(a, 4), st = 0f, startLat = car.Sim.Lateral; swerve = "running";
+                    float pg = 0f, ps = 0f, pt = 0f;
+                    PlayerCar.AutoDriver = (p, c) =>
+                    {
+                        st += Time.fixedDeltaTime;
+                        int kd2 = st < tr ? 1 : st < tr + tl ? -1 : 0;
+                        pg = Mathf.Max(pg, Mathf.Abs(c.LateralAccel) / 9.81f); ps = Mathf.Max(ps, Mathf.Abs(c.Beta) * Mathf.Rad2Deg); pt = Mathf.Max(pt, Mathf.Abs(c.Theta) * Mathf.Rad2Deg);
+                        if (st > tr + tl + 2f && swerve == "running")
+                            swerve = FormattableString.Invariant($"moved={c.Lateral - startLat:F1}m peakG={pg:F2} peakSlip={ps:F0}deg peakHeading={pt:F0}deg endHeading={c.Theta * Mathf.Rad2Deg:F1}deg mph={c.Speed * DriveSim.MetersPerSecondToMph:F0} offroad={c.OffRoad} wall={c.HitWall}");
+                        return new DriveInput { Steer = car.KeyboardSteer(kd2, false), Throttle = c.Speed * DriveSim.MetersPerSecondToMph < sm ? 1f : 0f };
+                    };
+                    return "swerving";
+                }
+                case "swerveresult": return swerve;
                 case "person": // carId years skill: who's driving that car, for tests
                 {
                     var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2));
@@ -214,6 +246,7 @@ namespace SurviveI95.EditorTools
                     if (c == null) return "ERROR no car";
                     var p = c.Profile;
                     c.Profile = new SurviveI95.Data.DriverProfile { id = p.id + "_test", name = p.name, habit = p.habit, aggression = p.aggression, temper = p.temper, discipline = p.discipline, attention = p.attention, rager = p.rager, racer = 1f, brakeTaps = p.brakeTaps };
+                    c.HoldDesired = false; // a test-spawned car holds its speed; a racer has to be free to chase
                     return "racer set";
                 }
                 case "tempers": { var n = car.GetComponent<TrafficManager>().Sim.TemperCounts(); return $"shrug={n[0]} honk={n[1]} follow={n[2]} yell={n[3]} ram={n[4]}"; }
@@ -353,9 +386,10 @@ namespace SurviveI95.EditorTools
             return "written";
         }
 
-        static string Shot(string name)
+        static string Shot(string name, bool atSun = false)
         {
             var cam = Camera.main;
+            if (atSun) cam.transform.rotation = Quaternion.LookRotation(-RenderSettings.sun.transform.forward);
             var rt = RenderTexture.GetTemporary(1600, 900, 24, RenderTextureFormat.ARGB32);
             RenderPipeline.SubmitRenderRequest(cam, new RenderPipeline.StandardRequest { destination = rt });
             var prev = RenderTexture.active;

@@ -27,8 +27,15 @@ An arcade survival driving game along I-95, from Miami to Maine. Unity 6 (6000.6
 - Screenshots land in `.livebridge/shots/`.
 - `trafficbench <seconds> <cars> <anchor m/s> <seed> [season]` runs traffic without rendering, much faster than real time, and reports lane speeds, age bands, plates and driver profiles. Unprovoked and chain crashes must stay at 0.
 - `Tools/compile.ps1` stops Play mode, refreshes, and waits for the compile.
-- Compile errors do NOT appear in `.livebridge/console.log`. After a refresh, compare the timestamps of `Library/ScriptAssemblies/Assembly-CSharp.dll` and `Assembly-CSharp-Editor.dll` with your edit. A stale dll means the compile failed: Unity keeps running old code and Play mode silently won't start.
+- Compile errors do NOT appear in `.livebridge/console.log`. After a refresh, compare the timestamps of `Library/ScriptAssemblies/Assembly-CSharp.dll` and `Assembly-CSharp-Editor.dll` with your edit. A stale dll means the compile failed: Unity keeps running old code and Play mode silently won't start. The errors are in `Library/Bee/tundra.log.json` (search for `error CS`).
 - `LiveBridge.Run` is one big switch. Unbraced cases declare locals (`r`, `s`) for the whole switch, so don't reuse those names.
+- Lighting comes from `Assets/Resources/Data/looks.json`, applied by `Assets/Editor/LookBuilder.cs` (sky, sun, haze, shade light, grade, bloom). After editing the file, `relight` re-applies it to the open scene without a rebuild (saved in edit mode; in Play mode it lasts until stop, and the first frame after it can be garbage). `sunshot <name>` takes a screenshot aimed at the sun, which must be in the center. `ambient` prints the shade light and haze as the renderer has them.
+- Unity treats `RenderSettings` ambient and fog colors as screen (gamma) values. Light measured in linear units needs `.gamma` first, or shade comes out navy and far too dark.
+- Shadow distance, shadow map size, edge smoothing and ambient occlusion are in `Assets/Settings/PC_RPAsset.asset` and `PC_Renderer.asset`.
+- `rebuildpart signs` or `rebuildpart barriers` rebuilds just that part of the open scene in seconds, for trying a look. It does not rewrite what you can hit, so finish with a full `rebuild`. `signcheck` counts sign text that sticks out of its panel and must report 0.
+- `steerbench [car]` compares keyboard steering laws without rendering (dodge time, tap strength, spin). `kbswerve <mph> <secRight> <secLeft>` then `swerveresult` runs an exactly timed dodge in the running game.
+- Test bots stay attached to the player's car after a test. Always finish with `release` (or `stop`), or the creator finds the car driving itself with a jittering wheel.
+- After bumping `SliceAutoRebuild.Version`, the automatic rebuild does not always start. Check `Assets/Generated/build_version.txt`; if it is stale, run `rebuild`.
 - `rebuild` regenerates the Miami scene (`Assets/Generated/FloridaSlice.unity`) and can take minutes. The bridge may time out while it keeps working.
 
 ## Code map

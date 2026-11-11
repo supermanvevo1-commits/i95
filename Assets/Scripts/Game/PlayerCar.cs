@@ -71,9 +71,8 @@ namespace SurviveI95.Game
         float keyHeld; int keyDir;
 
         /// <summary>
-        /// A key is all or nothing, and full lock at highway speed asks for about three times the grip the tires have.
-        /// A held key asks for a firm turn the tires can hold, and holding it longer allows a little more for a
-        /// deliberate hard turn. At parking speeds it's still full lock. Gamepad sticks skip this: they're already analog.
+        /// A key is all or nothing, so how long it's held stands in for how far the wheel is turned (see DriveSim.KeySteer):
+        /// a tap nudges, a hold builds to the hardest turn the tires can make. Gamepad sticks skip this: they're already analog.
         /// </summary>
         public float KeyboardSteer(int dir, bool handbrake)
         {
@@ -81,9 +80,7 @@ namespace SurviveI95.Game
             if (dir == 0) return 0f;
             keyHeld += Time.fixedDeltaTime;
             if (handbrake) return dir; // the handbrake is for throwing it around on purpose
-            // About half the tires' grip for a tap (a lane change needs far less), building toward 0.8 for a long, deliberate hold.
-            float grip = Sim.GripAccel * Mathf.Lerp(.5f, .8f, Mathf.InverseLerp(.5f, 1.8f, keyHeld));
-            return dir * Mathf.Max(Sim.SteerFor(grip), .12f);
+            return dir * Sim.KeySteer(keyHeld);
         }
 
         // ---- signals, high beams

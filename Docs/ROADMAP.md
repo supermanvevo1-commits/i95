@@ -70,7 +70,7 @@ Done when: 40 cars run smoothly, no crashes happen without a cause, and a camper
 # Phase 2: Vertical slice (current)
 Ten minutes on the Miami test road that look, sound and play like the finished game. Milestones run in this order.
 
-## M4 Road life (current)
+## M4 Road life (done)
 Drivers with memory and character, and real speed limits.
 - [x] 4.1 Regulars: drivers you have a run-in with stay in the run with the same car, keep driving out of sight, and can catch up later
 - [x] 4.2 Grudges: cutting off, brake-checking, tailgating, holding up or hitting someone makes them angry, and they cool off slowly
@@ -94,14 +94,26 @@ Drivers with memory and character, and real speed limits.
     - Second look: a cut-off now needs under 0.9 s of following distance left for them (0.6 s if you signaled for 0.8 s or more first), and it doesn't count if you're pulling away fast. Tests: tight with no signal angered them to level 2; tight but signaled was a milder grudge; 22 m signaled and 45 m unsignaled were no grudge at all, and there was no contact in any of them
 - [x] 4.9 License plates from where the driver is from (Florida locals, Georgia and Carolina through traffic, New York and New Jersey hurry, Ontario and Quebec snowbirds), hinting at how they drive and helping you recognize regulars. Who's on the road depends on where and why: more freight near ports and Jacksonville, more RVs, snowbirds and Quebec plates heading to Florida in winter, commuters and delivery vans near cities, beach and vacation traffic in season
     - Second look: over one-hour runs, winter plates are about 59% Florida, 13-15% Quebec and Ontario, and 6% New York, with snowbirds 7-9% of drivers. Summer is 73% Florida, 3% Canadian and 1% snowbirds. Rentals and work vans carry Florida plates, and freight comes from everywhere. New York, New Jersey and Massachusetts drivers run a little faster and pushier, and out-of-towners are a little less sure of the road. Regulars are now named with their plates ("the gray sedan with New York plates"). The test road is all city, so the city side of the mix (more taxis and vans, fewer RVs) is always on; rural stretches arrive with the full route (M12). The season defaults to winter until the menu lets you pick (M9)
+- [x] 4.8f Keyboard steering redone after the second playtest (the creator found 4.8c had killed the car's ability to turn and dodge). A tap is a nudge and a held key builds in about half a second to the hardest turn the tires can make. Stability control, which every US car since 2012 has, catches the tail when it steps out, so a hard swerve no longer spins the car. The handbrake still overrides it, and a muscle car has only half of it
+    - Second look: measured on a test bench that runs the three versions side by side. Dodging one lane over: the first version (full lock on any key press) spun the car at 60 mph and above; 4.8c took 1.4 s at 60 mph and 1.7 s at 115; the new one takes 1.0 s at 60 and about 1.15 s at 115, at 1 g with 6° of slide and no spin. A real emergency lane change is about 1.5 s at 0.7 g for an average driver, so this is the car's limit, not an arcade cheat. In the game: 0.35 s right then 0.3 s left at 60 mph moves exactly one lane at 0.67 g; a 1.5 s hold at 40 mph turns the car 48° at 1 g. 4.8c had capped a held key at a quarter of a g at 115 mph. 0 unprovoked or chain crashes in a 30-minute traffic run
+- [x] 4.8g Races that happen (second playtest: racers said they wanted to race and then never showed up). Nothing to press: a sporty driver you blow past chases you. They now accelerate like a sports car, run up to 150 mph, stay in it until 500 m apart, and race for 50-90 s instead of 12-25. Slowing below the speed limit ends it. The game says who won
+    - Second look: the cause was that a racer gave up once you were 140 m ahead, and you were already pulling away at 45 mph when it began. They were also capped at 110 mph. Live test: passed a coupe at 115 mph; it went from 72 to 126 mph, caught up in 20 s, passed, and the game announced "You lost to the tan coupe with Ontario plates." A race is still only a chase; stakes, a finish line and a way to accept or decline belong with scenarios (M10)
 
 Done when: a driver you wronged comes back and you recognize them, and you can tell a minivan mom from a lifted-truck guy by how they drive.
 
-## M5 Look, sound and screen target
+## M5 Look, sound and screen target (current)
 Sets the target for how the whole game looks and sounds, on the Miami test road, in daylight. Bar: at least Midnight Club II, aiming toward GTA V over time.
-- [ ] 5.1 Lighting and atmosphere: sun and sky, haze in the distance, color grading, bloom, soft shadows, ambient occlusion
+- [x] 5.1 Lighting and atmosphere: sun and sky, haze in the distance, color grading, bloom, soft shadows, ambient occlusion
+    - What changed: a clear blue Florida sky with scattered clouds replaces the grey overcast one. Filmic tone mapping, a light color grade and a subtle bloom are on (none were before). Shadows reach 300 m instead of 50 m, so buildings, walls and palms cast them. Edges are smoothed (4x). The whole look lives in one data file (`looks.json`), so night and rain can be added as more looks later (M11)
+    - Second look: the sun stands 48° high in the southwest, which is Miami in mid-March at mid-afternoon (about a quarter to four on the clock), inside the snowbird season the game starts in. Its direction is measured from the sky picture, and a screenshot aimed at it puts the sun dead center, so shadows and sky agree. Haze matches about 8 miles of visibility, a normal humid Florida day: a building 1 km away is 26% faded, 2 km 45%, 3 km 59%. The first version made everything in shade navy blue and about 3 times too dark. The cause was a color-space mistake, found by measuring the shade light, and fixed; shade is now lit blue-grey by the sky from above and warm from the ground below. The grass tint was neon in full sun and was toned down. Frame rate: 156 before, 151 parked and 145 driving at 70 mph with 40 cars after
+    - Still wrong, for later steps: buildings are flat colored boxes (5.4). The asphalt's cracks repeat and the elevated road casts no shadow on the ground under it (5.2). The player car's white paint looks chalky and flat. Lamp post shadows are too thin to see. Clouds don't move, and driving north the sun is always behind you, so there is no glare yet (M11)
 - [ ] 5.2 Road and roadside: fix the median barrier's chopped, pixelated look seen from the left lanes (texture filtering), real asphalt and concrete textures, worn paint, patches and slab joints, concrete Jersey barriers and guardrails, steel sign gantries
+    - Done so far (second playtest): the median and roadside barriers are now concrete Jersey barriers. They have crisp edges, a real concrete surface, a joint every 6 m, rain streaks, grime along the foot and black tire scuffs. The old one was a smooth ribbon with a small stretched texture, which broke into chunky pixels in a small window. Before and after from the left lane at the start are in `.livebridge/shots/m5_2_compare_median.png`
+    - Still to do: asphalt (the cracks repeat), worn paint, patches and slab joints, guardrails, steel gantries, and a shadow under the elevated road
 - [ ] 5.3 Signs built like real US highway signs: green reflective panels with a white border and rounded corners, a highway-style font (a free, openly licensed lookalike of the official one), route shields (I-95), exit number tabs, control cities and distances, plus billboards with designed satirical ads. The full set a driver reads: overhead gantries naming the road and control cities, distance signs ("Fort Lauderdale 12"), exit and merge signs, mile markers (exit numbers match them), and the small reference markers every tenth of a mile that tell 911 and tow trucks where you are
+    - Done so far (second playtest: words ran off the signs at exits 3A, 10A, 18 and 24): every sign panel is now sized to its words, as real signs are. Green guide signs have a white border, rounded corners, an exit number tab on the top right corner, a highway-style typeface (Overpass, open license) and Florida-style short names ("NW 2nd St"). Yellow and white signs have black borders, speed limits have large numerals, mile markers stack their digits. Signs stand plumb
+    - Second look: an automatic check (`signcheck`) measures every line of text against its panel: 233 signs, 454 lines, 0 outside. One billboard had lost its second line. The cause was signs tilting with the road's slope while their words were placed straight up, so lower lines sank behind the panel; it was the same for every sign on a hill. Lettering is about a third larger than real (0.58 m capitals against 0.4-0.5 m), because a screen shows far less detail than an eye and the words must be readable in time at speed; even so they only become readable about 90 m out at this window size
+    - Still to do: overhead gantries over the lanes (the real fix for reading signs in time), route shields, distance signs, tenth-mile markers, designed billboard ads, and moving billboards that stand behind buildings
 - [ ] 5.4 Buildings with textured walls, windows and roofs, so the skyline isn't flat boxes
 - [ ] 5.5 HUD in one visual style: a live analog speedometer as in Forza, with a needle and both mph and km/h, plus gear, cruise and damage, on designed panels with a proper font. Shown in third person, and its corner can be moved in settings
 - [ ] 5.5b The player car's own lights on the model: blinkers when you signal, brake lights, high beams, hazards. Traffic cars already have them because they're built in code; the player car is an imported model, so its lamps need to be found and lit
@@ -115,8 +127,9 @@ Done when: the creator calls the screen polished, side by side the game looks at
 
 ## M6 Road events
 Places where traffic piles up for real reasons.
-- [ ] 6.0 Traffic crash physics: a hit car spins, stops, smokes and shows damage, and the player can't drag it along or stick to it. Motorcycles go down at much lower speeds than cars, and heavy trucks barely move. Fixes the 99 mph side hit in the first playtest, where the other car shrugged it off
+- [ ] 6.0 Traffic crash physics: a hit car spins, stops, smokes and shows damage, and the player can't drag it along or stick to it. Motorcycles go down at much lower speeds than cars, and heavy trucks barely move. A rider comes off the bike and tumbles (ragdoll), and a car at speed runs the bike over instead of stopping dead against it. Fixes the 99 mph side hit in the first playtest, where the other car shrugged it off
 - [ ] 6.0b Angry chasers drive by skill: a skilled one weaves through traffic to reach you, flips you off and peels away; a hothead rides your bumper; a bad driver weaving after you can cause the crash that jams everyone, and everyone reacts by their own skill
+- [ ] 6.0c Traffic cars that snap or rubber-band sideways during a lane change (seen once in the second playtest): find and smooth
 - [ ] 6.1 Distracted drivers: about 3 in 100 on their phone, drifting and reacting late. Honking at one can snap them out of it
 - [ ] 6.2 Accidents between other drivers in real proportions (rear-end, sideswipe, run off the road, debris, rare freak events like a gator or a spill), blocking lanes, with rubbernecking in both directions
 - [ ] 6.3 Construction zones: lane closures, merges, lower limits, and cones and barrels you can hit and scatter
@@ -131,14 +144,15 @@ Every vehicle drives like what it is. The same stats drive the player and traffi
 - [ ] 7.2 Weighty feel in the spirit of GTA IV: soft suspension, body roll and dive, weight that shifts in corners and under braking, momentum you have to manage. Our own model, tuned per vehicle. The road talks back: concrete slab joints thump, patches and dips move the car a little
 - [ ] 7.3 Variety inside a class: a family sedan and a sport sedan feel different
 - [ ] 7.4 Heavy vehicles: slow to speed up, long to stop, lean, trailers sway
-- [ ] 7.5 Motorcycles: quick, light, lean into turns, fragile in a crash
+- [ ] 7.5 Motorcycles: quick, light, lean into turns, fragile in a crash. They can split lanes between cars in a jam, which is their edge and their risk
 - [ ] 7.6 Traffic accelerates, brakes and corners by the same stats
+- [ ] 7.7 Optional manual transmission with a clutch, for sports cars and players who want it
 
 Done when: a sedan, a pickup, a semi and a motorcycle each feel clearly different to drive.
 
 ## M8 Police and traffic law
 Florida law first. Police are part of traffic, not only a chase.
-- [ ] 8.1 Florida rules the game checks: speed tiers (100+ mph or 50+ over is criminal), Move Over, hands-free phone law, left lane, doubled fines in work zones with workers
+- [ ] 8.1 Florida rules the game checks: speed tiers (100+ mph or 50+ over is criminal), Move Over, hands-free phone law, left lane, doubled fines in work zones with workers, and lane splitting on a motorcycle (illegal in Florida; how much police care is researched per state)
 - [ ] 8.2 Patrol cars in traffic, hidden in medians and behind overpasses. Everyone slows near them
 - [ ] 8.3 Police pull over AI drivers too, with lights on the shoulder, and Move Over applies
 - [ ] 8.4 Being noticed: a trooper sees you, a plate reader or aircraft spotter flags you, other drivers call you in
@@ -154,8 +168,9 @@ One scenario, the road trip, playable from menu to finish on the Miami test road
 - [ ] 9.1 Gas by real tank size and mileage, with a station on the test road
 - [ ] 9.2 Money: start funds, gas, food, tickets, repairs
 - [ ] 9.3 Bathroom, food and sleep at a basic level
-- [ ] 9.4 Main menu with scenario, season and car select, pause, save and load
+- [ ] 9.4 Main menu with scenario, season, time of day (day, night, or a moving clock) and car select, pause, save and load
 - [ ] 9.5 Breakdowns and wrecks cost time, money and stress, not the run. Limp to the shoulder or the next exit on a damaged car. Quick fixes yourself (spare tire, taping a bumper). Florida's Road Rangers, the free FDOT patrol on urban interstates, show up for small problems. Call a tow with the phone and wait on the shoulder while traffic and police roll past. A mechanic in the next town costs money and clock hours. Roadside membership makes tows cheaper. The instant R reset stays as a test key only. Damage is by location: a front hit can kill the engine or the radiator, a side hit can bend a wheel, and that decides whether you can fix it yourself (change the wheel) or need a tow. Your character's skills (mechanic, driving) improve with use, so fixing it yourself gets faster over a run
+- [ ] 9.6 Getting hurt: a hard hit can daze or concuss your character by where the car was struck (rear: whiplash; front or side: concussion). The view blurs and sways until it's treated with medicine from the next stop or by an ambulance, which costs time and money
 
 Done when: someone who has never seen the game (Crispy, Noah) plays the slice without help, and wants to keep going.
 
@@ -167,7 +182,7 @@ Every car is someone with somewhere to be. The story comes out of the systems.
 - [ ] 10.2 An event director that spaces out incidents and lets them feed each other
 - [ ] 10.3 Mood and stress for your character
 - [ ] 10.4 The phone: first-person texting mini-game, with the risk of being seen
-- [ ] 10.5 Scenarios: family with kids and a crying baby, trucker, smuggler, cannonballer (unlocked with money and upgrades), free drive
+- [ ] 10.5 Scenarios: family with kids and a crying baby, trucker, smuggler, cannonballer (unlocked with money and upgrades), free drive. Cannonballers also appear as rare AI drivers running 100+ mph, and races get stakes, a finish line and a way to accept or decline
 - [ ] 10.6 A passenger who can take the wheel while you sleep, driving by their own skill
 - [ ] 10.7 Animated people in the car: in first person you see your own hands on the wheel, the shifter, the signal stalk and the phone; a partner in the passenger seat and kids in the back, reacting to the road
 - [ ] 10.8 Stops you walk into: get out at a gas station or rest stop, go inside, pay the cashier for gas, buy snacks (snacks quiet the kids down), use the bathroom. Or pay at the pump with your card, where a sketchy station can skim it, and miles later your phone buzzes with a big charge you didn't make
@@ -175,7 +190,7 @@ Every car is someone with somewhere to be. The story comes out of the systems.
 Done when: three scenarios feel like three different games, and an AI driver's story visibly causes trouble for you.
 
 ## M11 Time and weather
-- [ ] 11.1 Day and night: a Miami night look with lit street lamps, lit windows and neon, plus headlights
+- [ ] 11.1 Day and night: a Miami night look with lit street lamps, lit windows and neon, plus headlights. Chosen per run, or a clock that moves as you drive
 - [ ] 11.2 Rain, wipers, windshield drops, wet grip, hydroplaning and spray
 - [ ] 11.3 Seasons, chosen per run, and per-state weather odds (STATES.md): storms, lightning, fog, smoke, glare, flash floods
 - [ ] 11.4 Rare big events, warned about on the radio first: hurricane evacuation, tornado
@@ -223,7 +238,6 @@ Steam page, itch demo, legal review (car lookalikes, music licenses), credits, l
 More interstates, ghost races, open multiplayer highways, artist and podcast partnerships on the radio.
 
 ## Ideas list
-- Optional manual transmission with a clutch
 - Florida's Turnpike as an alternate route with toll plazas
 - School-zone speed cameras on city streets off the exits
 - A Montreal-to-Miami scenario start: Quebec plates, the long drive south

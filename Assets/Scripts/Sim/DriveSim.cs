@@ -13,6 +13,8 @@ namespace SurviveI95.Sim
     {
         public string id;
         public float topMph, accel, brake, gripG, wheelbase, steerIn, steerOut, mass, frontWeight;
+        /// <summary>Stability control, 0 (none, as on an old muscle car) to 1 (a modern car). Catches the tail when it steps out.</summary>
+        public float stability;
 
         [Serializable] class Table { public List<CarHandling> cars = new List<CarHandling>(); }
 
@@ -160,6 +162,29 @@ namespace SurviveI95.Sim
             return Mathf.Clamp01(Mathf.Pow(Mathf.Clamp01(shaped), 1f / 1.35f));
         }
 
+        /// <summary>How much of the full turn a key asks for the instant it's pressed, and the seconds of holding it takes to reach all of it.</summary>
+        public static float KeyTap = 0.2f, KeyBuild = 0.6f;
+        /// <summary>Stability control: rear slip (radians) where it steps in, the range over which it reaches full strength, its strength (rad/s²) and the speed it costs.</summary>
+        public static float EscSlip = 0.09f, EscRange = 0.1f, EscYaw = 4f, EscDrag = 0.4f;
+        // The slip angle (radians) where the tire curve above gives its most grip. Steering past it turns the car less, not more.
+        static readonly float PeakSlip = Mathf.Tan(Mathf.PI / (2f * TireC)) / TireB;
+
+        /// <summary>
+        /// Keyboard steering, 0..1, by how long the key has been held. A key is all or nothing, so time stands in for
+        /// how far a hand would turn the wheel: a tap is a nudge, and a held key builds in about half a second to the
+        /// hardest turn the front tires can make at this speed. It never asks for more than that, because more steering
+        /// past the tires' peak only makes the car push wide.
+        /// </summary>
+        public float KeySteer(float held)
+        {
+            float v = Mathf.Max(1f, Mathf.Abs(Speed));
+            float limit = GripAccel * Car.wheelbase / (v * v) + PeakSlip;
+            float shaped = limit * (1f + (v * v) / (SteerSpeedRef * SteerSpeedRef)) / MaxWheelAngle;
+            float full = Mathf.Pow(Mathf.Clamp01(shaped), 1f / 1.35f);
+            float build = Mathf.Lerp(KeyTap, 1f, Mathf.SmoothStep(0f, 1f, held / KeyBuild));
+            return Mathf.Max(full * build, .12f);
+        }
+
         /// <summary>Most cornering force the tires give on dry pavement, in m/s².</summary>
         public float GripAccel => Car.gripG * G;
 
@@ -189,6 +214,16 @@ namespace SurviveI95.Sim
 
             float sideAccel = (fyF * Mathf.Cos(delta) + fyR) / Car.mass;
             float yawAccel = (a * fyF * Mathf.Cos(delta) - b * fyR) / inertia;
+
+            // Stability control, standard on US cars since 2012: when the rear starts to let go, it brakes one front wheel
+            // to pull the car straight, which costs a little speed. The handbrake overrides it, and a crash is too much for it.
+            float over = Mathf.Abs(slipR) - EscSlip;
+            if (over > 0f && Car.stability > 0f && !input.Handbrake && stunned <= 0f && v > 8f)
+            {
+                float help = Mathf.Min(1f, over / EscRange) * EscYaw * Car.stability * (1f - Damage);
+                yawAccel += Mathf.Sign(slipR) * help;
+                Speed -= Mathf.Sign(Speed) * help * EscDrag * h;
+            }
 
             float dynYaw = YawRate + yawAccel * h;
             float dynSide = SideSpeed + (sideAccel - Speed * YawRate) * h;
