@@ -169,11 +169,72 @@ namespace SurviveI95.World
             return true;
         }
 
-        public bool HasBarrier(float s)
+        /// <summary>Something solid along the right edge at BarrierRight: a concrete barrier or a steel guardrail.</summary>
+        public bool HasBarrier(float s) => HasConcrete(s) || HasGuardrail(s);
+
+        /// <summary>Concrete barrier: on bridges, on raised road, and past overpass piers.</summary>
+        public bool HasConcrete(float s)
         {
             if (IsBridge(s) || Center(s).y > 1.5f) return true;
             foreach (var o in File.overpasses) if (Mathf.Abs(o.s - s) < 90f) return true;
             return false;
+        }
+
+        /// <summary>
+        /// Steel guardrail where open roadside meets a concrete barrier, as on Florida interstates: about 75 m leading
+        /// up to it and 30 m trailing after it, never across an exit or entrance.
+        /// </summary>
+        public bool HasGuardrail(float s)
+        {
+            if (guardrail == null) MapGuardrail();
+            int i = Mathf.FloorToInt(s / RailStep);
+            return i >= 0 && i < guardrail.Length && guardrail[i];
+        }
+
+        public const float RailLead = 75f, RailTrail = 30f, RailStep = 2.5f;
+        /// <summary>Overhead signs stand half a mile before each exit, as on Florida's urban interstates.</summary>
+        public const float SignBridgeAhead = 805f, SignBridgeShield = 45f;
+
+        /// <summary>
+        /// Where overhead sign bridges span the northbound lanes: half a mile before each exit, unless that spot falls
+        /// inside another interchange (its column would stand in an exit lane), in which case the sign goes on posts.
+        /// </summary>
+        public System.Collections.Generic.List<float> SignBridges()
+        {
+            var list = new System.Collections.Generic.List<float>();
+            foreach (var j in Junctions)
+            {
+                float s = j.divergeS - SignBridgeAhead;
+                if (s < 60f) continue;
+                bool clear = true;
+                foreach (var k in Junctions) if (s > k.divergeS - SignBridgeShield - 40f && s < k.mergeS + 60f) { clear = false; break; }
+                if (clear) list.Add(s);
+            }
+            return list;
+        }
+        bool[] guardrail;
+
+        void MapGuardrail()
+        {
+            int n = Mathf.CeilToInt(Length / RailStep) + 1;
+            var concrete = new bool[n];
+            for (int i = 0; i < n; i++) concrete[i] = HasConcrete(i * RailStep);
+            guardrail = new bool[n];
+            int lead = Mathf.RoundToInt(RailLead / RailStep), trail = Mathf.RoundToInt(RailTrail / RailStep);
+            for (int i = 1; i < n; i++)
+            {
+                if (concrete[i] && !concrete[i - 1]) for (int k = 1; k <= lead && i - k >= 0 && !concrete[i - k]; k++) guardrail[i - k] = true; // leading up to it
+                if (!concrete[i] && concrete[i - 1]) for (int k = 0; k < trail && i + k < n && !concrete[i + k]; k++) guardrail[i + k] = true; // trailing after
+            }
+            // A guardrail shields the roadside column of each overhead sign bridge.
+            foreach (float b in SignBridges())
+                for (float s = b - SignBridgeShield; s <= b + 10f; s += RailStep) { int i = Mathf.FloorToInt(s / RailStep); if (i >= 0 && i < n && !concrete[i]) guardrail[i] = true; }
+            for (int i = 0; i < n; i++)
+            {
+                float s = i * RailStep;
+                if (!guardrail[i]) continue;
+                foreach (var j in Junctions) if (s > j.divergeS - 30f && s < j.mergeS + 60f) { guardrail[i] = false; break; }
+            }
         }
 
         /// <summary>Signed curvature in 1/m; positive means the road bends right.</summary>
@@ -185,7 +246,7 @@ namespace SurviveI95.World
 
         public void LoadJunctions(RouteExitFile data)
         {
-            Junctions.Clear();
+            Junctions.Clear(); guardrail = null;
             foreach (var row in data.items)
             {
                 var pts = new System.Collections.Generic.List<Vector3>();

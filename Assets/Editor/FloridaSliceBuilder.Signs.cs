@@ -55,13 +55,13 @@ namespace SurviveI95.EditorTools
             return px * cap / CapPerEm / FontPx;
         }
 
-        static void Ink(Transform parent, Vector3 pos, Quaternion rot, string text, float cap, Color color)
+        static void Ink(Transform parent, Vector3 pos, Quaternion rot, string text, float cap, Color color, TextAnchor anchor = TextAnchor.MiddleCenter)
         {
             var go = new GameObject("Text", typeof(TextMesh));
             go.transform.SetParent(parent); go.transform.SetPositionAndRotation(pos, rot);
             var tm = go.GetComponent<TextMesh>();
             tm.font = signFont; tm.text = text; tm.fontSize = signFont.dynamic ? FontPx : 0; tm.characterSize = cap / CapPerEm / (FontPx * .1f);
-            tm.anchor = TextAnchor.MiddleCenter; tm.alignment = TextAlignment.Center; tm.color = color;
+            tm.anchor = anchor; tm.alignment = TextAlignment.Center; tm.color = color;
             go.GetComponent<MeshRenderer>().sharedMaterial = signInk;
         }
 
@@ -110,17 +110,24 @@ namespace SurviveI95.EditorTools
             return new Vector2(Mathf.Max(minWidth, w + big * 1.7f), h);
         }
 
-        /// <summary>One sign face. bottom is the middle of its lower edge.</summary>
-        static void Plate(Transform parent, Vector3 bottom, Quaternion rot, Line[] lines, Vector2 size, Material face, Material border, Color ink)
+        /// <summary>An empty sign panel: aluminum back, border and face. bottom is the middle of its lower edge.</summary>
+        static void Blank(Transform parent, Vector3 bottom, Quaternion rot, Vector2 size, Material face, Material border)
         {
             var fwd = rot * Vector3.forward;
-            float big = lines.Max(l => l.cap);
             float b = Mathf.Clamp(size.y * .035f, .025f, .09f), r = Mathf.Clamp(size.y * .1f, .05f, .3f);
             var mid = bottom + Vector3.up * (size.y / 2f);
             // The aluminum back, kept just inside the rounded corners.
             Box(parent, mid + fwd * .03f, rot, new Vector3(size.x - r * .6f, size.y - r * .6f, .05f), signBack, "Back").GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.On;
             Face(parent, mid, rot, RoundRect(size.x, size.y, r), border, "Border");
             Face(parent, mid - fwd * .012f, rot, RoundRect(size.x - 2 * b, size.y - 2 * b, Mathf.Max(.02f, r - b)), face, "Panel");
+        }
+
+        /// <summary>One sign face. bottom is the middle of its lower edge.</summary>
+        static void Plate(Transform parent, Vector3 bottom, Quaternion rot, Line[] lines, Vector2 size, Material face, Material border, Color ink)
+        {
+            var fwd = rot * Vector3.forward;
+            float big = lines.Max(l => l.cap);
+            Blank(parent, bottom, rot, size, face, border);
             float y = size.y - big * .75f;
             foreach (var l in lines)
             {
@@ -134,15 +141,15 @@ namespace SurviveI95.EditorTools
         /// A roadside sign on posts. clear is the gap from the road edge to the sign's near edge, so a wider sign
         /// grows away from the road. tab is the exit number plaque on the top right corner, or null.
         /// </summary>
-        static void RoadSign(Transform parent, RoutePath p, float s, float clear, float elevation, string tab, Line[] lines, Material face, Material border, Color ink, Mats m, bool solid = true, bool placedForExit = false, float minWidth = 0f)
+        static void RoadSign(Transform parent, RoutePath p, float s, float clear, float elevation, string tab, Line[] lines, Material face, Material border, Color ink, Mats m, bool solid = true, bool placedForExit = false, float minWidth = 0f, Vector2? fixedSize = null, System.Action<Vector3, Quaternion, Vector2> draw = null)
         {
             if (!placedForExit) foreach (var j in p.Junctions) if (s > j.divergeS - 2f && s < j.mergeS + 10f) return; // would stand in the exit lane
-            var size = PlateSize(lines, minWidth);
+            var size = fixedSize ?? PlateSize(lines, minWidth);
             var rot = Plumb(p, s);
             float lat = p.HalfWidth(s) + clear + size.x / 2f;
             var c = p.Point(s, lat); var right = p.Right(s);
             var bottom = c + Vector3.up * elevation;
-            Plate(parent, bottom, rot, lines, size, face, border, ink);
+            if (draw != null) draw(bottom, rot, size); else Plate(parent, bottom, rot, lines, size, face, border, ink);
             float top = c.y + elevation + size.y;
             if (tab != null)
             {
@@ -230,9 +237,16 @@ namespace SurviveI95.EditorTools
 
         static void BuildSigns(RoutePath p, Mats m)
         {
-            PrepareSigns();
+            PrepareSigns(); PrepareGantries(); white = m.white;
             var g = new GameObject("Signs");
             var t = g.transform;
+            var bridges = p.SignBridges();
+            var cities = LoadPlaces();
+            // The control city on pull-through signs: Fort Lauderdale until you're in it, then West Palm Beach (about 42 miles on).
+            float ftl = cities.FirstOrDefault(q => q.name == "FORT LAUDERDALE")?.s ?? p.Length;
+            string Control(float at) => at < ftl - 800f ? "Ft Lauderdale" : "W Palm Beach";
+            float ControlS(float at) => at < ftl - 800f ? ftl : ftl + 42f * 1609.34f;
+            int bridgeCount = 0, distanceCount = 0;
             foreach (var j in p.Junctions)
             {
                 var real = p.File.exits.Where(e => !string.IsNullOrEmpty(e.@ref)).OrderBy(e => Mathf.Abs(e.s - j.divergeS)).FirstOrDefault();
@@ -243,7 +257,13 @@ namespace SurviveI95.EditorTools
                 var ahead = known ? Destinations(real.name, PlaceCap, 2) : new List<Line>();
                 if (ahead.Count == 0) ahead.Add(L("EXIT", PlaceCap));
                 ahead.Add(L("1/2 MILE", ActionCap));
-                RoadSign(t, p, Mathf.Max(5f, j.divergeS - 805f), 4.2f, 2.5f, tab, ahead.ToArray(), m.signGreen, m.white, Color.white, m);
+                float halfMile = j.divergeS - RoutePath.SignBridgeAhead;
+                if (bridges.Any(b => Mathf.Abs(b - halfMile) < .5f)) { SignBridge(t, p, halfMile, m, tab ?? "EXIT", ahead.ToArray(), Control(halfMile)); bridgeCount++; }
+                else RoadSign(t, p, Mathf.Max(5f, halfMile), 4.2f, 2.5f, tab, ahead.ToArray(), m.signGreen, m.white, Color.white, m);
+                // After the interchange: how far to the next places.
+                float after = j.mergeS + 320f;
+                while (p.File.exits.Any(e => !string.IsNullOrEmpty(e.@ref) && (Mathf.Abs(after - (e.s - 15f)) < 100f || Mathf.Abs(after - (e.s - 340f)) < 100f))) after += 50f; // clear of the exit signs
+                if (after < p.Length - 200f) { DistanceSign(t, p, after, cities, Control(after), ControlS(after), m); distanceCount++; }
                 // Yellow signs mark the exits you can actually drive.
                 foreach (float back in new[] { 420f, 130f })
                     RoadSign(t, p, Mathf.Max(5f, j.divergeS - back), 3.8f, 2.5f, null, new[] { L(known ? "EXIT " + number : "EXIT", PlaceCap), L("KEEP RIGHT", ActionCap) }, m.yellow, signBlack, SignInk, m);
@@ -271,7 +291,15 @@ namespace SurviveI95.EditorTools
                     var stack = new List<Line> { L("MILE", .09f) };
                     foreach (char d in mile.ToString()) stack.Add(L(d.ToString(), .2f));
                     RoadSign(t, p, Mathf.Max(5, (mile - baseMile.Value) * 1609.34f), 4.9f, 1.3f, null, stack.ToArray(), m.signGreen, m.white, Color.white, m);
+                    // Every tenth of a mile between them, a small marker that tells 911 and tow trucks exactly where you are.
+                    for (int tenth = 1; tenth <= 9; tenth++)
+                    {
+                        float at = (mile + tenth / 10f - baseMile.Value) * 1609.34f;
+                        if (at > p.Length - 20f) break;
+                        RoadSign(t, p, at, 4.9f, 1.0f, null, new[] { L("95 N", .07f), L(mile.ToString(), .12f), L("." + tenth, .12f) }, m.signGreen, m.white, Color.white, m);
+                    }
                 }
+            Debug.Log($"[FloridaSlice] sign bridges {bridgeCount} at {string.Join(" ", bridges.Select(b => b.ToString("F0")))}, distance signs {distanceCount}");
             // Real posted limits: a sign just past every change, then repeats along the way.
             float lastSign = -9999f, lastMph = -1f;
             for (float s = 120f; s < p.Length - 300f; s += 50f)

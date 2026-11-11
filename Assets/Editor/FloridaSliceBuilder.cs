@@ -19,7 +19,7 @@ namespace SurviveI95.EditorTools
         const string CarPath = "Assets/ThirdParty/Sketchfab/corolla/scene.gltf";
         const float CarYawFix = 0f; // degrees, corrects the imported model's facing
 
-        class Mats { public Material asphalt, shoulder, grass, concrete, white, yellow, rumble, signGreen, post, billboard, text; }
+        class Mats { public Material asphalt, shoulder, grass, concrete, white, yellow, roadWhite, roadYellow, rumble, signGreen, post, billboard, text; }
 
         [MenuItem("Survive I-95/Build Florida Slice")]
         public static void Build()
@@ -50,7 +50,7 @@ namespace SurviveI95.EditorTools
             BuildPillars(road, path, south, m);
             BuildExitRoads(road, path, m);
             BuildSoundWalls(road, path, south, m);
-            BuildTrees(path, south);
+            BuildPlants(path, south);
 
             var cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener)).GetComponent<Camera>();
             cam.tag = "MainCamera"; cam.farClipPlane = 3000f; cam.fieldOfView = 62f;
@@ -80,7 +80,7 @@ namespace SurviveI95.EditorTools
         static Mats LoadMats()
         {
             Material M(string name) => AssetDatabase.LoadAssetAtPath<Material>($"{Gen}/Materials/{name}.mat");
-            return new Mats { asphalt = M("Asphalt"), shoulder = M("Shoulder"), grass = M("Grass"), concrete = M("Concrete"), white = M("PaintWhite"), yellow = M("PaintYellow"), rumble = M("Rumble"), signGreen = M("SignGreen"), post = M("Post"), billboard = M("Billboard"), text = M("SignText") };
+            return new Mats { asphalt = M("Asphalt"), shoulder = M("Shoulder"), grass = M("Grass"), concrete = M("Concrete"), white = M("PaintWhite"), yellow = M("PaintYellow"), rumble = M("Rumble"), signGreen = M("SignGreen"), post = M("Post"), billboard = M("Billboard"), text = M("SignText"), roadWhite = M("RoadPaintWhite"), roadYellow = M("RoadPaintYellow") };
         }
 
         /// <summary>
@@ -105,6 +105,48 @@ namespace SurviveI95.EditorTools
                 foreach (var old in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(o => o.name == "Barriers").Select(o => o.gameObject).ToList())
                     UnityEngine.Object.DestroyImmediate(old);
                 BuildBarriers(road, path, m);
+            }
+            else if (part == "guardrail")
+            {
+                var bar = UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).First(o => o.name == "Barriers");
+                foreach (var name in new[] { "Guardrail", "GuardrailPosts", "GuardrailMarkers" })
+                {
+                    var old = bar.Find(name); if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+                }
+                meshCount = 200000;
+                BuildGuardrails(bar.gameObject, path);
+            }
+            else if (part == "road")
+            {
+                // The pavement, paint and exit roads, with the road materials re-dressed in place.
+                DressRoad(m);
+                var road = EditorSceneManager.GetActiveScene().GetRootGameObjects().First(o => o.name == "Road");
+                foreach (var name in new[] { "Northbound", "Southbound", "DrivableExits" })
+                {
+                    var old = road.transform.Find(name); if (old != null) UnityEngine.Object.DestroyImmediate(old.gameObject);
+                }
+                meshCount = 100000; // new mesh files, so nothing else in the scene loses its mesh
+                BuildCarriageway(road, "Northbound", path, s => 0, m);
+                BuildCarriageway(road, "Southbound", path, s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap), m);
+                BuildExitRoads(road, path, m);
+            }
+            else if (part == "city")
+            {
+                foreach (var name in new[] { "City", "FarCity" })
+                {
+                    var old = GameObject.Find(name); if (old != null) UnityEngine.Object.DestroyImmediate(old);
+                }
+                PrepareLookup(path, s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap));
+                exitCorridor.Clear();
+                foreach (var j in path.Junctions)
+                    for (float s = 0f; s < j.road.Length; s += 8f) { var c = j.road.Center(s); exitCorridor.Add(new Vector2(c.x, c.z)); }
+                meshCount = 300000;
+                BuildBuildings(path, s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap), m);
+                foreach (var name in new[] { "Trees", "Shrubs", "Plants", "Palms" })
+                {
+                    var old = GameObject.Find(name); if (old != null) UnityEngine.Object.DestroyImmediate(old);
+                }
+                BuildPlants(path, s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap));
             }
             else return "ERROR unknown part " + part;
             placed.Clear();
@@ -256,22 +298,24 @@ namespace SurviveI95.EditorTools
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             m.text = new Material(Shader.Find("SurviveI95/SignText")) { mainTexture = font.material.mainTexture };
             Save(m.text, "SignText");
+            DressRoad(m);
             return m;
         }
 
         // ---------- geometry ----------
-        static Mesh Ribbon(RoutePath p, Func<float, float> left, Func<float, float> right, float y, float uTile, float vTile, float from = 0, float to = -1, float step = 10f, bool flat = false)
+        // uFromLeft measures the texture across from the left edge, so anything painted per lane lines up with the lanes.
+        static Mesh Ribbon(RoutePath p, Func<float, float> left, Func<float, float> right, float y, float uTile, float vTile, float from = 0, float to = -1, float step = 10f, bool flat = false, bool uFromLeft = false)
         {
             if (to < 0) to = p.Length;
             var v = new List<Vector3>(); var uv = new List<Vector2>(); var tris = new List<int>();
             int rows = Mathf.Max(1, Mathf.CeilToInt((to - from) / step));
             for (int r = 0; r <= rows; r++)
             {
-                float s = from + (to - from) * r / rows, l = left(s), rr = right(s);
+                float s = from + (to - from) * r / rows, l = left(s), rr = right(s), u0 = uFromLeft ? l : 0f;
                 var pl = p.Point(s, l) + Vector3.up * y; var pr = p.Point(s, rr) + Vector3.up * y;
                 if (flat) { pl.y = y; pr.y = y; }
                 v.Add(pl); v.Add(pr);
-                uv.Add(new Vector2(l / uTile, s / vTile)); uv.Add(new Vector2(rr / uTile, s / vTile));
+                uv.Add(new Vector2((l - u0) / uTile, s / vTile)); uv.Add(new Vector2((rr - u0) / uTile, s / vTile));
                 if (r > 0) { int a = (r - 1) * 2; tris.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 }); }
             }
             return Finish(v, uv, tris);
@@ -297,7 +341,9 @@ namespace SurviveI95.EditorTools
         }
 
         static int meshCount;
-        static void Add(GameObject parent, string name, Mesh mesh, Material mat, bool shadows = false)
+        static void Add(GameObject parent, string name, Mesh mesh, Material mat, bool shadows = false) => Add(parent, name, mesh, mat, shadows ? ShadowCastingMode.On : ShadowCastingMode.Off);
+
+        static void Add(GameObject parent, string name, Mesh mesh, Material mat, ShadowCastingMode shadows)
         {
             var file = $"{Gen}/Meshes/{parent.name}_{name}_{meshCount++}.asset";
             AssetDatabase.DeleteAsset(file);
@@ -307,7 +353,7 @@ namespace SurviveI95.EditorTools
             go.GetComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.GetComponent<MeshRenderer>();
             r.sharedMaterial = mat;
-            r.shadowCastingMode = shadows ? ShadowCastingMode.On : ShadowCastingMode.Off;
+            r.shadowCastingMode = shadows;
         }
 
         // Distance from each end of an exit, or -1 outside one.
@@ -359,11 +405,14 @@ namespace SurviveI95.EditorTools
             Func<float, float> h = p.HalfWidth;
             const float rightShoulder = 3.05f, leftShoulder = 1.3f;
             Add(g, "Shoulder", Ribbon(p, s => c(s) - h(s) - leftShoulder, s => c(s) + h(s) + shoulder(s), 0.0f, 5, 5, step: 5f), m.shoulder);
-            Add(g, "Lanes", Ribbon(p, s => c(s) - h(s), s => c(s) + h(s) + aux(s), 0.012f, 7, 7, step: 5f), m.asphalt);
+            Add(g, "Lanes", Ribbon(p, s => c(s) - h(s), s => c(s) + h(s) + aux(s), 0.012f, 7, 7, step: 5f, uFromLeft: true), m.asphalt);
+            // The deck's underside: casts the shadow an elevated road throws on the ground below. On the ground it sits
+            // below the grass and does nothing.
+            Add(g, "DeckShadow", Ribbon(p, s => c(s) - h(s) - leftShoulder - .2f, s => c(s) + h(s) + Mathf.Max(shoulder(s), aux(s)) + .2f, -1.5f, 7, 7, step: 5f), m.concrete, ShadowCastingMode.ShadowsOnly);
             Add(g, "RumbleLeft", Ribbon(p, s => c(s) - h(s) - .95f, s => c(s) - h(s) - .4f, 0.02f, 1, .6f, step: 10f), m.rumble);
             Add(g, "RumbleRight", Ribbon(p, s => c(s) + h(s) + .4f, s => c(s) + h(s) + (plainEdge(s) ? .95f : .4f), 0.02f, 1, .6f, step: 5f), m.rumble);
-            Add(g, "EdgeLeft", Ribbon(p, s => c(s) - h(s) - .08f, s => c(s) - h(s) + .08f, 0.03f, 1, 1), m.yellow);
-            Add(g, "EdgeRight", Ribbon(p, s => c(s) + h(s) - .08f, s => c(s) + h(s) + (aux(s) > 0f ? -.08f : .08f), 0.03f, 1, 1, step: 5f), m.white);
+            Add(g, "EdgeLeft", Ribbon(p, s => c(s) - h(s) - .08f, s => c(s) - h(s) + .08f, 0.03f, 1, 1), m.roadYellow);
+            Add(g, "EdgeRight", Ribbon(p, s => c(s) + h(s) - .08f, s => c(s) + h(s) + (aux(s) > 0f ? -.08f : .08f), 0.03f, 1, 1, step: 5f), m.roadWhite);
 
             // US standard broken lane line: 10 ft painted, 30 ft gap.
             var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
@@ -397,8 +446,8 @@ namespace SurviveI95.EditorTools
                 {
                     float gap = RoutePath.ExitWallGap, hold = RoutePath.ExitHold;
                     Func<float, float> edge = s => h(s) + Mathf.Max(0f, aux(s) - gap);
-                    Add(g, "AuxEdgeOut", Ribbon(p, s => edge(s) - .08f, s => edge(s) + .08f, 0.035f, 1, 1, j.divergeS, j.divergeS + hold, 3f), m.white);
-                    Add(g, "AuxEdgeIn", Ribbon(p, s => edge(s) - .08f, s => edge(s) + .08f, 0.035f, 1, 1, j.mergeS - hold, j.mergeS, 3f), m.white);
+                    Add(g, "AuxEdgeOut", Ribbon(p, s => edge(s) - .08f, s => edge(s) + .08f, 0.035f, 1, 1, j.divergeS, j.divergeS + hold, 3f), m.roadWhite);
+                    Add(g, "AuxEdgeIn", Ribbon(p, s => edge(s) - .08f, s => edge(s) + .08f, 0.035f, 1, 1, j.mergeS - hold, j.mergeS, 3f), m.roadWhite);
                     RoadArrow(v, uv, t, p, j.divergeS + 62f, h(j.divergeS + 62f) + RoutePath.ExitEdge, 16f);
                     RoadArrow(v, uv, t, p, j.mergeS - 66f, h(j.mergeS - 66f) + RoutePath.ExitEdge, -16f);
                     // Painted stripes fill the wedge where the two roads part.
@@ -415,7 +464,9 @@ namespace SurviveI95.EditorTools
                             t.AddRange(new[] { a, a + 2, a + 1, a + 1, a + 2, a + 3 });
                         }
                 }
-            Add(g, "Dashes", Finish(v, uv, t), m.white);
+            // Paint is textured in meters straight from above, so worn spots keep their size on every stripe.
+            for (int i = 0; i < v.Count; i++) uv[i] = new Vector2(v[i].x, v[i].z);
+            Add(g, "Dashes", Finish(v, uv, t), m.roadWhite);
             Add(g, "SkirtR", WallStrip(p, s => c(s) + h(s) + Mathf.Max(shoulder(s), aux(s)), 0f, p.Length, -1.6f, 0f), m.concrete);
             Add(g, "SkirtL", WallStrip(p, s => c(s) - h(s) - leftShoulder, 0f, p.Length, -1.6f, 0f), m.concrete);
         }
@@ -568,7 +619,7 @@ namespace SurviveI95.EditorTools
             float start = -1;
             for (float s = 0; s < p.Length; s += 5)
             {
-                bool on = p.HasBarrier(s) && !p.InGate(s); // must match the collision rule exactly, or walls become invisible
+                bool on = p.HasConcrete(s) && !p.InGate(s); // must match the collision rule exactly, or walls become invisible
                 if (on && start < 0) start = s;
                 if (!on && start >= 0) { spans.Add((start, s)); start = -1; }
             }
@@ -579,6 +630,7 @@ namespace SurviveI95.EditorTools
             }
             Add(g, "Median", Extrude(p, -RoutePath.BarrierLeft, 0, p.Length), skin, true);
             Debug.Log("[FloridaSlice] barrier spans " + spans.Count);
+            BuildGuardrails(g, p);
         }
 
         static GameObject Box(Transform parent, Vector3 pos, Quaternion rot, Vector3 size, Material mat, string name = "Box")
@@ -736,7 +788,15 @@ namespace SurviveI95.EditorTools
         }
 
         const int FacadeCount = 10, RoofSlot = 10, ApronSlot = 11, SlotCount = 12;
-        class Bucket { public List<Vector3>[] v = new List<Vector3>[SlotCount]; public List<Vector2>[] uv = new List<Vector2>[SlotCount]; public List<int>[] t = new List<int>[SlotCount]; }
+        class Bucket
+        {
+            public List<Vector3>[] v; public List<Vector2>[] uv; public List<int>[] t;
+            public Bucket(int n)
+            {
+                v = new List<Vector3>[n]; uv = new List<Vector2>[n]; t = new List<int>[n];
+                for (int i = 0; i < n; i++) { v[i] = new List<Vector3>(); uv[i] = new List<Vector2>(); t[i] = new List<int>(); }
+            }
+        }
 
         static Dictionary<(int, int), List<float>> cells;
         static RoutePath lookupPath;
@@ -802,14 +862,10 @@ namespace SurviveI95.EditorTools
             }
         }
 
-        static Bucket Get(Dictionary<(int, int), Bucket> map, Vector2 at, float size)
+        static Bucket Get(Dictionary<(int, int), Bucket> map, Vector2 at, float size, int slots = SlotCount)
         {
             var key = ((int)Mathf.Floor(at.x / size), (int)Mathf.Floor(at.y / size));
-            if (!map.TryGetValue(key, out var bk))
-            {
-                map[key] = bk = new Bucket();
-                for (int i = 0; i < SlotCount; i++) { bk.v[i] = new List<Vector3>(); bk.uv[i] = new List<Vector2>(); bk.t[i] = new List<int>(); }
-            }
+            if (!map.TryGetValue(key, out var bk)) map[key] = bk = new Bucket(slots);
             return bk;
         }
 
@@ -901,9 +957,10 @@ namespace SurviveI95.EditorTools
                 // Stays on the shoulder at both ends, so it never paints over the highway's lanes.
                 Func<float, float> leftEdge = s => -h(s) - Mathf.Lerp(.2f, gap, Mathf.Min(Mathf.InverseLerp(open, open + 20f, s), Mathf.InverseLerp(open, open + 20f, r.Length - s)));
                 float pave = RoutePath.ExitHold; // beside the highway the pavement belongs to the highway
-                Add(g, "Road", Ribbon(r, leftEdge, s => h(s) + gap, 0.05f, 7, 7, pave - 12f, r.Length - pave + 12f, 3f), m.asphalt);
-                Add(g, "EdgeL", Ribbon(r, s => -h(s) - .08f, s => -h(s) + .08f, 0.07f, 1, 1, pave, r.Length - pave, 3f), m.yellow);
-                Add(g, "EdgeR", Ribbon(r, s => h(s) - .08f, s => h(s) + .08f, 0.07f, 1, 1, pave, r.Length - pave, 3f), m.white);
+                Add(g, "Road", Ribbon(r, leftEdge, s => h(s) + gap, 0.05f, 7, 7, pave - 12f, r.Length - pave + 12f, 3f, uFromLeft: true), m.asphalt);
+                Add(g, "DeckShadow", Ribbon(r, s => -h(s) - gap - .2f, s => h(s) + gap + .2f, -1.2f, 7, 7, pave, r.Length - pave, 3f), m.concrete, ShadowCastingMode.ShadowsOnly);
+                Add(g, "EdgeL", Ribbon(r, s => -h(s) - .08f, s => -h(s) + .08f, 0.07f, 1, 1, pave, r.Length - pave, 3f), m.roadYellow);
+                Add(g, "EdgeR", Ribbon(r, s => h(s) - .08f, s => h(s) + .08f, 0.07f, 1, 1, pave, r.Length - pave, 3f), m.roadWhite);
                 Add(g, "WallL", WallStrip(r, s => -h(s) - gap, open, r.Length - open, -0.1f, 0.9f), m.concrete, true);
                 Add(g, "WallR", WallStrip(r, s => h(s) + gap, RoutePath.ExitTaper, r.Length - RoutePath.ExitTaper, -0.1f, 0.9f), m.concrete, true);
                 for (float s = 15f; s < r.Length; s += 24f)
@@ -915,73 +972,6 @@ namespace SurviveI95.EditorTools
             }
         }
 
-        static void BuildBuildings(RoutePath p, Func<float, float> south, Mats m)
-        {
-            occupied.Clear();
-            var file = $"Tools/Data/{RouteId}_buildings.json";
-            if (!File.Exists(file)) { Debug.LogError("[FloridaSlice] no building data"); return; }
-            var data = JsonUtility.FromJson<BuildingFile>(File.ReadAllText(file));
-            var mats = new[]
-            {
-                Facade("FacadeGlassBlue", new Color(.3f, .37f, .44f), new Color(.16f, .28f, .4f), 0, 1, .8f),
-                Facade("FacadeGlassGreen", new Color(.32f, .4f, .4f), new Color(.17f, .33f, .35f), 0, 2, .8f),
-                Facade("FacadeGlassDark", new Color(.2f, .22f, .26f), new Color(.1f, .13f, .18f), 0, 3, .85f),
-                Facade("FacadeBandWhite", new Color(.84f, .84f, .8f), new Color(.2f, .3f, .4f), 2, 4, .45f),
-                Facade("FacadeBandTan", new Color(.72f, .66f, .56f), new Color(.17f, .23f, .3f), 2, 5, .35f),
-                Facade("FacadeCondo", new Color(.88f, .86f, .79f), new Color(.2f, .27f, .35f), 1, 6, .3f),
-                Facade("FacadeStuccoCream", new Color(.9f, .84f, .68f), new Color(.2f, .23f, .28f), 3, 7, .15f),
-                Facade("FacadeStuccoWhite", new Color(.9f, .9f, .86f), new Color(.2f, .24f, .3f), 3, 8, .15f),
-                Facade("FacadeStuccoCoral", new Color(.88f, .67f, .57f), new Color(.2f, .23f, .28f), 3, 9, .15f),
-                Facade("FacadeStuccoTeal", new Color(.58f, .78f, .74f), new Color(.2f, .25f, .3f), 3, 10, .15f),
-                Lit("Roof", new Color(.5f, .5f, .48f), .1f),
-                Lit("Apron", new Color(.8f, .79f, .74f), .1f),
-            };
-            var rnd = new System.Random(305);
-            var map = new Dictionary<(int, int), Bucket>();
-            int built = 0, dropped = 0, solid = 0;
-            foreach (var b in data.items)
-            {
-                var pts = new List<Vector2>();
-                for (int i = 0; i + 1 < b.p.Length; i += 2) pts.Add(new Vector2(b.p[i], b.p[i + 1]));
-                if (pts.Count < 3 || pts.Any(q => OnRoad(q) || NearExit(q, 12f)) || exitCorridor.Any(c => Inside(pts, c))) { dropped++; continue; }
-                float area = 0;
-                for (int i = 0; i < pts.Count; i++) { var a = pts[i]; var c = pts[(i + 1) % pts.Count]; area += a.x * c.y - c.x * a.y; }
-                if (area < 0) pts.Reverse();
-                float h = b.h > 2f ? b.h : 3.5f + (float)rnd.NextDouble() * 6f;
-                int style = h > 45f ? rnd.Next(3) + (rnd.NextDouble() < .2 ? 3 : 0) : h > 14f ? 3 + rnd.Next(3) : 6 + rnd.Next(4);
-                var mid = new Vector2(pts.Average(q => q.x), pts.Average(q => q.y));
-                var bk = Get(map, mid, 900f);
-                Walls(bk, style, pts, -0.3f, h, (float)rnd.NextDouble() * 3f);
-                Fan(bk, RoofSlot, pts, h, 8f);
-                float rad = pts.Average(q => (q - mid).magnitude);
-                Fan(bk, ApronSlot, pts.Select(q => mid + (q - mid) * (1f + 2.4f / Mathf.Max(3f, rad))).ToList(), -0.14f, 4f);
-                if (h > 30f)
-                {
-                    var core = pts.Select(q => mid + (q - mid) * .48f).ToList();
-                    float h2 = h + 3f + h * .05f;
-                    Walls(bk, style, core, h, h2, 1f);
-                    Fan(bk, RoofSlot, core, h2, 8f);
-                }
-                float minX = pts.Min(q => q.x), maxX = pts.Max(q => q.x), minZ = pts.Min(q => q.y), maxZ = pts.Max(q => q.y);
-                for (int ix = (int)(minX / 30f); ix <= (int)(maxX / 30f); ix++) for (int iz = (int)(minZ / 30f); iz <= (int)(maxZ / 30f); iz++) occupied.Add((ix, iz));
-                if (Locate(mid, out var cs, out var clat) && Mathf.Abs(clat) < 500f)
-                {
-                    // Small blocks that follow the real footprint; one box around an angled building can span the highway.
-                    var tan = p.Tangent(cs); var right = p.Right(cs);
-                    for (float gx = minX + 4f; gx < maxX; gx += 9f) for (float gz = minZ + 4f; gz < maxZ; gz += 9f)
-                    {
-                        if (!Inside(pts, new Vector2(gx, gz))) continue;
-                        var d = new Vector3(gx - mid.x, 0, gz - mid.y);
-                        float bs = cs + Vector3.Dot(d, tan), bl = clat + Vector3.Dot(d, right);
-                        if (bl - 5f < p.HalfWidth(bs) + 5f && bl + 5f > south(bs) - p.HalfWidth(bs) - 5f) continue;
-                        Solid(bs, bl, 5f, 5f, "building"); solid++;
-                    }
-                }
-                built++;
-            }
-            int chunks = Flush(map, "City", mats, SlotCount, true);
-            Debug.Log($"[FloridaSlice] buildings placed {built}, removed from roadway {dropped}, solid {solid}, chunks {chunks}");
-        }
 
         [Serializable] class GroundRow { public float w; public float[] p; }
         [Serializable] class GroundFile { public GroundRow[] roads; public GroundRow[] lots; }

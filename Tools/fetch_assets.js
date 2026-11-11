@@ -114,4 +114,40 @@ async function vehicles() {
   }
 }
 
-({ environment, shortlist, vehicles })[process.argv[2]]().catch(e => { console.error(e.message); process.exit(1); });
+// Plants and roadside props for the city (5.4b, 5.4c): Poly Haven CC0 at 1k, and three CC BY palms from Sketchfab.
+const PLANTS = {
+  polyhaven: ['island_tree_01', 'island_tree_02', 'island_tree_03', 'shrub_01', 'shrub_02', 'shrub_03', 'shrub_04', 'grass_bermuda_01', 'grass_medium_02', 'modular_chainlink_fence', 'modular_electricity_poles', 'fire_hydrant'],
+  sketchfab: [
+    { name: 'coconut_palm', uid: '26e787f2ff2e4c0fb004c3b0210805a3' },
+    { name: 'curly_palm', uid: '00f2b57dd0e844edbeb116034fa471ec' },
+    { name: 'date_palm', uid: 'ced3b31f14f940d0b7480a83e6f8c9c0' },
+  ]
+};
+
+async function plants() {
+  const base = path.join(ROOT, 'Assets', 'ThirdParty', 'PolyHaven');
+  for (const id of PLANTS.polyhaven) {
+    const files = (await json('https://api.polyhaven.com/files/' + id)).gltf;
+    const g = (files['1k'] || files['2k']).gltf;
+    await save(g.url, path.join(base, 'Models', id, id + '.gltf'));
+    for (const [rel, file] of Object.entries(g.include || {})) await save(file.url, path.join(base, 'Models', id, rel));
+    console.log('model', id); credit(id + ' (model), Poly Haven, CC0, https://polyhaven.com/a/' + id);
+  }
+  const token = process.env.SKETCHFAB_TOKEN;
+  if (!token) throw new Error('Set the SKETCHFAB_TOKEN environment variable first.');
+  for (const p of PLANTS.sketchfab) {
+    const info = await json('https://api.sketchfab.com/v3/models/' + p.uid);
+    const lic = (info.license && info.license.slug) || '';
+    if (!/^cc0$|^by$|cc-by$|^cc-by-4/.test(lic) && !/Attribution$|CC0/.test((info.license || {}).label || '')) throw new Error('Blocked license ' + lic + ' for ' + info.name);
+    const dest = path.join(ROOT, 'Tools', 'Downloads', 'plants', p.name + '.zip');
+    if (!fs.existsSync(dest)) {
+      const d = await json('https://api.sketchfab.com/v3/models/' + p.uid + '/download', { Authorization: 'Token ' + token });
+      await save(d.gltf.url, dest);
+      await sleep(800);
+    }
+    console.log('plant', p.name, info.name, info.license.label);
+    credit(`"${info.name}" by ${info.user.displayName}, ${info.license.label}, ${info.viewerUrl}`);
+  }
+}
+
+({ environment, shortlist, vehicles, plants })[process.argv[2]]().catch(e => { console.error(e.message); process.exit(1); });

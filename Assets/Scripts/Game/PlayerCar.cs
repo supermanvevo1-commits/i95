@@ -332,8 +332,11 @@ namespace SurviveI95.Game
             // GTA-style layout: V changes the camera, C looks back, E is the horn.
             if ((k != null && k.vKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame)) SetCockpit(!Cockpit);
             if (k != null && k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
+            // A click in the game takes the mouse back, as games do after Escape.
+            var mClick = Mouse.current;
+            if (mClick != null && mClick.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; mouseSettle = 0.3f; }
             UpdateControls(k, pad);
-            if (Cockpit) UpdateLook(pad);
+            if (Cockpit) UpdateLook(pad); else UpdateOrbit(pad);
 
             float t = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
             Pose(Mathf.Lerp(prevS, Sim.S, t), Mathf.Lerp(prevLat, Sim.Lateral, t), Mathf.Lerp(prevTheta, Sim.Theta, t));
@@ -621,7 +624,9 @@ namespace SurviveI95.Game
             if (on) { lookYaw = 0; lookPitch = 0; mouseSettle = 0.3f; }
             if (chaseCamera != null) chaseCamera.nearClipPlane = on ? 0.04f : 0.3f;
             EnsureCabinLight();
-            if (Application.isPlaying) { Cursor.lockState = on ? CursorLockMode.Locked : CursorLockMode.None; Cursor.visible = !on; }
+            // The mouse steers the view in both cameras now (cockpit look, chase orbit), so it's captured in both.
+            orbitYaw = 0f; orbitPitch = 0f; mouseSettle = 0.3f;
+            if (Application.isPlaying) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
             SnapCamera();
         }
 
@@ -682,10 +687,43 @@ namespace SurviveI95.Game
                 chaseCamera.transform.rotation = rot;
                 return;
             }
-            var dir = Quaternion.Euler(0, camYaw, 0) * Vector3.forward;
+            // Behind the car, swung around it by the mouse (orbit), as in GTA.
+            var dir = Quaternion.Euler(0, camYaw + orbitYaw, 0) * Vector3.forward;
             float back = cameraBack + 0.9f * Mathf.Clamp01(Sim.Speed / Sim.TopSpeed);
-            chaseCamera.transform.position = transform.position - dir * back + Vector3.up * cameraUp;
-            chaseCamera.transform.rotation = Quaternion.LookRotation(transform.position + dir * 12f + Vector3.up * 1.05f - chaseCamera.transform.position);
+            float p = orbitPitch * Mathf.Deg2Rad;
+            var pos = transform.position - dir * back * Mathf.Cos(p) + Vector3.up * (cameraUp + back * Mathf.Sin(p));
+            pos.y = Mathf.Max(pos.y, transform.position.y + 0.5f);
+            chaseCamera.transform.position = pos;
+            // Straight behind, aim down the road ahead; swung round to the side, aim at the car itself.
+            float aside = Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(0f, orbitYaw)) / 35f);
+            var target = transform.position + Vector3.up * 1.05f + dir * Mathf.Lerp(12f, 0f, aside);
+            chaseCamera.transform.rotation = Quaternion.LookRotation(target - pos);
+        }
+
+        float orbitYaw, orbitPitch, orbitIdle;
+
+        /// <summary>For tests: swings the chase camera as if the mouse had moved, then lets it return as a player's would.</summary>
+        public void TestOrbit(float yaw, float pitchDeg) { orbitYaw = yaw; orbitPitch = pitchDeg; orbitIdle = 0f; }
+        public float OrbitYaw => orbitYaw;
+
+        /// <summary>
+        /// Mouse or right stick swings the chase camera around the car. Left alone while driving, it eases back
+        /// behind after a moment; parked, it stays where it was left.
+        /// </summary>
+        void UpdateOrbit(Gamepad pad)
+        {
+            var mouse = Mouse.current;
+            mouseSettle -= Time.unscaledDeltaTime;
+            Vector2 delta = mouse != null && mouseSettle <= 0 && Cursor.lockState == CursorLockMode.Locked ? mouse.delta.ReadValue() * 0.12f : Vector2.zero;
+            if (pad != null) delta += pad.rightStick.ReadValue() * 160f * Time.deltaTime;
+            if (delta.sqrMagnitude > 0.0004f) orbitIdle = 0f; else orbitIdle += Time.deltaTime;
+            orbitYaw = Mathf.Repeat(orbitYaw + delta.x + 180f, 360f) - 180f;
+            orbitPitch = Mathf.Clamp(orbitPitch - delta.y * .6f, -8f, 50f);
+            if (orbitIdle > 1.4f && Mathf.Abs(Sim.Speed) > 3f)
+            {
+                float k = 1f - Mathf.Exp(-Time.deltaTime * 2.5f);
+                orbitYaw = Mathf.LerpAngle(orbitYaw, 0f, k); orbitPitch = Mathf.Lerp(orbitPitch, 0f, k);
+            }
         }
 
         public void SnapCamera()

@@ -21,6 +21,7 @@ namespace SurviveI95.EditorTools
         static double nextPoll, nextBeat;
         static float slowest;
         static int fpsFrames; static float fpsTime;
+        static SurviveI95.World.RoutePath viewRoad;
         static LaneBot bot;
         static string swerve = "";
 
@@ -91,6 +92,16 @@ namespace SurviveI95.EditorTools
                     RenderSettings.ambientProbe.Evaluate(dirs, got);
                     return FormattableString.Invariant($"mode={RenderSettings.ambientMode} up={got[0]} east={got[1]} north={got[2]} down={got[3]} reflections={RenderSettings.defaultReflectionMode} x{RenderSettings.reflectionIntensity:F2} fog={RenderSettings.fogColor} density={RenderSettings.fogDensity}");
                 }
+                case "viewshot": // name s lat height lookS lookLat lookHeight: a camera anywhere along the road, for before-and-after pairs (edit or Play mode)
+                {
+                    var vr = car != null ? car.Path : (viewRoad ??= SurviveI95.World.RoutePath.Load("miami_ftl"));
+                    var vc = Camera.main; var keepPos = vc.transform.position; var keepRot = vc.transform.rotation;
+                    var from = vr.Point(F(a, 3), F(a, 4)) + Vector3.up * F(a, 5); var to = vr.Point(F(a, 6), F(a, 7)) + Vector3.up * F(a, 8);
+                    vc.transform.SetPositionAndRotation(from, Quaternion.LookRotation(to - from));
+                    var vp = Shot(a[2]);
+                    vc.transform.SetPositionAndRotation(keepPos, keepRot);
+                    return vp;
+                }
                 case "sunshot": return Shot(a[2], true); // a screenshot aimed straight at the sun, to check the sky and the shadows agree
             }
             if (car == null) return "ERROR not in play mode";
@@ -131,6 +142,8 @@ namespace SurviveI95.EditorTools
                     return $"exit {a[2]} at s={j.divergeS:F0} merge {j.mergeS:F0} length {j.road.Length:F0} of {car.Path.Junctions.Count}";
                 case "release": PlayerCar.AutoDriver = null; return "released";
                 case "cockpit": car.SetCockpit(a[2] == "on"); return "cockpit " + a[2];
+                case "orbit": car.TestOrbit(F(a, 2), F(a, 3)); return "orbit set; now " + car.OrbitYaw.ToString("F0"); // yaw pitch: swings the chase camera as the mouse would
+                case "orbitnow": return "orbit yaw " + car.OrbitYaw.ToString("F1");
                 case "look": car.ScriptedLook = new Vector2(F(a, 2), F(a, 3)); return "looking";
                 case "place": car.Place(F(a, 2)); return "placed";
                 case "status":
@@ -233,7 +246,7 @@ namespace SurviveI95.EditorTools
                 }
                 case "swerveresult": return swerve;
                 case "lamps": return car.LampState;
-                case "screen": { string sp = Path.Combine(Dir, "shots", a[2] + ".png"); if (File.Exists(sp)) File.Delete(sp); ScreenCapture.CaptureScreenshot(sp); return sp + " (game view, with the HUD; written at the end of the frame)"; }
+                case "screen": { string sp = Path.Combine(Dir, "shots", a[2] + ".png"); if (File.Exists(sp)) File.Delete(sp); ScreenCapture.CaptureScreenshot(sp, a.Length > 3 ? (int)F(a, 3) : 1); return sp + " (game view, with the HUD; written at the end of the frame)"; }
                 case "notice": car.GetComponent<TrafficManager>().Show(string.Join(" ", a, 2, a.Length - 2)); return "notice shown";
                 case "card": { var cp = string.Join(" ", a, 2, a.Length - 2).Split('|'); car.Hud.ShowCard(cp[0], cp.Length > 1 ? cp[1] : "", cp.Length > 2 ? cp[2] : "", 30f); return "card"; } // top|BIG|small, held 30 s for screenshots
                 case "hudcorner": car.Hud.SetCorner((int)F(a, 2)); return "hud corner " + a[2];

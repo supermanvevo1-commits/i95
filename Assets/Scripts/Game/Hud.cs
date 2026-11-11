@@ -11,7 +11,7 @@ namespace SurviveI95.Game
     /// in the cockpit the car's own gauges do the job. Everything is drawn from textures made here, so there are no image
     /// files to keep, and sized to the screen height so it looks the same at any resolution.
     /// </summary>
-    public class Hud : MonoBehaviour
+    public partial class Hud : MonoBehaviour
     {
         const float DialMaxMph = 160f, SweepDeg = 250f, Ref = 1080f;
         // Florida troopers seldom stop anyone under about 10 over; from 20 over it is a near-certain ticket.
@@ -34,6 +34,7 @@ namespace SurviveI95.Game
             LoadPlaces();
             dial = MakeDial(512); needle = MakeNeedle(); hub = MakeDisc(64, new Color(.12f, .13f, .14f), new Color(.32f, .34f, .36f));
             mark = MakeMark(); arrow = MakeArrow(); beam = MakeBeam(); white = Solid(Color.white); soft = MakeSoft();
+            StartMap();
         }
 
         void Update()
@@ -44,6 +45,7 @@ namespace SurviveI95.Game
             float mph = Mathf.Abs(car.Sim.Speed) * DriveSim.MetersPerSecondToMph;
             needleMph = Mathf.Lerp(needleMph, mph, 1f - Mathf.Exp(-Time.deltaTime * 9f));
             UpdateCards();
+            UpdateMap();
         }
 
         // ---------------------------------------------------------------- title and place cards
@@ -248,6 +250,7 @@ namespace SurviveI95.Game
             if (l) Rotated(arrow, new Rect(ax, ay, 40f * s, 36f * s), new Vector2(ax + 20f * s, ay + 18f * s), 180f, on);
             if (rr) { GUI.color = on; GUI.DrawTexture(new Rect(ax + 100f * s, ay, 40f * s, 36f * s), arrow); GUI.color = Color.white; }
 
+            DrawMap(!right, bottom); // across from the speedometer
             DrawCard();
 
             // Center messages: short confirmations, looking back, and a disabled car.

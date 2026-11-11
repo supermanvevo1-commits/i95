@@ -44,7 +44,22 @@
 - "2001 Crown Victoria Police Interceptor Game Prop" by 8sianDude, CC BY 4.0, https://sketchfab.com/3d-models/none-9f30d360cee343efb5a441978ddb57bd
 - grass_ground (texture), Poly Haven, CC0, https://polyhaven.com/a/grass_ground
 - brushed_concrete (texture), Poly Haven, CC0, https://polyhaven.com/a/brushed_concrete
-- Road geometry: OpenStreetMap contributors, ODbL. Elevation: USGS 3DEP, public domain.
+- Road geometry and minimap streets: OpenStreetMap contributors, ODbL. Elevation: USGS 3DEP, public domain.
 - kloofendal_48d_partly_cloudy_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
 - Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org
 - Barlow Semi Condensed (font) by Jeremy Tribby, SIL Open Font License 1.1, https://tribby.com/fonts/barlow/
+- island_tree_01 (model), Poly Haven, CC0, https://polyhaven.com/a/island_tree_01
+- island_tree_02 (model), Poly Haven, CC0, https://polyhaven.com/a/island_tree_02
+- island_tree_03 (model), Poly Haven, CC0, https://polyhaven.com/a/island_tree_03
+- shrub_01 (model), Poly Haven, CC0, https://polyhaven.com/a/shrub_01
+- shrub_02 (model), Poly Haven, CC0, https://polyhaven.com/a/shrub_02
+- shrub_03 (model), Poly Haven, CC0, https://polyhaven.com/a/shrub_03
+- shrub_04 (model), Poly Haven, CC0, https://polyhaven.com/a/shrub_04
+- grass_bermuda_01 (model), Poly Haven, CC0, https://polyhaven.com/a/grass_bermuda_01
+- grass_medium_02 (model), Poly Haven, CC0, https://polyhaven.com/a/grass_medium_02
+- modular_chainlink_fence (model), Poly Haven, CC0, https://polyhaven.com/a/modular_chainlink_fence
+- modular_electricity_poles (model), Poly Haven, CC0, https://polyhaven.com/a/modular_electricity_poles
+- fire_hydrant (model), Poly Haven, CC0, https://polyhaven.com/a/fire_hydrant
+- "Coconut Palm" by evolveduk, CC Attribution, https://sketchfab.com/3d-models/coconut-palm-26e787f2ff2e4c0fb004c3b0210805a3
+- "Curly Palm" by evolveduk, CC Attribution, https://sketchfab.com/3d-models/curly-palm-00f2b57dd0e844edbeb116034fa471ec
+- "Palm Tree Realistic" by 00amza, CC Attribution, https://sketchfab.com/3d-models/palm-tree-realistic-ced3b31f14f940d0b7480a83e6f8c9c0

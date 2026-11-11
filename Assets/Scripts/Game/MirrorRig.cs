@@ -32,6 +32,7 @@ namespace SurviveI95.Game
             go.transform.localRotation = Quaternion.Euler(0, 180f + yaw, 0);
             var cam = go.GetComponent<Camera>();
             cam.targetTexture = rt; cam.fieldOfView = 34f; cam.nearClipPlane = near; cam.farClipPlane = 1500f; cam.depth = -10; cam.allowHDR = false; cam.allowMSAA = false;
+            cam.cullingMask &= ~(1 << Minimap.Layer); // the minimap's flat world lies far below and isn't for mirrors
             var data = cam.GetUniversalAdditionalCameraData();
             data.renderShadows = false; data.requiresDepthTexture = false; data.requiresColorTexture = false;
             var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
