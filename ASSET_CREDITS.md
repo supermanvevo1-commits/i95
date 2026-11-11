@@ -47,3 +47,4 @@
 - Road geometry: OpenStreetMap contributors, ODbL. Elevation: USGS 3DEP, public domain.
 - kloofendal_48d_partly_cloudy_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
 - Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org
+- Barlow Semi Condensed (font) by Jeremy Tribby, SIL Open Font License 1.1, https://tribby.com/fonts/barlow/

@@ -18,7 +18,10 @@ const ENV = {
   hdris: ['derelict_highway_noon', 'evening_road_01', 'citrus_orchard_road_puresky', 'autumn_field_puresky', 'kloofendal_48d_partly_cloudy_puresky@4k'],
   models: ['concrete_road_barrier', 'street_lamp_01', 'pine_tree_01', 'grass_medium_01'],
   // Overpass is an open-license lookalike of the US highway sign typeface.
-  fonts: [{ file: 'Overpass-Bold.ttf', url: 'https://github.com/RedHatOfficial/Overpass/raw/master/fonts/ttf/Overpass-Bold.ttf', credit: 'Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org' }]
+  fonts: [{ file: 'Overpass-Bold.ttf', url: 'https://github.com/RedHatOfficial/Overpass/raw/master/fonts/ttf/Overpass-Bold.ttf', credit: 'Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org' },
+    // Barlow Semi Condensed is the dashboard font for the HUD.
+    { file: 'BarlowSemiCondensed-Bold.ttf', url: 'https://github.com/google/fonts/raw/main/ofl/barlowsemicondensed/BarlowSemiCondensed-Bold.ttf', credit: 'Barlow Semi Condensed (font) by Jeremy Tribby, SIL Open Font License 1.1, https://tribby.com/fonts/barlow/' },
+    { file: 'BarlowSemiCondensed-Medium.ttf', url: 'https://github.com/google/fonts/raw/main/ofl/barlowsemicondensed/BarlowSemiCondensed-Medium.ttf', credit: 'Barlow Semi Condensed (font) by Jeremy Tribby, SIL Open Font License 1.1, https://tribby.com/fonts/barlow/' }]
 };
 const VEHICLES = {
   sedan: 'sedan car', coupe: 'coupe car', hatchback: 'hatchback', convertible: 'convertible car', station_wagon: 'station wagon',

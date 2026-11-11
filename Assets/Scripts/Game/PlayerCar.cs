@@ -13,6 +13,9 @@ namespace SurviveI95.Game
         public float startS = 300f;
         public Camera chaseCamera;
         public Material smokeMaterial;
+        /// <summary>The HUD's dashboard font (Barlow Semi Condensed), set by the scene builder.</summary>
+        public Font hudFontBold, hudFontMedium;
+        public Hud Hud { get; private set; }
         /// <summary>Test view from in front of the car, for inspecting crash damage.</summary>
         public bool FrontView;
         /// <summary>Test view from high above, for inspecting the surroundings.</summary>
@@ -87,6 +90,14 @@ namespace SurviveI95.Game
         /// <summary>The player's turn signal: -1 left, +1 right, 0 off (same as traffic). Z and X toggle it.</summary>
         public int Signal { get; private set; }
         public bool HighBeams { get; private set; }
+        /// <summary>Hazard lights, toggled with G.</summary>
+        public bool Hazards { get; private set; }
+        /// <summary>True while the brake lights are on: the brake pedal is down (cruise's gentle braking counts, as in a real car).</summary>
+        public bool BrakeLights { get; private set; }
+        CarLamps lamps;
+        public string LampState => lamps == null ? "no lamps" : lamps.State() + $" signal={Signal} hazards={Hazards} brake={BrakeLights} high={HighBeams}";
+        [System.NonSerialized] public bool? TestBrakeLights;
+        public void TestHazards(bool on) => Hazards = on;
         float signalSince, signalLat;
 
         void UpdateSignals(Keyboard k)
@@ -97,6 +108,7 @@ namespace SurviveI95.Game
             // Cancels itself once the lane change is done, or after a while, like a real stalk.
             if (Signal != 0 && (Mathf.Abs(Sim.Lateral - signalLat) > 3.2f || Time.time - signalSince > 12f)) Signal = 0;
             HighBeams = TestHighBeams || k.hKey.isPressed;
+            if (k.gKey.wasPressedThisFrame) { Hazards = !Hazards; Flash(Hazards ? "Hazards on" : "Hazards off"); }
         }
 
         void SetSignal(int s) { Signal = s; signalSince = Time.time; signalLat = Sim.Lateral; }
@@ -107,11 +119,20 @@ namespace SurviveI95.Game
         const float CruiseStepMph = 5f;
         bool cruiseOn;
         float cruiseSet, cruiseI;
+        public bool CruiseOn => cruiseOn;
+        public float CruiseSetMph => cruiseSet * DriveSim.MetersPerSecondToMph;
+        public bool LookingBack => lookingBack;
+        /// <summary>A short confirmation on screen ("Cruise 70 mph"), or null.</summary>
+        public string FlashText => flash != null && Time.unscaledTime < flashUntil ? flash : null;
+        /// <summary>The gear the lever shows: P, R, N or D.</summary>
+        public string GearLetter => string.IsNullOrEmpty(shownGear) ? Sim.Gear.ToString() : shownGear;
+        /// <summary>The posted limit where the car is, in mph, or 0 off the highway.</summary>
+        public float LimitMph => Sim.Current == null ? Path.LimitMph(Sim.S) : 0f;
         public string CruiseStatus => cruiseOn ? $"cruise {Mathf.RoundToInt(cruiseSet * DriveSim.MetersPerSecondToMph)} mph" : "cruise off";
 
         void Awake()
         {
-            Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious();
+            Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); lamps = new CarLamps(transform, model); Hud = gameObject.AddComponent<Hud>(); Hud.Init(this); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious();
             BaseFov = Mathf.Clamp(PlayerPrefs.GetFloat("fov", DefaultFov), 40f, 80f); fovSmooth = BaseFov;
             FindMirrors();
         }
@@ -270,6 +291,7 @@ namespace SurviveI95.Game
             var input = AutoDriver != null ? AutoDriver(Path, Sim) : ReadKeyboard();
             StorePrevious();
             int roads = Sim.RoadSwitches;
+            BrakeLights = TestBrakeLights ?? (input.Brake > .02f && Sim.Speed > -.3f);
             Sim.Step(Path, input, Time.fixedDeltaTime);
             if (Mathf.Abs(Sim.S - prevS) > 20f || roads != Sim.RoadSwitches) StorePrevious(); // respawned or changed road
         }
@@ -328,6 +350,7 @@ namespace SurviveI95.Game
             ApplyVisuals(visualSteer);
             UpdateGauges();
             UpdateDamageVisuals();
+            lamps?.Update(Signal, Hazards, BrakeLights, HighBeams);
             if (Sim.BrokenCount != shownBroken) { shownBroken = Sim.BrokenCount; KnockDownSign(); }
         }
 
@@ -670,38 +693,6 @@ namespace SurviveI95.Game
             if (chaseCamera == null) return;
             camYaw = transform.eulerAngles.y;
             ApplyCamera();
-        }
-
-        void OnGUI()
-        {
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 32, fontStyle = FontStyle.Bold, alignment = TextAnchor.LowerRight };
-            GUI.Label(new Rect(Screen.width - 330, Screen.height - 70, 300, 56), Mathf.RoundToInt(Mathf.Abs(Sim.Speed) * DriveSim.MetersPerSecondToMph) + " MPH", style);
-            var info = new GUIStyle(style) { fontSize = 22 };
-            float line = Screen.height - 108;
-            if (cruiseOn)
-            {
-                var cruise = new GUIStyle(info); cruise.normal.textColor = new Color(.45f, 1f, .55f);
-                GUI.Label(new Rect(Screen.width - 330, line, 300, 40), "CRUISE " + Mathf.RoundToInt(cruiseSet * DriveSim.MetersPerSecondToMph), cruise);
-                line -= 34;
-            }
-            if (flash != null && Time.unscaledTime < flashUntil)
-            {
-                var mid = new GUIStyle(info) { alignment = TextAnchor.MiddleCenter };
-                GUI.Label(new Rect(0, Screen.height * .72f, Screen.width, 40), flash, mid);
-            }
-            if (lookingBack) { var mid = new GUIStyle(info) { alignment = TextAnchor.UpperCenter }; GUI.Label(new Rect(0, 18, Screen.width, 40), "LOOKING BACK", mid); }
-            // Blinking signal arrows and a high-beam marker. Placeholders until the designed HUD (M5).
-            bool blink = Mathf.Repeat(Time.time * 1.6f, 1f) < .55f;
-            var arrow = new GUIStyle(info) { fontSize = 40 }; arrow.normal.textColor = new Color(.3f, 1f, .4f);
-            if (Signal == -1 && blink) GUI.Label(new Rect(Screen.width - 330, line - 44, 60, 50), "◄", arrow);
-            if (Signal == 1 && blink) GUI.Label(new Rect(Screen.width - 80, line - 44, 60, 50), "►", arrow);
-            if (HighBeams) { var hb = new GUIStyle(info); hb.normal.textColor = new Color(.45f, .7f, 1f); GUI.Label(new Rect(Screen.width - 330, line - 80, 300, 40), "HIGH BEAMS", hb); }
-            if (Sim.Damage > 0.01f)
-            {
-                var small = info;
-                GUI.Label(new Rect(Screen.width - 330, line, 300, 40), "DAMAGE " + Mathf.RoundToInt(Sim.Damage * 100f) + "%", small);
-                if (Sim.Disabled) { var big = new GUIStyle(style) { alignment = TextAnchor.MiddleCenter, fontSize = 34 }; GUI.Label(new Rect(0, Screen.height * 0.3f, Screen.width, 60), "CAR DISABLED - PRESS R TO RECOVER", big); }
-            }
         }
     }
 }

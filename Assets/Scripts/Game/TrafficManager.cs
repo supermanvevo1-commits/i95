@@ -86,7 +86,7 @@ namespace SurviveI95.Game
             paintMaterials = new Material[Paints.Length][];
             for (int i = 0; i < Paints.Length; i++) paintMaterials[i] = Set(Surface(lit, Paints[i], .62f, .1f));
             taxi = Set(Surface(lit, new Color(.85f, .55f, .03f), .62f, .1f));
-            amber = Glow(new Color(1f, .55f, .05f)); red = Glow(new Color(1f, .05f, .04f)); white = Glow(new Color(1f, 1f, .92f));
+            amber = Glow(CarLamps.Amber); red = Glow(CarLamps.Red); white = Glow(CarLamps.White); // the same lit colors as the player car
         }
 
         void FixedUpdate()
@@ -180,12 +180,7 @@ namespace SurviveI95.Game
         {
             if (string.IsNullOrEmpty(notice) || Time.time > noticeUntil) return;
             float alpha = Mathf.Clamp01((noticeUntil - Time.time) / .6f);
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = true };
-            var r = new Rect(Screen.width * .15f, Screen.height * .12f, Screen.width * .7f, 50f);
-            style.normal.textColor = new Color(0f, 0f, 0f, .8f * alpha);
-            GUI.Label(new Rect(r.x + 2f, r.y + 2f, r.width, r.height), notice, style);
-            style.normal.textColor = new Color(1f, .93f, .78f, alpha);
-            GUI.Label(r, notice, style);
+            if (player.Hud != null) player.Hud.DrawNotice(notice, alpha);
         }
 
         void Update()
@@ -194,7 +189,7 @@ namespace SurviveI95.Game
             RoutePath road = player.Path;
             float t = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
             float playerS = player.Sim.Current == null ? player.Sim.S : player.Sim.CurrentJunction.divergeS + player.Sim.S;
-            bool blink = Mathf.Repeat(Time.time * 1.5f, 1f) < .5f;
+            bool blink = CarLamps.Blink;
             foreach (var c in Sim.Cars)
             {
                 var v = c.View as View;

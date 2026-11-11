@@ -69,6 +69,14 @@ namespace SurviveI95.EditorTools
             if (shots != null) Screenshots(car, cam, path, shots);
         }
 
+        static void AssignHudFonts(PlayerCar player)
+        {
+            player.hudFontBold = AssetDatabase.LoadAssetAtPath<Font>("Assets/ThirdParty/Fonts/BarlowSemiCondensed-Bold.ttf");
+            player.hudFontMedium = AssetDatabase.LoadAssetAtPath<Font>("Assets/ThirdParty/Fonts/BarlowSemiCondensed-Medium.ttf");
+            if (player.hudFontBold == null) Debug.LogWarning("[FloridaSlice] HUD font missing (run node Tools/fetch_assets.js environment)");
+            EditorUtility.SetDirty(player);
+        }
+
         static Mats LoadMats()
         {
             Material M(string name) => AssetDatabase.LoadAssetAtPath<Material>($"{Gen}/Materials/{name}.mat");
@@ -84,7 +92,8 @@ namespace SurviveI95.EditorTools
             var path = RoutePath.Load(RouteId);
             var m = LoadMats();
             placed.Clear();
-            if (part == "signs")
+            if (part == "hud") { }
+            else if (part == "signs")
             {
                 var old = GameObject.Find("Signs"); if (old != null) UnityEngine.Object.DestroyImmediate(old);
                 BuildSigns(path, m);
@@ -97,6 +106,7 @@ namespace SurviveI95.EditorTools
                     UnityEngine.Object.DestroyImmediate(old);
                 BuildBarriers(road, path, m);
             }
+            else if (part == "hud") AssignHudFonts(UnityEngine.Object.FindAnyObjectByType<PlayerCar>());
             else return "ERROR unknown part " + part;
             placed.Clear();
             var scene = EditorSceneManager.GetActiveScene();
@@ -1186,6 +1196,7 @@ namespace SurviveI95.EditorTools
             root.AddComponent<TrafficManager>();
             player.chaseCamera = cam;
             player.routeId = RouteId;
+            AssignHudFonts(player);
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(CarPath);
             if (model == null) { Debug.LogError("[FloridaSlice] car model missing"); return player; }
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(model);

@@ -24,7 +24,8 @@ An arcade survival driving game along I-95, from Miami to Maine. Unity 6 (6000.6
 
 ## Unity live bridge
 - `Tools/live.ps1 <command> [args]` sends commands to the open editor through `.livebridge/`. Commands are in `Assets/Editor/LiveBridge.cs` (`Run`): play, stop, refresh, rebuild, launch, drive, cruise, place, shot, status, traffic, cars, speeds, profiles, tempers, regulars, notices, trafficbench and more.
-- Screenshots land in `.livebridge/shots/`.
+- Screenshots land in `.livebridge/shots/`. `shot` renders the 3D view only, at 1600x900. `screen` captures the game view as the player sees it, with the HUD, at the game window's size.
+- Lamp and HUD test commands: `lamps`, `brakelights on|off|auto`, `hazards on|off`, `blink on|off|auto` (holds the flasher for screenshots), `signal -1|0|1`, `highbeams on|off`, `hudcorner 0-3`, `notice <text>`.
 - `trafficbench <seconds> <cars> <anchor m/s> <seed> [season]` runs traffic without rendering, much faster than real time, and reports lane speeds, age bands, plates and driver profiles. Unprovoked and chain crashes must stay at 0.
 - `Tools/compile.ps1` stops Play mode, refreshes, and waits for the compile.
 - Compile errors do NOT appear in `.livebridge/console.log`. After a refresh, compare the timestamps of `Library/ScriptAssemblies/Assembly-CSharp.dll` and `Assembly-CSharp-Editor.dll` with your edit. A stale dll means the compile failed: Unity keeps running old code and Play mode silently won't start. The errors are in `Library/Bee/tundra.log.json` (search for `error CS`).

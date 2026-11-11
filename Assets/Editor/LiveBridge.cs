@@ -232,6 +232,28 @@ namespace SurviveI95.EditorTools
                     return "swerving";
                 }
                 case "swerveresult": return swerve;
+                case "lamps": return car.LampState;
+                case "screen": { string sp = Path.Combine(Dir, "shots", a[2] + ".png"); if (File.Exists(sp)) File.Delete(sp); ScreenCapture.CaptureScreenshot(sp); return sp + " (game view, with the HUD; written at the end of the frame)"; }
+                case "notice": car.GetComponent<TrafficManager>().Show(string.Join(" ", a, 2, a.Length - 2)); return "notice shown";
+                case "hudcorner": car.Hud.SetCorner((int)F(a, 2)); return "hud corner " + a[2];
+                case "flashtest": car.ScrollCruise(0); return "ok";
+                case "blink": CarLamps.BlinkTest = a[2] == "auto" ? (bool?)null : a[2] == "on"; return "blink " + a[2];
+                case "brakelights": car.TestBrakeLights = a[2] == "auto" ? (bool?)null : a[2] == "on"; return "brake lights " + a[2];
+                case "hazards": car.TestHazards(a[2] == "on"); return "hazards " + a[2];
+                case "carparts": // the player model's parts in car space (x right, y up, z forward), with materials, to find lamps and glass
+                {
+                    var sbp = new System.Text.StringBuilder();
+                    foreach (var pr in car.transform.Find("Model").GetComponentsInChildren<MeshRenderer>())
+                    {
+                        var pb = pr.bounds; var pc = car.transform.InverseTransformPoint(pb.center);
+                        var pm = pr.sharedMaterial; string col = "";
+                        if (pm != null) foreach (var prop in new[] { "baseColorFactor", "_BaseColor", "_Color" }) if (pm.HasProperty(prop)) { var cc = pm.GetColor(prop); col = FormattableString.Invariant($"col({cc.r:F2},{cc.g:F2},{cc.b:F2},{cc.a:F2}) "); break; }
+                        if (pm != null && pm.HasProperty("emissiveFactor")) { var ec = pm.GetColor("emissiveFactor"); col += FormattableString.Invariant($"emit({ec.r:F2},{ec.g:F2},{ec.b:F2}) "); }
+                        sbp.AppendLine(FormattableString.Invariant($"{pr.name} | {string.Join(",", Array.ConvertAll(pr.sharedMaterials, x => x ? x.name : "null"))} | {col}{(pm ? pm.shader.name : "")} | c({pc.x:F2},{pc.y:F2},{pc.z:F2}) s({pb.size.x:F2},{pb.size.y:F2},{pb.size.z:F2})"));
+                    }
+                    File.WriteAllText(Path.Combine(Dir, "carparts.txt"), sbp.ToString());
+                    return "written carparts.txt";
+                }
                 case "person": // carId years skill: who's driving that car, for tests
                 {
                     var c = car.GetComponent<TrafficManager>().Sim.Cars.Find(o => o.Id == (int)F(a, 2));
