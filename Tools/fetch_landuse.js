@@ -84,12 +84,21 @@ function businessOf(t) {
   return BUSINESS[t.amenity] || BUSINESS[t.shop] || BUSINESS[t.office] || BUSINESS[t.tourism] || BUSINESS[t.healthcare] || (t.shop ? 'shop' : null);
 }
 
-// The route in pieces of about 6 km, so no single request is too heavy for the server.
+// The route in pieces of about 3 km, so no single request is too heavy for the server. Each piece is saved as it
+// arrives (Tools/Data/cache), so a run that dies keeps what it got, and a piece that keeps failing is skipped.
+const cacheDir = path.join(root, 'Tools/Data/cache'); fs.mkdirSync(cacheDir, { recursive: true });
+let stage = 0;
 async function each(make) {
-  const out = [], seen = new Set();
+  const out = [], seen = new Set(); stage++;
   for (let i = 0; i < samples.length; i += 4) {
     const part = samples.slice(i, i + 4).join(',');
-    const got = await query(make(part));
+    const cf = path.join(cacheDir, `${id}_${stage}_${i}.json`);
+    let got;
+    if (fs.existsSync(cf)) got = JSON.parse(fs.readFileSync(cf, 'utf8'));
+    else {
+      try { got = await query(make(part)); fs.writeFileSync(cf, JSON.stringify(got)); }
+      catch (e) { console.log('\nskipped a piece:', e.message); got = []; }
+    }
     for (const e of got) { const k = e.type + e.id; if (!seen.has(k)) { seen.add(k); out.push(e); } }
     process.stdout.write('.');
   }

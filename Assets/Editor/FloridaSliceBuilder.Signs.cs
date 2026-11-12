@@ -311,17 +311,7 @@ namespace SurviveI95.EditorTools
                 RoadSign(t, p, s + (changed ? 60f : 0f), 5.6f, 1.8f, null, new[] { L("SPEED", .24f), L("LIMIT", .24f), L(mph.ToString("0"), .58f) }, m.white, signBlack, SignInk, m);
                 lastSign = s; lastMph = mph;
             }
-            string[] ads = { "HURT ON I-95?\nCALL BIG RICK", "GATOR WORLD\nNEXT EXIT", "FIREWORKS\nFIREWORKS\nFIREWORKS", "EARLY BIRD\nBUFFET 3:45PM" };
-            for (int i = 0; i < 9; i++)
-            {
-                // Billboards keep clear of exit signs, so nothing competes with them.
-                float at = 1400f + i * 2500f;
-                while (p.Junctions.Any(j => at > j.divergeS - 900f && at < j.mergeS + 40f)) at += 100f;
-                var words = ads[i % ads.Length].Split('\n');
-                float cap = Mathf.Min(1.1f, 1.1f * 12.5f / words.Max(w => Width(w, 1.1f)));
-                Debug.Log("[FloridaSlice] billboard at " + at.ToString("F0") + ": " + string.Join(" / ", words));
-                RoadSign(t, p, at, 14.5f, 6f, null, words.Select(w => L(w, cap)).ToArray(), m.billboard, signBlack, new Color(.08f, .08f, .08f), m, minWidth: 15f);
-            }
+            // Billboards are built after the city (FloridaSliceBuilder.Billboards.cs), so they never stand behind a building.
             Debug.Log("[FloridaSlice] sign panel shapes " + plates.Count);
         }
     }

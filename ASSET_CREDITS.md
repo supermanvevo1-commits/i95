@@ -63,3 +63,8 @@
 - "Coconut Palm" by evolveduk, CC Attribution, https://sketchfab.com/3d-models/coconut-palm-26e787f2ff2e4c0fb004c3b0210805a3
 - "Curly Palm" by evolveduk, CC Attribution, https://sketchfab.com/3d-models/curly-palm-00f2b57dd0e844edbeb116034fa471ec
 - "Palm Tree Realistic" by 00amza, CC Attribution, https://sketchfab.com/3d-models/palm-tree-realistic-ced3b31f14f940d0b7480a83e6f8c9c0
+- grey_plaster (texture), Poly Haven, CC0, https://polyhaven.com/a/grey_plaster
+- painted_plaster_wall (texture), Poly Haven, CC0, https://polyhaven.com/a/painted_plaster_wall
+- clay_roof_tiles_02 (texture), Poly Haven, CC0, https://polyhaven.com/a/clay_roof_tiles_02
+- grey_roof_tiles (texture), Poly Haven, CC0, https://polyhaven.com/a/grey_roof_tiles
+- concrete_wall_004 (texture), Poly Haven, CC0, https://polyhaven.com/a/concrete_wall_004

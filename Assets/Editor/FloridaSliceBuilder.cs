@@ -747,43 +747,75 @@ namespace SurviveI95.EditorTools
         [Serializable] class BuildingFile { public BuildingRow[] items; }
         static readonly HashSet<(int, int)> occupied = new HashSet<(int, int)>();
 
+        /// <summary>
+        /// Office and tower walls, 8 bays by 8 floors (3.6 m by 3.4 m each). Kind 0: a glass curtain wall with aluminum
+        /// mullions, a dark spandrel at each floor, sky and cloud reflections that drift across the face, and blinds at
+        /// random heights. Kind 1: a white condo tower with slab edges, glass balcony rails and sliding doors.
+        /// Kind 2: an office with ribbon windows between concrete bands. Kind 3: punched windows in stucco.
+        /// </summary>
         static Material Facade(string name, Color wall, Color glass, int kind, int seed, float smooth)
         {
-            const int size = 256, cells = 8, cw = size / cells;
+            const int size = 1024, cells = 8, cw = size / cells;
             var rnd = new System.Random(seed);
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, true);
-            var pane = new Color[cells * cells];
-            for (int i = 0; i < pane.Length; i++)
+            var cv = new Canvas(size, size, wall);
+            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++) cv.px[y * size + x] = Grain(wall, x, y, seed + 900, .06f);
+            // Glass tinted by what it reflects: brighter sky at the top of each pane, big soft clouds drifting across.
+            Color Pane(int x, int y, float top)
             {
-                double roll = rnd.NextDouble();
-                float spread = kind == 0 ? .1f : .32f, blindChance = kind == 0 ? .03f : .16f;
-                pane[i] = roll < blindChance ? Color.Lerp(glass, new Color(.72f, .7f, .62f), kind == 0 ? .25f : .55f) : glass * (float)(1f - spread / 2f + rnd.NextDouble() * spread);
-                pane[i].a = 1f;
+                float cloud = Noise(x / 150f, y / 110f, 7, 10, seed + 7);
+                var c = Color.Lerp(glass * .78f, Color.Lerp(glass, new Color(.62f, .7f, .78f), .45f), top * .7f + cloud * .35f);
+                c *= .95f + Hash(x / cw, y / cw, seed) * .1f; c.a = 1f; return c;
             }
-            var missing = new bool[cells * cells];
-            for (int i = 0; i < missing.Length; i++) missing[i] = kind == 3 && rnd.NextDouble() < .22;
-            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++)
+            for (int fy = 0; fy < cells; fy++) for (int bx = 0; bx < cells; bx++)
             {
-                int ix = x / cw, iy = y / cw, px = x % cw, py = y % cw;
-                bool win;
+                int x0 = bx * cw, y0 = fy * cw;
+                float blind = rnd.NextDouble() < (kind == 0 ? .25 : .35) ? (float)rnd.NextDouble() : 0f; // blinds pulled part way down
+                var blindC = new Color(.78f, .76f, .7f) * (.9f + (float)rnd.NextDouble() * .15f);
                 switch (kind)
                 {
-                    case 0: win = px > 0 && py > 1; break;
-                    case 1: win = px > 8 && px < 24 && py > 9 && py < 26; break;
-                    case 2: win = py > 12 && py < 26 && px % 11 != 0; break;
-                    default: win = !missing[ix + iy * cells] && px > 10 && px < 22 && py > 10 && py < 25; break;
+                    case 0:
+                        for (int y = y0 + 22; y < y0 + cw; y++) for (int x = x0; x < x0 + cw; x++)
+                        {
+                            float top = (y - y0 - 22) / (float)(cw - 22);
+                            cv.px[y * size + x] = blind > 0 && top > 1f - blind * .6f ? Color.Lerp(Pane(x, y, top), blindC, .55f) : Pane(x, y, top);
+                        }
+                        cv.Rect(x0, y0, x0 + cw, y0 + 22, Color.Lerp(glass, wall, .5f) * .7f);   // spandrel
+                        cv.Rect(x0, y0 + 20, x0 + cw, y0 + 24, new Color(.62f, .64f, .66f));     // transom
+                        cv.Rect(x0, y0, x0 + 4, y0 + cw, new Color(.62f, .64f, .66f));            // mullion
+                        cv.Rect(x0 + cw / 2 - 1, y0 + 22, x0 + cw / 2 + 2, y0 + cw, new Color(.55f, .57f, .6f));
+                        break;
+                    case 1:
+                        cv.Rect(x0, y0, x0 + cw, y0 + 14, new Color(.95f, .95f, .93f));           // slab edge
+                        for (int y = y0 + 14; y < y0 + cw - 6; y++) for (int x = x0 + 6; x < x0 + cw - 6; x++)
+                        {
+                            float top = (y - y0 - 14) / (float)(cw - 20);
+                            cv.px[y * size + x] = blind > 0 && top > 1f - blind * .5f ? Color.Lerp(Pane(x, y, top), blindC, .7f) : Pane(x, y, top) * .85f;
+                        }
+                        cv.Rect(x0 + cw / 2 - 2, y0 + 14, x0 + cw / 2 + 2, y0 + cw - 6, new Color(.8f, .8f, .78f));
+                        // The balcony's glass rail, lighter and see-through, with its cap.
+                        cv.Rect(x0, y0 + 14, x0 + cw, y0 + 50, new Color(.6f, .75f, .8f), .45f);
+                        cv.Rect(x0, y0 + 50, x0 + cw, y0 + 53, new Color(.85f, .86f, .86f));
+                        if (bx % 4 == 0) cv.Rect(x0, y0, x0 + 8, y0 + cw, wall * .92f);
+                        break;
+                    case 2:
+                        for (int y = y0 + 44; y < y0 + 100; y++) for (int x = x0; x < x0 + cw; x++)
+                        {
+                            float top = (y - y0 - 44) / 56f;
+                            cv.px[y * size + x] = blind > 0 && top > 1f - blind * .7f ? Color.Lerp(Pane(x, y, top), blindC, .6f) : Pane(x, y, top);
+                        }
+                        for (int mx = x0; mx < x0 + cw; mx += cw / 3) cv.Rect(mx, y0 + 44, mx + 3, y0 + 100, new Color(.5f, .52f, .55f));
+                        cv.Mul(x0, y0 + 38, x0 + cw, y0 + 44, .85f);
+                        break;
+                    default:
+                        if (rnd.NextDouble() < .2) break;
+                        for (int y = y0 + 38; y < y0 + 100; y++) for (int x = x0 + 40; x < x0 + 88; x++) cv.px[y * size + x] = Pane(x, y, (y - y0 - 38) / 62f);
+                        cv.Frame(x0 + 38, y0 + 36, x0 + 90, y0 + 102, 3, new Color(.93f, .93f, .9f));
+                        break;
                 }
-                float grain = 1f + (float)(rnd.NextDouble() - .5) * .05f;
-                var c = win ? pane[ix + iy * cells] : wall * grain;
-                c.a = 1f;
-                tex.SetPixel(x, y, c);
             }
-            tex.Apply();
-            string file = $"{Gen}/Materials/{name}.png";
-            File.WriteAllBytes(file, tex.EncodeToPNG());
-            AssetDatabase.ImportAsset(file);
+            var tex = cv.Save(name);
             var mat = Lit(name, Color.white, smooth);
-            mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(file));
+            mat.SetTexture("_BaseMap", tex);
             return mat;
         }
 

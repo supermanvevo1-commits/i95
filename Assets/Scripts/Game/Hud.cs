@@ -40,7 +40,7 @@ namespace SurviveI95.Game
         void Update()
         {
             var k = Keyboard.current;
-            if (k != null && k.f2Key.wasPressedThisFrame) { Corner = (Corner + 1) % 4; PlayerPrefs.SetInt("hudCorner", Corner); }
+            if ((k != null && k.f2Key.wasPressedThisFrame) || (UnityEngine.InputSystem.Gamepad.current != null && UnityEngine.InputSystem.Gamepad.current.selectButton.wasPressedThisFrame)) { Corner = (Corner + 1) % 4; PlayerPrefs.SetInt("hudCorner", Corner); }
             // The needle has a little weight to it, like a real gauge.
             float mph = Mathf.Abs(car.Sim.Speed) * DriveSim.MetersPerSecondToMph;
             needleMph = Mathf.Lerp(needleMph, mph, 1f - Mathf.Exp(-Time.deltaTime * 9f));

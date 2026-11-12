@@ -181,6 +181,70 @@ namespace SurviveI95.EditorTools
             return SaveTexture(tex, "HazardMarker");
         }
 
+        const float RailPanel = 3.81f; // a standard 12 ft 6 in W-beam panel
+
+        /// <summary>
+        /// Galvanized W-beam over two panels (7.62 m by the rail's 0.31 m height): zinc spangle, the lap splice with
+        /// its bolts at each panel end, a bolt at each post, road grime along the bottom, rain streaks, white oxide
+        /// bloom, a few rust spots and black tire scuffs on the ridges that face traffic.
+        /// </summary>
+        static Texture2D MakeGuardrailTex()
+        {
+            const int W = 2048, H = 160; float pxm = W / (RailPanel * 2f);
+            var px = new Color[W * H];
+            for (int y = 0; y < H; y++) for (int x = 0; x < W; x++)
+            {
+                // Spangle: irregular crystals of slightly different brightness.
+                int cx = x / 14, cy = y / 14; float best = 9e9f, id = 0;
+                for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++)
+                {
+                    int gx = cx + i, gy = cy + j; float ox = (gx + Hash(gx, gy, 501)) * 14f, oy = (gy + Hash(gx, gy, 502)) * 14f;
+                    float d = (ox - x) * (ox - x) * .6f + (oy - y) * (oy - y);
+                    if (d < best) { best = d; id = Hash(((gx % (W / 14)) + W / 14) % (W / 14), gy, 503); }
+                }
+                float v = .66f + (id - .5f) * .08f + (Noise(x / 60f, y / 30f, W / 60 + 1, 6, 504) - .5f) * .08f;
+                var c = new Color(v, v * 1.01f, v * 1.03f);
+                float k = y / (float)H;
+                c *= Mathf.Lerp(.72f, 1f, Mathf.SmoothStep(0f, .35f, k));                                  // road grime at the foot
+                float streak = Noise(x / 7f, y / 90f, W / 7 + 1, 3, 505); if (streak > .62f) c *= 1f - (streak - .62f) * .5f;  // rain streaks
+                float bloom = Noise(x / 40f, y / 20f, W / 40 + 1, 9, 506); if (bloom > .72f) c = Color.Lerp(c, new Color(.82f, .83f, .82f), (bloom - .72f) * 1.6f);
+                float rust = Noise(x / 9f, y / 9f, W / 9 + 1, 19, 507); if (rust > .83f) c = Color.Lerp(c, new Color(.42f, .27f, .17f), (rust - .83f) * 4f);
+                c.a = 1f; px[y * W + x] = c;
+            }
+            void Bolt(float bx, float by)
+            {
+                for (int y = -6; y <= 6; y++) for (int x = -6; x <= 6; x++)
+                {
+                    int X = Mathf.RoundToInt(bx) + x, Y = Mathf.RoundToInt(by) + y; if (Y < 0 || Y >= H) continue;
+                    float r = Mathf.Sqrt(x * x + y * y); int i = Y * W + ((X % W) + W) % W;
+                    if (r < 4.5f) px[i] = new Color(.5f, .5f, .5f) * (1f - y * .04f);
+                    else if (r < 6.5f) px[i] *= .75f;
+                }
+            }
+            for (int panel = 0; panel < 2; panel++)
+            {
+                float x0 = panel * RailPanel * pxm;
+                // Lap splice: the overlap edge and eight bolts in two columns.
+                for (int y = 0; y < H; y++) for (int x = 0; x < 4; x++) px[y * W + ((Mathf.RoundToInt(x0) + x) % W)] *= .55f;
+                foreach (float bx in new[] { x0 + 28f, x0 + 60f }) foreach (float by in new[] { H * .14f, H * .36f, H * .64f, H * .86f }) Bolt(bx, by);
+                Bolt(x0 + RailPanel * pxm / 2f, H * .5f); Bolt(x0 + 44f, H * .5f);
+            }
+            // Tire scuffs where cars have brushed the ridges.
+            var rnd = new System.Random(77);
+            for (int n = 0; n < 5; n++)
+            {
+                float sx = (float)rnd.NextDouble() * W, len = 80f + (float)rnd.NextDouble() * 260f, sy = rnd.NextDouble() < .5 ? H * .58f : H * .9f;
+                for (int x = 0; x < len; x++) for (int y = -4; y <= 4; y++)
+                {
+                    int X = (int)(sx + x) % W, Y = (int)(sy + y + Mathf.Sin(x * .05f) * 2f); if (Y < 0 || Y >= H) continue;
+                    float a = (1f - Mathf.Abs(y) / 5f) * Mathf.Min(1f, Mathf.Min(x, len - x) / 30f) * .7f;
+                    px[Y * W + X] = Color.Lerp(px[Y * W + X], new Color(.08f, .08f, .08f), a);
+                }
+            }
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, true); tex.SetPixels(px); tex.Apply();
+            return SaveTexture(tex, "GuardrailSteel");
+        }
+
         static void BuildGuardrails(GameObject parent, RoutePath p)
         {
             var spans = new List<(float a, float b)>(); float start = -1f;
@@ -190,7 +254,8 @@ namespace SurviveI95.EditorTools
                 if (on && start < 0f) start = s;
                 if (!on && start >= 0f) { spans.Add((start, s)); start = -1f; }
             }
-            var steel = Lit("Guardrail", new Color(.6f, .62f, .64f), .45f); steel.SetFloat("_Metallic", .55f);
+            var steel = Lit("Guardrail", Color.white, .38f); steel.SetFloat("_Metallic", .5f); steel.SetTexture("_BaseMap", MakeGuardrailTex());
+            var postSteel = Lit("GuardrailPost", new Color(.36f, .37f, .37f), .22f); postSteel.SetFloat("_Metallic", .4f);
             var marker = Lit("HazardMarker", Color.white, .3f); marker.SetTexture("_BaseMap", MakeHazardMarker());
 
             var rv = new List<Vector3>(); var ruv = new List<Vector2>(); var rt = new List<int>();
@@ -210,7 +275,7 @@ namespace SurviveI95.EditorTools
                     for (int r = 0; r <= rows; r++)
                     {
                         float s = a + (b - a) * r / rows;
-                        foreach (var q in RailProfile) { rv.Add(p.Point(s, Lat(s) + q.x + side * .004f) + Vector3.up * q.y); ruv.Add(new Vector2(s / 4f, q.y)); }
+                        foreach (var q in RailProfile) { rv.Add(p.Point(s, Lat(s) + q.x + side * .004f) + Vector3.up * q.y); ruv.Add(new Vector2(s / (RailPanel * 2f), (q.y - .48f) / .31f)); }
                         if (r == 0) continue;
                         int prev = first + (r - 1) * RailProfile.Length, cur = first + r * RailProfile.Length;
                         for (int k = 0; k + 1 < RailProfile.Length; k++)
@@ -243,7 +308,7 @@ namespace SurviveI95.EditorTools
                 }
             }
             Add(parent, "Guardrail", Finish(rv, ruv, rt), steel, true);
-            Add(parent, "GuardrailPosts", Finish(pv, puv, pt), steel, true);
+            Add(parent, "GuardrailPosts", Finish(pv, puv, pt), postSteel, true);
             Add(parent, "GuardrailMarkers", Finish(mv, muv, mt), marker, false);
             Debug.Log("[FloridaSlice] guardrail spans " + spans.Count + ": " + string.Join(" ", spans.ConvertAll(x => $"{x.a:F0}-{x.b:F0}")));
         }

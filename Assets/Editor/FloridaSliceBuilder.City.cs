@@ -313,24 +313,74 @@ namespace SurviveI95.EditorTools
 
         static int bkHouse, bkApt, bkShop, bkWare, bkOffice, bkTower, bkCivic, bkShed, driveways, lotsMade;
 
+        /// <summary>
+        /// A photographed surface (Poly Haven) turned into a detail layer: its grain and blotches kept, its color removed,
+        /// centered on mid grey so it darkens and lightens the painted wall underneath without changing its color.
+        /// </summary>
+        static Texture2D DetailFromPhoto(string texSet, string name, float contrast)
+        {
+            var file = $"{PH}/Textures/{texSet}/{texSet}_Diffuse.jpg";
+            if (!File.Exists(file)) return null;
+            var src = new Texture2D(2, 2); src.LoadImage(File.ReadAllBytes(file));
+            const int S = 1024; var px = new Color[S * S]; double sum = 0;
+            var lum = new float[S * S];
+            for (int y = 0; y < S; y++) for (int x = 0; x < S; x++) { float l = src.GetPixelBilinear((x + .5f) / S, (y + .5f) / S).grayscale; lum[y * S + x] = l; sum += l; }
+            float mean = (float)(sum / lum.Length);
+            for (int i = 0; i < px.Length; i++) { float v = Mathf.Clamp01(.5f + (lum[i] / Mathf.Max(.01f, mean) - 1f) * .5f * contrast); px[i] = new Color(v, v, v, 1f); }
+            UnityEngine.Object.DestroyImmediate(src);
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, true); tex.SetPixels(px); tex.Apply();
+            return SaveTexture(tex, name);
+        }
+
+        static void AddDetail(Material m, Texture2D detail, string normalSet, float tiles)
+        {
+            if (detail == null) return;
+            m.SetTexture("_DetailAlbedoMap", detail); m.SetTextureScale("_DetailAlbedoMap", new Vector2(tiles, tiles));
+            m.SetFloat("_DetailAlbedoMapScale", 1f);
+            var n = Tex($"{PH}/Textures/{normalSet}/{normalSet}_nor_gl.jpg", true);
+            if (n != null) { m.SetTexture("_DetailNormalMap", n); m.SetFloat("_DetailNormalMapScale", .8f); }
+            m.EnableKeyword("_DETAIL_MULX2");
+        }
+
+        static Material PhotoRoof(string name, string texSet, float metersPerRepeat, Color tint, Material fallback)
+        {
+            var b = $"{PH}/Textures/{texSet}/{texSet}_";
+            if (!File.Exists(b + "Diffuse.jpg")) return fallback;
+            var mt = Lit(name, tint, .12f, texSet);
+            // Roof faces measure their texture in 2 m steps; the photo covers metersPerRepeat.
+            mt.SetTextureScale("_BaseMap", Vector2.one * (2f / metersPerRepeat));
+            return mt;
+        }
+
         static Material[] CityMaterials()
         {
-            Material Atlas(string name, Texture2D t) { var mt = Lit(name, Color.white, .12f); mt.SetTexture("_BaseMap", t); return mt; }
+            var plaster = DetailFromPhoto("grey_plaster", "PlasterDetail", .9f);
+            var concrete = DetailFromPhoto("concrete_wall_004", "ConcreteDetail", 1.2f);
+            // Each atlas is laid out so one texture repeat is the same size across and up, so the detail stays square.
+            Material Atlas(string name, Texture2D t, float metersPerRepeat, Texture2D detail, string normalSet, float detailMeters)
+            {
+                var mt = Lit(name, Color.white, .12f); mt.SetTexture("_BaseMap", t);
+                AddDetail(mt, detail, normalSet, metersPerRepeat / detailMeters);
+                return mt;
+            }
             Material Roof(string name, Texture2D t, float smooth) { var mt = Lit(name, Color.white, smooth); mt.SetTexture("_BaseMap", t); return mt; }
             var lotTex = AssetDatabase.LoadAssetAtPath<Texture2D>(Gen + "/Materials/ParkingStripes.png");
             var lot = Lit("CityLot", Color.white, .15f); if (lotTex != null) lot.SetTexture("_BaseMap", lotTex);
             return new[]
             {
-                Atlas("HouseWalls", MakeHouseAtlas()), Atlas("AptWalls", MakeAptAtlas()), Atlas("ShopWalls", MakeShopAtlas()), Atlas("WareWalls", MakeWareAtlas()),
+                Atlas("HouseWalls", MakeHouseAtlas(), HouseTexW, plaster, "grey_plaster", 2.5f), Atlas("AptWalls", MakeAptAtlas(), AptTexW, plaster, "grey_plaster", 2.5f),
+                Atlas("ShopWalls", MakeShopAtlas(), ShopTexW, plaster, "grey_plaster", 2.5f), Atlas("WareWalls", MakeWareAtlas(), WareTexW, concrete, "concrete_wall_004", 3.5f),
                 Facade("FacadeGlassBlue", new Color(.3f, .37f, .44f), new Color(.16f, .28f, .4f), 0, 1, .8f),
                 Facade("FacadeGlassGreen", new Color(.32f, .4f, .4f), new Color(.17f, .33f, .35f), 0, 2, .8f),
                 Facade("FacadeGlassDark", new Color(.2f, .22f, .26f), new Color(.1f, .13f, .18f), 0, 3, .85f),
                 Facade("FacadeBandWhite", new Color(.84f, .84f, .8f), new Color(.2f, .3f, .4f), 2, 4, .45f),
                 Facade("FacadeBandTan", new Color(.72f, .66f, .56f), new Color(.17f, .23f, .3f), 2, 5, .35f),
                 Facade("FacadeCondo", new Color(.88f, .86f, .79f), new Color(.2f, .27f, .35f), 1, 6, .3f),
-                Roof("RoofBarrel", MakeBarrelTile(), .15f), Roof("RoofFlat", MakeFlatTile(), .1f), Roof("RoofShingle", MakeShingle(), .08f), Roof("RoofWhite", MakeMembrane(), .12f),
+                // Clay barrel tile, the old-Florida Spanish roof; flat concrete tile, toned grey-brown and darker for Florida's mildew.
+                PhotoRoof("RoofBarrel", "clay_roof_tiles_02", 4.4f, new Color(.95f, .9f, .86f), null) ?? Roof("RoofBarrel", MakeBarrelTile(), .15f),
+                PhotoRoof("RoofFlat", "grey_roof_tiles", 4.8f, new Color(.92f, .9f, .88f), null) ?? Roof("RoofFlat", MakeFlatTile(), .1f), Roof("RoofShingle", MakeShingle(), .08f), Roof("RoofWhite", MakeMembrane(), .12f),
                 Lit("RoofUnit", new Color(.74f, .75f, .74f), .35f),
-                Textured("CityPave", MakeConcrete("CityPaveTex", new Color(.64f, .63f, .6f), 0), .12f),
+                Textured("CityPave", MakeConcrete("CityPaveTex", new Color(.52f, .51f, .48f), 0), .1f),
                 Lit("CityTrim", new Color(.92f, .91f, .88f), .2f),
                 lot,
             };
@@ -395,9 +445,53 @@ namespace SurviveI95.EditorTools
                 }
                 built++;
             }
+            int infill = Infill(p, south, map);
             int chunks = Flush(map, "City", mats, CitySlots, true);
+            Debug.Log($"[FloridaSlice] infill buildings where the map has a zone but no footprints: {infill}");
             Debug.Log($"[FloridaSlice] buildings placed {built} (houses {bkHouse}, apartments {bkApt}, shops {bkShop}, warehouses {bkWare}, offices {bkOffice}, towers {bkTower}, civic {bkCivic}, sheds {bkShed}), driveways {driveways}, shop lots {lotsMade}, removed from roadway {dropped}, solid {solid}, chunks {chunks}");
             BuildFarCity(p, south, mats);
+        }
+
+        /// <summary>
+        /// OpenStreetMap is missing footprints in places (whole blocks in parts of Miami). Where the map marks land as
+        /// homes, shops or industry but nothing stands, add what the zone would have: a house facing its street every
+        /// lot or so, or a low commercial or industrial building. Parks, water and highway land stay open.
+        /// </summary>
+        static int Infill(RoutePath p, Func<float, float> south, Dictionary<(int, int), Bucket> map)
+        {
+            int n = 0;
+            foreach (var z in zones)
+            {
+                if (z.k != "home" && z.k != "shop" && z.k != "industry") continue;
+                float step = z.k == "home" ? 24f : 45f;
+                for (float x = z.min.x + step / 2f; x < z.max.x; x += step)
+                    for (float y = z.min.y + step / 2f; y < z.max.y; y += step)
+                    {
+                        var q = new Vector2(x, y);
+                        if (!Inside(z.pts, q) || InBuilding(q, z.k == "home" ? 12f : 20f) || OnRoad(q, 25f) || NearExit(q, 20f) || InWater(q)) continue;
+                        if (osmLots.Any(l => Inside(l, q))) continue;
+                        float d = StreetDistance(q, 60f, out var at, out var sw);
+                        if (d > 55f || d < sw / 2f + 7f) continue;
+                        var toStreet = (at - q).normalized; var u = new Vector2(-toStreet.y, toStreet.x);
+                        var r = new System.Random((int)(x * 3.1f) ^ (int)(y * 7.7f) ^ 0x77);
+                        float a, b;
+                        if (z.k == "home") { a = 6f + (float)r.NextDouble() * 3f; b = 4.5f + (float)r.NextDouble() * 2f; }
+                        else { a = 12f + (float)r.NextDouble() * 10f; b = 9f + (float)r.NextDouble() * 6f; }
+                        // Set back from the street the way real lots are.
+                        var c = at - toStreet * (sw / 2f + (z.k == "home" ? 7.5f : 14f) + b);
+                        var foot = RectPts(c, u, a, b);
+                        if (foot.Any(v => InBuilding(v, 1.5f) || OnRoad(v, 20f) || StreetDistance(v, 8f, out _, out var sw2) < sw2 / 2f + 2f)) continue;
+                        var bk = Get(map, c, 900f, CitySlots);
+                        float area = 4f * a * b;
+                        if (z.k == "home") House(bk, foot, c, area, 0f, true, c, u, a, b, r);
+                        else if (z.k == "shop") Shop(bk, foot, c, area, 0f, new List<string>(), r);
+                        else Warehouse(bk, foot, c, area, 0f, r);
+                        AddFootprint(foot);
+                        if (Locate(c, out var cs, out var clat) && Mathf.Abs(clat) < 500f) Solid(cs, clat, Mathf.Min(a, b), Mathf.Min(a, b), "building");
+                        n++;
+                    }
+            }
+            return n;
         }
 
         static float House(Bucket bk, List<Vector2> pts, Vector2 mid, float area, float h, bool rect, Vector2 c, Vector2 u, float a, float b, System.Random r)

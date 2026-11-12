@@ -27,9 +27,35 @@ It's a driving life simulator in the way Death Stranding is a walking simulator,
 - **Road trip:** a partner in the passenger seat. They can take the wheel while you sleep. They may be a poor driver, or have no license, and that can get you pulled over.
 - **Family:** kids and a crying baby in the back. Stress builds in traffic and after a crash, and it affects your character.
 - **Trucker:** cargo jobs and deadlines. Big tank, poor mileage, the things that happen to truckers: weigh stations, hours on the road, a load that shifts, being cut off by cars that don't know how long a truck takes to stop.
-- **Smuggler:** what you prepared beforehand decides how a traffic stop goes: plates, paperwork, a clean car, a story that holds up. Skip prep and the officer finds out. Stay put or run.
+- **Smuggler (runner):** what you prepared beforehand decides how a traffic stop goes: plates, paperwork, a clean car, a story that holds up. Skip prep and the officer finds out. Stay put or run. A buyer's deadline pushes you to speed, the one thing you shouldn't do while carrying. I-95 is a known drug corridor, and police really do run interdiction on it: a small violation (a tag light, following too close, 4 over) becomes the reason to look closer, and troopers watch for tells: driving exactly the limit, eyes locked ahead, a fresh out-of-state rental, a car riding low. The cargo matters: heavy loads make the car sag, some cargo a K9 can smell, and a hidden compartment costs money up front but survives a quick search.
 - **Cannonballer:** unlocked with money and car upgrades (engine, fuel tank, auxiliary fuel). The fastest, the most heat.
+- **Medical courier (creator, 2026-11-11):** an organ or blood shipment in a cooler that has to arrive within hours. A legal reason to speed; a trooper may escort you or may not believe you.
+- **Moving truck:** a family's whole life in a rental box truck towing their car on a dolly. Heavy, slow, can't brake, merge or back up like a car, and a wind gust on a bridge is felt.
+- **Rideshare driver:** passengers picked up and dropped along the route, ratings, and some passengers who are trouble.
+- **Tow or repo driver:** you go toward the wrecks instead of away from them, racing other tow trucks to the call, and repossessing cars from people who don't want to give them up.
 - **Just driving:** no objective, only the road.
+
+## Loadout: choices before the run (creator, 2026-11-11)
+Every scenario starts on one screen where you choose what you go with, and every choice is a trade: the job's pay (or the trip's budget) is what you spend it from, so the better car or driver leaves less profit. The trucker picks a rig and a load, the family a car and how many kids, the road trip a partner, the runner a car and a driver.
+- **Car:** a beater is cheap and blends in but can break down and won't outrun anyone; a rental is clean but an out-of-state rental is what troopers look for; a fast car can run but draws eyes.
+- **Driver:** skill (better handling, calmer in a stop, costs the most); licensed or not (unlicensed is cheap, but any stop becomes an arrest); and habits that become needs to manage on the road:
+  - A smoker gets jittery and irritable without cigarettes and drives more aggressively; fix it at a gas station.
+  - A drinker is steady while drinking, but each drink slows reactions and adds drift, and a stop becomes a DUI and a search.
+  - A texter keeps looking down at the phone (the chain-crash risk in 6.2).
+  - Neglect a need and the driver goes erratic, and it shows in how the car drives.
+
+## The clock (creator, 2026-11-11)
+By default the clock runs with the drive: time passes by the distance you cover, at the rate that makes the shortened route take real time (Florida is about 2 hours of play for a trip of about 5½ hours, so the clock runs about 2.75 times fast). Leave Miami at 3 p.m. and you reach Jacksonville somewhere around sunset to 9 p.m., depending on how you drove. Stops cost game time, so a long rest can push you into the night. A fixed day or night can still be chosen.
+
+Night is when the road gets worse, from real data:
+- About half of US traffic deaths happen at night on about a quarter of the driving; per mile, night is about three times as deadly.
+- Drunk drivers peak from midnight to 3 a.m., worst on weekend nights. Florida allows sobriety checkpoints.
+- Street racers and street takeovers, a real Miami night problem.
+- Tired truckers, worst from 2 to 6 a.m.
+- Fewer cars but faster ones, and unlit stretches outside the cities where you see only what your headlights reach.
+
+## Leaving the highway
+I-95 is the game. The city beside it is real to look at and you can drive its streets near an exit, but deliveries, stops and pickups happen a short drive from a real exit (a gas station, a rest area, a motel, a buyer's warehouse, a hospital dock). Beyond the band of streets built around each exit, the world ends naturally: canals, fences, dead ends, and police who notice a car circling a neighborhood. Staying on the highway is also simply faster, as in life: surface roads have lights every few blocks and 30-45 mph limits, and US-1 or A1A take hours longer. A parallel road (US-1, A1A) can be a deliberate choice later: slower, with lights and local police instead of troopers.
 
 ## Traffic stops
 The officer walks up and talks. You pick answers. Wrong answers, or a car that isn't clean, send the officer back to check your plate. Then you wait and hope, or you floor it.

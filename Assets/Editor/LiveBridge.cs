@@ -102,6 +102,20 @@ namespace SurviveI95.EditorTools
                     vc.transform.SetPositionAndRotation(keepPos, keepRot);
                     return vp;
                 }
+                case "where": // name [max]: road position (s, lateral) of scene objects with that name
+                {
+                    var wr = car != null ? car.Path : (viewRoad ??= SurviveI95.World.RoutePath.Load("miami_ftl"));
+                    int wmax = a.Length > 3 ? (int)F(a, 3) : 20; var wl = new System.Collections.Generic.List<string>();
+                    foreach (var go in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Exclude))
+                    {
+                        if (go.name != a[2] || wl.Count >= wmax) continue;
+                        var wp = go.position; float ws = 0, wd = float.MaxValue;
+                        for (float q = 0; q < wr.Length; q += 10f) { var c = wr.Center(q); float d = (c.x - wp.x) * (c.x - wp.x) + (c.z - wp.z) * (c.z - wp.z); if (d < wd) { wd = d; ws = q; } }
+                        float wlat = Vector3.Dot(wp - wr.Center(ws), wr.Right(ws));
+                        wl.Add($"s={ws:F0} lat={wlat:F0}");
+                    }
+                    return string.Join(" | ", wl);
+                }
                 case "sunshot": return Shot(a[2], true); // a screenshot aimed straight at the sun, to check the sky and the shadows agree
             }
             if (car == null) return "ERROR not in play mode";
@@ -143,6 +157,28 @@ namespace SurviveI95.EditorTools
                 case "release": PlayerCar.AutoDriver = null; return "released";
                 case "cockpit": car.SetCockpit(a[2] == "on"); return "cockpit " + a[2];
                 case "orbit": car.TestOrbit(F(a, 2), F(a, 3)); return "orbit set; now " + car.OrbitYaw.ToString("F0"); // yaw pitch: swings the chase camera as the mouse would
+                case "planes": { var at = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.AirTraffic>(); return at == null ? "no air traffic" : $"{at.Count} planes: {at.Describe()}"; }
+                case "planeshot": // name: from the player's car (1.5 m up), aimed at the nearest plane
+                {
+                    var at = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.AirTraffic>(); var pl = at != null ? at.Nearest(car.transform.position) : null;
+                    if (pl == null) return "ERROR no plane";
+                    var pc = Camera.main; var kp = pc.transform.position; var kr = pc.transform.rotation;
+                    var eye = car.transform.position + Vector3.up * 1.5f;
+                    pc.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(pl.position - eye));
+                    var ps = Shot(a[2]); pc.transform.SetPositionAndRotation(kp, kr);
+                    return ps + $" plane at {(pl.position - eye).magnitude:F0} m, {pl.position.y:F0} m up";
+                }
+                case "trains": { var tr = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.Trains>(); return tr == null ? "no trains (no rail data)" : $"{tr.Count} trains: {tr.Describe()}"; }
+                case "trainshot": // name: from the player's car, aimed at the first train's locomotive
+                {
+                    var tr = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.Trains>(); var lo = tr != null ? tr.First : null;
+                    if (lo == null) return "ERROR no train";
+                    var tc = Camera.main; var tk = tc.transform.position; var tkr = tc.transform.rotation;
+                    var teye = car.transform.position + Vector3.up * 1.5f;
+                    tc.transform.SetPositionAndRotation(teye, Quaternion.LookRotation(lo.position + Vector3.up * 2f - teye));
+                    var tsp = Shot(a[2]); tc.transform.SetPositionAndRotation(tk, tkr);
+                    return tsp + $" train at {(lo.position - teye).magnitude:F0} m";
+                }
                 case "orbitnow": return "orbit yaw " + car.OrbitYaw.ToString("F1");
                 case "look": car.ScriptedLook = new Vector2(F(a, 2), F(a, 3)); return "looking";
                 case "place": car.Place(F(a, 2)); return "placed";

@@ -100,15 +100,18 @@ namespace SurviveI95.Game
         public void TestHazards(bool on) => Hazards = on;
         float signalSince, signalLat;
 
-        void UpdateSignals(Keyboard k)
+        // Keyboard: Z and X signal, H flashes the high beams, G hazards. Gamepad: d-pad left and right signal,
+        // X (Square) flashes the high beams, B (Circle) hazards.
+        void UpdateSignals(Keyboard k, Gamepad pad)
         {
-            if (k == null) return;
-            if (k.zKey.wasPressedThisFrame) SetSignal(Signal == -1 ? 0 : -1);
-            if (k.xKey.wasPressedThisFrame) SetSignal(Signal == 1 ? 0 : 1);
+            bool left = (k != null && k.zKey.wasPressedThisFrame) || (pad != null && pad.dpad.left.wasPressedThisFrame);
+            bool rightSig = (k != null && k.xKey.wasPressedThisFrame) || (pad != null && pad.dpad.right.wasPressedThisFrame);
+            if (left) SetSignal(Signal == -1 ? 0 : -1);
+            if (rightSig) SetSignal(Signal == 1 ? 0 : 1);
             // Cancels itself once the lane change is done, or after a while, like a real stalk.
             if (Signal != 0 && (Mathf.Abs(Sim.Lateral - signalLat) > 3.2f || Time.time - signalSince > 12f)) Signal = 0;
-            HighBeams = TestHighBeams || k.hKey.isPressed;
-            if (k.gKey.wasPressedThisFrame) { Hazards = !Hazards; Flash(Hazards ? "Hazards on" : "Hazards off"); }
+            HighBeams = TestHighBeams || (k != null && k.hKey.isPressed) || (pad != null && pad.buttonWest.isPressed);
+            if ((k != null && k.gKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Hazards = !Hazards; Flash(Hazards ? "Hazards on" : "Hazards off"); }
         }
 
         void SetSignal(int s) { Signal = s; signalSince = Time.time; signalLat = Sim.Lateral; }
@@ -133,7 +136,7 @@ namespace SurviveI95.Game
         void Awake()
         {
             Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); lamps = new CarLamps(transform, model); Hud = gameObject.AddComponent<Hud>(); Hud.Init(this); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious();
-            BaseFov = Mathf.Clamp(PlayerPrefs.GetFloat("fov", DefaultFov), 40f, 80f); fovSmooth = BaseFov;
+            BaseFov = Mathf.Clamp(PlayerPrefs.GetFloat("fov", DefaultFov), 40f, 80f); fovSmooth = BaseFov; RoadShake = PlayerPrefs.GetInt("roadShake", 1) == 1;
             FindMirrors();
         }
 
@@ -229,7 +232,7 @@ namespace SurviveI95.Game
             }
             glancing = wantGlance && mirrorParts != null && mirrorParts[glanceMirror] != null;
             lookingBack = TestLookBack || (k != null && k.cKey.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
-            UpdateSignals(k);
+            UpdateSignals(k, pad);
             Honking = TestHorn || (k != null && k.eKey.isPressed) || (pad != null && pad.leftStickButton.isPressed);
             if (Honking && horn == null)
             {
@@ -319,7 +322,7 @@ namespace SurviveI95.Game
                 if (Mathf.Abs(stick) > 0.08f) input.Steer = stick * Mathf.Abs(stick);
                 input.Throttle = Mathf.Max(input.Throttle, pad.rightTrigger.ReadValue());
                 input.Brake = Mathf.Max(input.Brake, pad.leftTrigger.ReadValue());
-                input.Handbrake |= pad.buttonSouth.isPressed;
+                input.Handbrake |= pad.buttonSouth.isPressed || pad.rightShoulder.isPressed; // A, or RB as in GTA
             }
             return ApplyCruise(input);
         }
@@ -332,6 +335,7 @@ namespace SurviveI95.Game
             // GTA-style layout: V changes the camera, C looks back, E is the horn.
             if ((k != null && k.vKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame)) SetCockpit(!Cockpit);
             if (k != null && k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
+            if (k != null && k.f3Key.wasPressedThisFrame) { RoadShake = !RoadShake; PlayerPrefs.SetInt("roadShake", RoadShake ? 1 : 0); Flash(RoadShake ? "Road feel on" : "Road feel off"); }
             // A click in the game takes the mouse back, as games do after Escape.
             var mClick = Mouse.current;
             if (mClick != null && mClick.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; mouseSettle = 0.3f; }
@@ -614,6 +618,7 @@ namespace SurviveI95.Game
             fovSmooth = Mathf.Lerp(fovSmooth, fov, 1f - Mathf.Exp(-Time.deltaTime * 4f));
             float g = Mathf.SmoothStep(0f, 1f, Glance);
             chaseCamera.fieldOfView = lookingBack ? BaseFov : Mathf.Lerp(fovSmooth, glanceFov, g);
+            RoadFeel();
             if (shake > 0.01f) { chaseCamera.transform.position += UnityEngine.Random.insideUnitSphere * 0.22f * shake * shake; chaseCamera.transform.rotation *= Quaternion.Euler(UnityEngine.Random.insideUnitSphere * 2.5f * shake); }
             if (rumbleShake > 0.01f) chaseCamera.transform.position += UnityEngine.Random.insideUnitSphere * 0.022f * rumbleShake;
         }
@@ -698,6 +703,39 @@ namespace SurviveI95.Game
             float aside = Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(0f, orbitYaw)) / 35f);
             var target = transform.position + Vector3.up * 1.05f + dir * Mathf.Lerp(12f, 0f, aside);
             chaseCamera.transform.rotation = Quaternion.LookRotation(target - pos);
+        }
+
+        // ---- speed feel (5b.4): the road through the camera, never shake for its own sake
+        public static bool RoadShake = true;
+        float lastSpeed, accelSmooth, thump, nextJoint;
+
+        /// <summary>
+        /// A fine tremor that grows with speed (tires on a real road surface), a soft thump at pavement joints and
+        /// patches that comes faster the faster you go, and the camera dropping back under hard acceleration and
+        /// closing in under braking, as a body squats and dives. F3 turns the tremor off.
+        /// </summary>
+        void RoadFeel()
+        {
+            if (Time.deltaTime <= 0f) return;
+            float v = Mathf.Abs(Sim.Speed), mph = v * DriveSim.MetersPerSecondToMph;
+            float accel = (v - lastSpeed) / Time.deltaTime; lastSpeed = v;
+            accelSmooth = Mathf.Lerp(accelSmooth, Mathf.Clamp(accel, -9f, 6f), 1f - Mathf.Exp(-Time.deltaTime * 3f));
+            if (!Cockpit && TopView <= 0f && !FrontView && !lookingBack)
+                chaseCamera.transform.position -= chaseCamera.transform.forward * accelSmooth * .07f;
+            if (!RoadShake || v < 1f) return;
+            // Joints and patches: a pavement joint about every 20 m on average, uneven.
+            nextJoint -= v * Time.deltaTime;
+            if (nextJoint <= 0f) { thump = Mathf.Clamp01(.35f + mph / 160f); nextJoint = 9f + UnityEngine.Random.value * 25f; }
+            thump = Mathf.MoveTowards(thump, 0f, Time.deltaTime * 9f);
+            float k = Mathf.Clamp01((mph - 20f) / 120f); k *= k;
+            float t = Time.time * (6f + mph * .12f);
+            float tremor = (Mathf.PerlinNoise(t, .3f) - .5f) * .03f * k + (Mathf.PerlinNoise(t * 2.3f, 7.1f) - .5f) * .012f * k;
+            float bump = Mathf.Sin(thump * Mathf.PI * 3f) * thump * .025f;
+            float scale = Cockpit ? .6f : 1f;
+            chaseCamera.transform.position += Vector3.up * (tremor + bump) * scale;
+            // Past about 120 mph the view starts to hum sideways too, as the car gets light.
+            float hum = Mathf.Clamp01((mph - 115f) / 50f);
+            if (hum > 0f) chaseCamera.transform.rotation *= Quaternion.Euler(0f, 0f, (Mathf.PerlinNoise(t * 1.7f, 3.3f) - .5f) * 1.2f * hum * scale);
         }
 
         float orbitYaw, orbitPitch, orbitIdle;

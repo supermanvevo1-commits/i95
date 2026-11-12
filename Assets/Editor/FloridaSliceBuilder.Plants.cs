@@ -121,57 +121,85 @@ namespace SurviveI95.EditorTools
             var camGo = new GameObject("CardCam"); var cam = camGo.AddComponent<Camera>();
             cam.orthographic = true; cam.cullingMask = 1 << 30; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = new Color(0, 0, 0, 0);
             cam.allowHDR = false; cam.allowMSAA = false; cam.nearClipPlane = .1f; cam.farClipPlane = 400f;
-            // Even light: soft from everywhere and a little more from above, so the cards carry shape but no fixed sun.
+            // Two pictures of each view: the plant's own colors under flat, even light (no sun baked in), and which way
+            // every leaf and branch faces. The game's real sun then lights the cards through that second picture,
+            // bright on the sunny side and shaded on the other, so the plants sit in the same light as everything else.
             var lights = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude).Where(l => l.enabled).ToList();
             foreach (var l in lights) l.enabled = false;
-            var top = new GameObject("CardLight").AddComponent<Light>(); top.type = LightType.Directional; top.intensity = .55f; top.shadows = LightShadows.None;
-            top.transform.rotation = Quaternion.LookRotation(new Vector3(.2f, -1f, .1f));
             bool fog = RenderSettings.fog; var probe = RenderSettings.ambientProbe; float refl = RenderSettings.reflectionIntensity;
-            RenderSettings.fog = false; var sh = new SphericalHarmonicsL2(); sh.AddAmbientLight(new Color(.62f, .62f, .62f)); RenderSettings.ambientProbe = sh; RenderSettings.reflectionIntensity = 0f;
-            var rt = new RenderTexture(Hi, Hi, 24, RenderTextureFormat.ARGB32);
-            var strip = new Color[CardPx * 4 * CardPx];
-            for (int k = 0; k < 4; k++)
+            RenderSettings.fog = false; var sh = new SphericalHarmonicsL2(); sh.AddAmbientLight(new Color(1f, 1f, 1f)); RenderSettings.ambientProbe = sh; RenderSettings.reflectionIntensity = 0f;
+            var rt = new RenderTexture(Hi, Hi, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+            var renderers = inst.GetComponentsInChildren<Renderer>();
+            var keep = renderers.Select(r => r.sharedMaterials).ToArray();
+            var normalShader = Shader.Find("Hidden/SurviveI95/CardNormal");
+            Color[] Capture(bool normals)
             {
-                Vector3 dir = k < 3 ? Quaternion.Euler(0, k * 60f, 0) * Vector3.forward : Vector3.down;
-                cam.orthographicSize = k < 3 ? half : topHalf;
-                cam.transform.SetPositionAndRotation(b.center - dir * 200f, Quaternion.LookRotation(dir, k < 3 ? Vector3.up : Vector3.forward));
-                RenderPipeline.SubmitRenderRequest(cam, new RenderPipeline.StandardRequest { destination = rt });
-                var prev = RenderTexture.active; RenderTexture.active = rt;
-                var t = new Texture2D(Hi, Hi, TextureFormat.RGBA32, false); t.ReadPixels(new Rect(0, 0, Hi, Hi), 0, 0); t.Apply();
-                RenderTexture.active = prev;
-                var px = t.GetPixels(); UnityEngine.Object.DestroyImmediate(t);
-                // Down to half size with premultiplied alpha, so edges are smooth and never dark.
-                for (int y = 0; y < CardPx; y++) for (int x = 0; x < CardPx; x++)
+                if (normals)
+                    for (int i = 0; i < renderers.Length; i++)
+                        renderers[i].sharedMaterials = keep[i].Select(m =>
+                        {
+                            var nm = new Material(normalShader);
+                            Texture t = null; foreach (var p in new[] { "baseColorTexture", "_BaseMap", "_MainTex" }) if (m != null && m.HasProperty(p) && m.GetTexture(p) != null) { t = m.GetTexture(p); break; }
+                            if (t != null) nm.SetTexture("_MainTex", t); nm.SetFloat("_Cutoff", .5f);
+                            return nm;
+                        }).ToArray();
+                var strip = new Color[CardPx * 4 * CardPx];
+                for (int k = 0; k < 4; k++)
                 {
-                    Color sum = Color.clear; float a = 0;
-                    for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) { var c = px[(y * 2 + j) * Hi + x * 2 + i]; sum += c * c.a; a += c.a; }
-                    var o = a > 0 ? sum / a : Color.clear; o.a = a / 4f;
-                    strip[y * CardPx * 4 + k * CardPx + x] = o;
+                    Vector3 dir = k < 3 ? Quaternion.Euler(0, k * 60f, 0) * Vector3.forward : Vector3.down;
+                    cam.orthographicSize = k < 3 ? half : topHalf;
+                    cam.transform.SetPositionAndRotation(b.center - dir * 200f, Quaternion.LookRotation(dir, k < 3 ? Vector3.up : Vector3.forward));
+                    RenderPipeline.SubmitRenderRequest(cam, new RenderPipeline.StandardRequest { destination = rt });
+                    var prev = RenderTexture.active; RenderTexture.active = rt;
+                    var t = new Texture2D(Hi, Hi, TextureFormat.RGBA32, false, true); t.ReadPixels(new Rect(0, 0, Hi, Hi), 0, 0); t.Apply();
+                    RenderTexture.active = prev;
+                    var px = t.GetPixels(); UnityEngine.Object.DestroyImmediate(t);
+                    // Down to half size with premultiplied alpha, so edges are smooth and never dark.
+                    for (int y = 0; y < CardPx; y++) for (int x = 0; x < CardPx; x++)
+                    {
+                        Color sum = Color.clear; float a = 0;
+                        for (int j = 0; j < 2; j++) for (int i = 0; i < 2; i++) { var c = px[(y * 2 + j) * Hi + x * 2 + i]; sum += c * c.a; a += c.a; }
+                        var o = a > 0 ? sum / a : (normals ? new Color(.5f, .5f, 1f, 0f) : Color.clear); o.a = a / 4f;
+                        if (normals && a > 0) { var n = new Vector3(o.r * 2f - 1f, o.g * 2f - 1f, o.b * 2f - 1f).normalized; o = new Color(n.x * .5f + .5f, n.y * .5f + .5f, n.z * .5f + .5f, a / 4f); }
+                        strip[y * CardPx * 4 + k * CardPx + x] = o;
+                    }
                 }
+                if (normals) for (int i = 0; i < renderers.Length; i++) renderers[i].sharedMaterials = keep[i];
+                return strip;
             }
+            var albedo = Capture(false); var normalStrip = Capture(true);
             foreach (var l in lights) l.enabled = true;
-            UnityEngine.Object.DestroyImmediate(top.gameObject); UnityEngine.Object.DestroyImmediate(camGo); rt.Release();
+            UnityEngine.Object.DestroyImmediate(camGo); rt.Release();
             RenderSettings.fog = fog; RenderSettings.ambientProbe = probe; RenderSettings.reflectionIntensity = refl;
-            Dilate(strip, CardPx * 4, CardPx);
-            var tex = new Texture2D(CardPx * 4, CardPx, TextureFormat.RGBA32, true); tex.SetPixels(strip); tex.Apply();
+            Dilate(albedo, CardPx * 4, CardPx);
+            // The color picture came out of a linear render; store it as normal sRGB colors.
+            for (int i = 0; i < albedo.Length; i++) { var c = albedo[i]; albedo[i] = new Color(Mathf.LinearToGammaSpace(c.r), Mathf.LinearToGammaSpace(c.g), Mathf.LinearToGammaSpace(c.b), c.a); }
+            for (int i = 0; i < normalStrip.Length; i++) if (normalStrip[i].a < .02f) normalStrip[i] = new Color(.5f, .5f, 1f, 1f); else normalStrip[i].a = 1f;
+            var tex = new Texture2D(CardPx * 4, CardPx, TextureFormat.RGBA32, true); tex.SetPixels(albedo); tex.Apply();
             string file = $"{Gen}/Plants/{sp.name}_cards.png";
             File.WriteAllBytes(file, tex.EncodeToPNG()); AssetDatabase.ImportAsset(file);
             if (AssetImporter.GetAtPath(file) is TextureImporter ti)
             {
                 ti.alphaIsTransparency = true; ti.mipMapsPreserveCoverage = true; ti.alphaTestReferenceValue = .45f; ti.wrapMode = TextureWrapMode.Clamp; ti.SaveAndReimport();
             }
+            var ntex = new Texture2D(CardPx * 4, CardPx, TextureFormat.RGBA32, true, true); ntex.SetPixels(normalStrip); ntex.Apply();
+            string nfile = $"{Gen}/Plants/{sp.name}_cards_n.png";
+            File.WriteAllBytes(nfile, ntex.EncodeToPNG()); AssetDatabase.ImportAsset(nfile);
+            if (AssetImporter.GetAtPath(nfile) is TextureImporter nti) { nti.textureType = TextureImporterType.NormalMap; nti.wrapMode = TextureWrapMode.Clamp; nti.SaveAndReimport(); }
             var mat = Lit("Card_" + sp.name, Color.white, .05f);
             mat.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(file));
+            mat.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(nfile)); mat.EnableKeyword("_NORMALMAP");
             mat.SetFloat("_AlphaClip", 1f); mat.SetFloat("_Cutoff", .45f); mat.EnableKeyword("_ALPHATEST_ON");
-            mat.SetFloat("_Cull", 0f); mat.renderQueue = 2450; mat.enableInstancing = true;
+            mat.SetFloat("_Cull", 2f); mat.renderQueue = 2450; mat.enableInstancing = true; // each card has its own back face
             mat.SetFloat("_SpecularHighlights", 0f); mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
             mat.SetFloat("_EnvironmentReflections", 0f); mat.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
             sp.cardMat = mat;
-            sp.cardHalf = half * scale; sp.cardMid = (b.center.y - b.min.y) * scale; sp.topHalf = topHalf * scale; sp.topY = (b.center.y - b.min.y) * scale + b.extents.y * scale * .35f;
+            sp.cardHalf = half * scale; sp.cardMid = (b.center.y - b.min.y) * scale; // Broadleaf crowns: the flat card from above sits high and small inside the crown, so from the road it never shows as a slab.
+            sp.topHalf = topHalf * scale * (sp.palm ? 1f : .62f); sp.topY = sp.palm ? (b.center.y - b.min.y) * scale + b.extents.y * scale * .35f : b.size.y * scale * .86f;
             // A standalone card mesh, for the far step of a full-model palm.
             var v = new List<Vector3>(); var uv = new List<Vector2>(); var tr = new List<int>(); var nr = new List<Vector3>();
             CardGeometry(v, uv, nr, tr, sp, Vector3.zero, 0f, 1f);
-            var cm = new Mesh(); cm.SetVertices(v); cm.SetUVs(0, uv); cm.SetNormals(nr); cm.SetTriangles(tr, 0); cm.RecalculateBounds();
+            var cm = new Mesh(); cm.SetVertices(v); cm.SetUVs(0, uv); cm.SetNormals(nr); cm.SetTriangles(tr, 0); cm.RecalculateTangents(); cm.RecalculateBounds();
             var cf = $"{Gen}/Plants/{sp.name}_cardmesh.asset"; AssetDatabase.DeleteAsset(cf); AssetDatabase.CreateAsset(cm, cf);
             sp.cards = cm;
         }
@@ -196,7 +224,7 @@ namespace SurviveI95.EditorTools
             }
         }
 
-        /// <summary>Three upright cards 60° apart and one flat card at the crown, normals tilted up for soft daylight.</summary>
+        /// <summary>Three upright cards 60° apart and one flat card at the crown, each facing the way it was photographed.</summary>
         static void CardGeometry(List<Vector3> v, List<Vector2> uv, List<Vector3> nr, List<int> t, Species sp, Vector3 at, float yaw, float scale)
         {
             float half = sp.cardHalf * scale, mid = sp.cardMid * scale;
@@ -209,9 +237,13 @@ namespace SurviveI95.EditorTools
                 v.Add(at + new Vector3(0, mid - half, 0) - right); v.Add(at + new Vector3(0, mid + half, 0) - right);
                 v.Add(at + new Vector3(0, mid - half, 0) + right); v.Add(at + new Vector3(0, mid + half, 0) + right);
                 uv.Add(new Vector2(u0, 0)); uv.Add(new Vector2(u0, 1)); uv.Add(new Vector2(u1, 0)); uv.Add(new Vector2(u1, 1));
-                var up = (Vector3.up * .8f - fwd * .2f).normalized;
+                var up = -fwd; // facing the camera that photographed it; the direction picture does the rest
                 for (int i = 0; i < 4; i++) nr.Add(up);
                 t.AddRange(new[] { n, n + 1, n + 2, n + 2, n + 1, n + 3 });
+                // Its own back face, facing the other way, so the far side of a tree is lit as the far side.
+                int b = v.Count;
+                for (int i = 0; i < 4; i++) { v.Add(v[n + i]); uv.Add(uv[n + i]); nr.Add(fwd); }
+                t.AddRange(new[] { b, b + 2, b + 1, b + 2, b + 3, b + 1 });
             }
             {
                 var face = Quaternion.Euler(0, yaw, 0); float th = sp.topHalf * scale, y = sp.topY * scale;
@@ -257,7 +289,7 @@ namespace SurviveI95.EditorTools
 
         static bool PlantSpotOk(Vector2 q, float pad)
         {
-            if (InBuilding(q, pad) || OnRoad(q, 9f) || NearExit(q, 8f)) return false;
+            if (InBuilding(q, pad) || OnRoad(q, 9f) || NearExit(q, 8f) || InWater(q)) return false;
             float d = StreetDistance(q, 12f, out _, out var w);
             return d >= w / 2f + pad + .6f;
         }
@@ -404,6 +436,8 @@ namespace SurviveI95.EditorTools
             var waterMat = Lit("PoolWater", new Color(.18f, .62f, .78f), .92f);
             var deckMat = AssetDatabase.LoadAssetAtPath<Material>(Gen + "/Materials/CityPave.mat") ?? Lit("PoolDeck", new Color(.85f, .83f, .78f), .1f);
             Flush(pools, "Pools", new[] { waterMat, deckMat }, 2, false);
+            BuildFences(p, south);
+            BuildWater(p); BuildPower(p, south); BuildRail(p); BuildBillboards(p, south);
             Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}), full palms near the road {models}, pools {poolCount}");
         }
 
@@ -436,7 +470,7 @@ namespace SurviveI95.EditorTools
                 var mesh = new Mesh { indexFormat = IndexFormat.UInt32 };
                 mesh.SetVertices(all); mesh.SetNormals(allN); mesh.SetUVs(0, allUv); mesh.subMeshCount = mats.Length;
                 for (int i = 0; i < mats.Length; i++) mesh.SetTriangles(subs[i], i);
-                mesh.RecalculateBounds();
+                mesh.RecalculateTangents(); mesh.RecalculateBounds();
                 var file = $"{Gen}/Meshes/{name}_{chunk++}.asset"; AssetDatabase.DeleteAsset(file); AssetDatabase.CreateAsset(mesh, file);
                 var go = new GameObject(name + "Block", typeof(MeshFilter), typeof(MeshRenderer)); go.transform.SetParent(parent.transform);
                 go.GetComponent<MeshFilter>().sharedMesh = mesh;

@@ -25,3 +25,6 @@
 /TestReports/
 
 /.livebridge/
+
+# Partial downloads from Tools/fetch_landuse.js
+/Tools/Data/cache/

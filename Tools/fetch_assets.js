@@ -13,7 +13,9 @@ const ALLOWED = ['cc0', 'by'];
 const BRANDS = /porsche|mercedes|bmw|ford|chevrolet|chevy|chrysler|dodge|toyota|honda|nissan|tesla|audi|volvo|volkswagen|vw\b|mclaren|ferrari|lamborghini|jeep|gmc|yamaha|harley|kawasaki|suzuki|ducati|oshkosh|magirus|peterbilt|kenworth|freightliner|mack\b|fatboy|fallout/i;
 
 const ENV = {
-  textures: ['asphalt_02', 'worn_asphalt', 'road_damaged', 'gravel_road', 'asphalt_snow', 'grass_ground', 'brushed_concrete'],
+  textures: ['asphalt_02', 'worn_asphalt', 'road_damaged', 'gravel_road', 'asphalt_snow', 'grass_ground', 'brushed_concrete',
+    // City surfaces (5.4): stucco grain for walls, clay and concrete roof tiles, tilt-up concrete.
+    'grey_plaster', 'painted_plaster_wall', 'clay_roof_tiles_02', 'grey_roof_tiles', 'concrete_wall_004'],
   // "id@4k" asks for a sharper file; the sky fills the screen, so the main one needs it.
   hdris: ['derelict_highway_noon', 'evening_road_01', 'citrus_orchard_road_puresky', 'autumn_field_puresky', 'kloofendal_48d_partly_cloudy_puresky@4k'],
   models: ['concrete_road_barrier', 'street_lamp_01', 'pine_tree_01', 'grass_medium_01'],
