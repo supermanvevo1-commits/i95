@@ -34,6 +34,7 @@ namespace SurviveI95.EditorTools
             EditorApplication.update += Tick;
         }
 
+        // Writes tagged log lines to .livebridge/console.log for the command line to read.
         static void OnLog(string message, string stack, LogType type)
         {
             if (type == LogType.Log && !message.StartsWith("[")) return;
@@ -101,6 +102,13 @@ namespace SurviveI95.EditorTools
                     var vp = Shot(a[2]);
                     vc.transform.SetPositionAndRotation(keepPos, keepRot);
                     return vp;
+                }
+                case "kids": // name: how many objects and renderers sit under each scene object with that name
+                {
+                    var kl = new System.Collections.Generic.List<string>();
+                    foreach (var kt in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+                        if (kt.name == a[2]) kl.Add($"{kt.name}: children {kt.childCount}, renderers {kt.GetComponentsInChildren<Renderer>(true).Length}, first [{(kt.childCount > 0 ? kt.GetChild(0).name : "")}]");
+                    return kl.Count == 0 ? "none" : string.Join(" | ", kl);
                 }
                 case "where": // name [max]: road position (s, lateral) of scene objects with that name
                 {
