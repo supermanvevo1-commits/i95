@@ -44,6 +44,9 @@ Every scenario starts on one screen where you choose what you go with, and every
   - A texter keeps looking down at the phone (the chain-crash risk in 6.2).
   - Neglect a need and the driver goes erratic, and it shows in how the car drives.
 
+## Modifications (creator, 2026-11-12)
+Any car can be modified, but only with modifications that are really possible for that car: real parts, real gains, real costs. It mostly belongs to the scenarios that need it, like the cannonballer, street racer or runner. Grounded: a tune changes the numbers it would really change, including noise and how much police notice.
+
 ## The clock (creator, 2026-11-11)
 By default the clock runs with the drive: time passes by the distance you cover, at the rate that makes the shortened route take real time (Florida is about 2 hours of play for a trip of about 5½ hours, so the clock runs about 2.75 times fast). Leave Miami at 3 p.m. and you reach Jacksonville somewhere around sunset to 9 p.m., depending on how you drove. Stops cost game time, so a long rest can push you into the night. A fixed day or night can still be chosen.
 

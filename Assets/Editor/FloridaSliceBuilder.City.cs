@@ -342,13 +342,15 @@ namespace SurviveI95.EditorTools
             m.EnableKeyword("_DETAIL_MULX2");
         }
 
-        static Material PhotoRoof(string name, string texSet, float metersPerRepeat, Color tint, Material fallback)
+        static Material PhotoRoof(string name, string texSet, float metersPerRepeat, Color tint, Material fallback, float bump = 1f)
         {
             var b = $"{PH}/Textures/{texSet}/{texSet}_";
             if (!File.Exists(b + "Diffuse.jpg")) return fallback;
             var mt = Lit(name, tint, .12f, texSet);
             // Roof faces measure their texture in 2 m steps; the photo covers metersPerRepeat.
             mt.SetTextureScale("_BaseMap", Vector2.one * (2f / metersPerRepeat));
+            // Deeper tile relief so the rows of tiles throw their own little shadows in the low sun.
+            mt.SetFloat("_BumpScale", bump);
             return mt;
         }
 
@@ -377,7 +379,7 @@ namespace SurviveI95.EditorTools
                 Facade("FacadeBandTan", new Color(.72f, .66f, .56f), new Color(.17f, .23f, .3f), 2, 5, .35f),
                 Facade("FacadeCondo", new Color(.88f, .86f, .79f), new Color(.2f, .27f, .35f), 1, 6, .3f),
                 // Clay barrel tile, the old-Florida Spanish roof; flat concrete tile, toned grey-brown and darker for Florida's mildew.
-                PhotoRoof("RoofBarrel", "clay_roof_tiles_02", 4.4f, new Color(.95f, .9f, .86f), null) ?? Roof("RoofBarrel", MakeBarrelTile(), .15f),
+                PhotoRoof("RoofBarrel", "clay_roof_tiles_02", 4.4f, new Color(.8f, .72f, .68f), null, 2.2f) ?? Roof("RoofBarrel", MakeBarrelTile(), .15f),
                 PhotoRoof("RoofFlat", "grey_roof_tiles", 4.8f, new Color(.92f, .9f, .88f), null) ?? Roof("RoofFlat", MakeFlatTile(), .1f), Roof("RoofShingle", MakeShingle(), .08f), Roof("RoofWhite", MakeMembrane(), .12f),
                 Lit("RoofUnit", new Color(.74f, .75f, .74f), .35f),
                 Textured("CityPave", MakeConcrete("CityPaveTex", new Color(.52f, .51f, .48f), 0), .1f),
