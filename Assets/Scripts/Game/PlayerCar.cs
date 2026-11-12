@@ -60,6 +60,8 @@ namespace SurviveI95.Game
         [NonSerialized] public bool TestLookBack, TestHorn;
         /// <summary>True while the player is on the horn.</summary>
         public bool Honking { get; private set; }
+        /// <summary>What the driver asked of the car on the last physics step (for sound).</summary>
+        public DriveInput LastInput { get; private set; }
         AudioSource horn;
         static readonly string[] MirrorParts = { "Mirror_L", "Mirror_Rear", "Mirror_R" };
         Renderer[] mirrorParts;
@@ -237,8 +239,9 @@ namespace SurviveI95.Game
             if (Honking && horn == null)
             {
                 horn = gameObject.AddComponent<AudioSource>();
-                horn.clip = TrafficManager.MakeHorn(1f, 415f, 518f, loop: true);
-                horn.loop = true; horn.spatialBlend = 0f; horn.volume = .55f; horn.playOnAwake = false;
+                // A recorded horn held as long as the key is down; the made-up two-tone one only if the recordings are missing.
+                horn.clip = Resources.Load<AudioClip>("Sound/horn_hold") ?? TrafficManager.MakeHorn(1f, 415f, 518f, loop: true); horn.pitch = 1.1f;
+                horn.loop = true; horn.spatialBlend = 0f; horn.volume = .38f; horn.playOnAwake = false;
             }
             if (horn != null && Honking != horn.isPlaying) { if (Honking) horn.Play(); else horn.Stop(); }
             Glance = Mathf.MoveTowards(Glance, glancing && !lookingBack ? 1f : 0f, Time.deltaTime / .4f);
@@ -295,6 +298,7 @@ namespace SurviveI95.Game
             StorePrevious();
             int roads = Sim.RoadSwitches;
             BrakeLights = TestBrakeLights ?? (input.Brake > .02f && Sim.Speed > -.3f);
+            LastInput = input;
             Sim.Step(Path, input, Time.fixedDeltaTime);
             if (Mathf.Abs(Sim.S - prevS) > 20f || roads != Sim.RoadSwitches) StorePrevious(); // respawned or changed road
         }
@@ -515,6 +519,8 @@ namespace SurviveI95.Game
             if (speedNeedle) speedNeedle.localRotation = Quaternion.Euler(0, 0, 135f - 270f * Mathf.Clamp01(mph / 140f));
             float gearPos = Mathf.Clamp01(Mathf.Abs(Sim.Speed) / Sim.TopSpeed) * 6f;
             float rpm = mph < 1f ? 0.1f : 0.3f + 0.45f * (gearPos - Mathf.Min(5, (int)gearPos));
+            // With sound on, the needle follows the same engine the player hears (8,000 RPM full scale).
+            var audio = GetComponent<GameAudio>(); if (audio != null) rpm = audio.Rpm / 8000f;
             tachSmooth = Mathf.Lerp(tachSmooth, rpm, 1f - Mathf.Exp(-Time.deltaTime * 10f));
             if (tachNeedle) tachNeedle.localRotation = Quaternion.Euler(0, 0, 135f - 270f * tachSmooth);
             int rounded = Mathf.RoundToInt(mph);

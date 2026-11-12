@@ -179,6 +179,18 @@ namespace SurviveI95.EditorTools
                     var tsp = Shot(a[2]); tc.transform.SetPositionAndRotation(tk, tkr);
                     return tsp + $" train at {(lo.position - teye).magnitude:F0} m";
                 }
+                case "audio": // the sound mix right now
+                {
+                    var ga = car.GetComponent<SurviveI95.Game.GameAudio>(); if (ga == null) return "no audio";
+                    var parts = new System.Collections.Generic.List<string> { $"rpm={ga.Rpm:F0} gear={ga.Gear}" };
+                    foreach (var src in car.GetComponentsInChildren<AudioSource>()) if (src.isPlaying && src.volume > .005f) parts.Add($"{src.clip.name}:{src.volume:F2}@{src.pitch:F2}");
+                    int voices = 0; foreach (var src in UnityEngine.Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Exclude)) if (src.gameObject.name == "TrafficVoice" && src.volume > .01f) voices++;
+                    return string.Join(" ", parts) + $" trafficVoices={voices / 2}";
+                }
+                case "audiorec": // name seconds: records what the player hears to .livebridge/shots/name.wav
+                {
+                    var ap = Path.Combine(Dir, "shots", a[2] + ".wav"); SurviveI95.Game.AudioRecorder.Start(ap, F(a, 3)); return "recording " + ap;
+                }
                 case "orbitnow": return "orbit yaw " + car.OrbitYaw.ToString("F1");
                 case "look": car.ScriptedLook = new Vector2(F(a, 2), F(a, 3)); return "looking";
                 case "place": car.Place(F(a, 2)); return "placed";

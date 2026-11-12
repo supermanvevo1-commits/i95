@@ -163,9 +163,14 @@ namespace SurviveI95.Game
             return clip;
         }
 
+        /// <summary>Where a traffic car is drawn, for sounds that come from it.</summary>
+        public Transform RootOf(TrafficCar c) => c.View is View v && v.Root != null ? v.Root.transform : null;
+
         void PlayHorn(TrafficCar c, bool angry)
         {
             if (!(c.View is View v)) return;
+            var audio = GetComponent<GameAudio>();
+            if (audio != null) { audio.Honk(v.Root.transform, c.Def.category == "freight" || c.Def.category == "recreation", angry, c.GetHashCode()); return; }
             if (v.Horn == null)
             {
                 v.Horn = v.Root.AddComponent<AudioSource>();

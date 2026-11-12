@@ -94,9 +94,11 @@ async function each(make) {
     const part = samples.slice(i, i + 4).join(',');
     const cf = path.join(cacheDir, `${id}_${stage}_${i}.json`);
     let got;
-    if (fs.existsSync(cf)) got = JSON.parse(fs.readFileSync(cf, 'utf8'));
+    // An empty answer is how an overloaded server often fails quietly, so it's never kept: that piece is asked again next run.
+    const cached = fs.existsSync(cf) ? JSON.parse(fs.readFileSync(cf, 'utf8')) : null;
+    if (cached && cached.length > 0) got = cached;
     else {
-      try { got = await query(make(part)); fs.writeFileSync(cf, JSON.stringify(got)); }
+      try { got = await query(make(part)); if (got.length > 0) fs.writeFileSync(cf, JSON.stringify(got)); }
       catch (e) { console.log('\nskipped a piece:', e.message); got = []; }
     }
     for (const e of got) { const k = e.type + e.id; if (!seen.has(k)) { seen.add(k); out.push(e); } }

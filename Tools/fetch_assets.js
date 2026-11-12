@@ -152,4 +152,37 @@ async function plants() {
   }
 }
 
-({ environment, shortlist, vehicles, plants })[process.argv[2]]().catch(e => { console.error(e.message); process.exit(1); });
+// Real recordings for 5.9, from the Sonniss GDC Game Audio Bundles (royalty-free, commercial use, no attribution
+// required), fetched file by file from the Internet Archive's copies of the bundles.
+const SOUNDS = [
+  ['2016', 'Pole Position Production - Skoda Octavia 1.6 (2008)/Skoda_Octavia_1.6_t1_onboard_start_stop_idle_blip_steadies_Exhaust_Catalysator.wav'],
+  ['2016', 'Pole Position Production - Dodge Challenger 426 Hemi - 1970/Dodge_Challenger_Hemi_-70_t3_onboard_driving_steady_rpms_shutdown_Interior_L.wav'],
+  ['2017', 'Pole Position - Ford Ltd Crown Victoria 1990/Ford_LTD_t2_ext_medium_passbys_forward_stop_reverse_CSS5.wav'],
+  ['2017', 'Pole Position - Volvo F12 truck 1992/Volvo_F12_truck_t1_exterior_medium_passby_DPA4021.wav'],
+  ['2017', 'Pole Position - Volvo F12 truck 1992/Volvo_F12_truck_t11_exterior_slow_passby_Neumann.RSM191.wav'],
+  ['2018', 'Pole Position - Volvo 850 SE 2.5 1996/volvo_850_t24_var_sfx_ext_very_distant_horn_various_D100.wav'],
+  ['2018', 'Pole Position - Chevrolet Silverado 2012 Tow Truck/chevrolet_silverado_tow_truck_t24_onbrd_var_sfx_horn_various_engine_right_PZM.wav'],
+  ['2018', 'Pole Position - Skids & Screeches Tarmac/Skids_Tarmac_t4_exterior_skidding_in_circles_MKH8060_stand.wav'],
+  ['2018', 'Pole Position - Skids & Screeches Tarmac/Skids_Tarmac_t3_exterior_skidding_wet_tires_CSS5_handheld.wav'],
+  ['2015', 'Coll Anderson - Car Destruction/EFX EXT Car Impacts and Scrapes 19 A.wav'],
+  ['2015', 'Coll Anderson - Car Destruction/EFX EXT Metal Impact Smash Move 07 B.M.wav'],
+  ['2015', 'Coll Anderson - Car Destruction/EFX EXT Shattered Glass Impact 10 A.wav'],
+  ['2015', 'Mechanical Wave - Ambience and Weather/City Day Far Highway Rumble_MB 02.wav'],
+  ['2019', '2496SoundEffects - Surround In the City 5.1/Auto Interior On Busy Freeway Driving Fast Windows Open, Car Bys Fast -5.1 LCRLsRsLf.wav'],
+  ['2018', 'Fox Audio Post-Production - Planes Passbys – Interior-Exterior/Plane_Passbys_window_02.wav'],
+  ['2018', 'Fox Audio Post-Production - Planes Passbys – Interior-Exterior/Plane_Passbys_window_08.wav'],
+  ['2017', 'Griffin Sound Design - Chicago Rapid Transit - The L/L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav'],
+];
+
+async function sounds() {
+  for (const [year, rel] of SOUNDS) {
+    const item = `sonniss-gdc-${year}-game-audio-bundle-normalized`;
+    const url = `https://archive.org/download/${item}/${rel.split('/').map(encodeURIComponent).join('/')}`;
+    const dest = path.join(ROOT, 'Assets', 'ThirdParty', 'Sonniss', rel);
+    try { if (await save(url, dest)) console.log('sound', rel); else console.log('have', rel); }
+    catch (e) { console.log('FAILED', rel, e.message); continue; }
+    credit(`"${rel.split('/')[1]}" from "${rel.split('/')[0]}", Sonniss GDC ${year} Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)`);
+  }
+}
+
+({ environment, shortlist, vehicles, plants, sounds })[process.argv[2]]().catch(e => { console.error(e.message); process.exit(1); });

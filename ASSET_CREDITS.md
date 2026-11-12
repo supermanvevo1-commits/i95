@@ -68,3 +68,20 @@
 - clay_roof_tiles_02 (texture), Poly Haven, CC0, https://polyhaven.com/a/clay_roof_tiles_02
 - grey_roof_tiles (texture), Poly Haven, CC0, https://polyhaven.com/a/grey_roof_tiles
 - concrete_wall_004 (texture), Poly Haven, CC0, https://polyhaven.com/a/concrete_wall_004
+- "Skoda_Octavia_1.6_t1_onboard_start_stop_idle_blip_steadies_Exhaust_Catalysator.wav" from "Pole Position Production - Skoda Octavia 1.6 (2008)", Sonniss GDC 2016 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Dodge_Challenger_Hemi_-70_t3_onboard_driving_steady_rpms_shutdown_Interior_L.wav" from "Pole Position Production - Dodge Challenger 426 Hemi - 1970", Sonniss GDC 2016 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Ford_LTD_t2_ext_medium_passbys_forward_stop_reverse_CSS5.wav" from "Pole Position - Ford Ltd Crown Victoria 1990", Sonniss GDC 2017 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Volvo_F12_truck_t1_exterior_medium_passby_DPA4021.wav" from "Pole Position - Volvo F12 truck 1992", Sonniss GDC 2017 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Volvo_F12_truck_t11_exterior_slow_passby_Neumann.RSM191.wav" from "Pole Position - Volvo F12 truck 1992", Sonniss GDC 2017 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "volvo_850_t24_var_sfx_ext_very_distant_horn_various_D100.wav" from "Pole Position - Volvo 850 SE 2.5 1996", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "chevrolet_silverado_tow_truck_t24_onbrd_var_sfx_horn_various_engine_right_PZM.wav" from "Pole Position - Chevrolet Silverado 2012 Tow Truck", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Skids_Tarmac_t4_exterior_skidding_in_circles_MKH8060_stand.wav" from "Pole Position - Skids & Screeches Tarmac", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Skids_Tarmac_t3_exterior_skidding_wet_tires_CSS5_handheld.wav" from "Pole Position - Skids & Screeches Tarmac", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "EFX EXT Car Impacts and Scrapes 19 A.wav" from "Coll Anderson - Car Destruction", Sonniss GDC 2015 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "EFX EXT Metal Impact Smash Move 07 B.M.wav" from "Coll Anderson - Car Destruction", Sonniss GDC 2015 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "EFX EXT Shattered Glass Impact 10 A.wav" from "Coll Anderson - Car Destruction", Sonniss GDC 2015 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "City Day Far Highway Rumble_MB 02.wav" from "Mechanical Wave - Ambience and Weather", Sonniss GDC 2015 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Auto Interior On Busy Freeway Driving Fast Windows Open, Car Bys Fast -5.1 LCRLsRsLf.wav" from "2496SoundEffects - Surround In the City 5.1", Sonniss GDC 2019 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Plane_Passbys_window_02.wav" from "Fox Audio Post-Production - Planes Passbys – Interior-Exterior", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "Plane_Passbys_window_08.wav" from "Fox Audio Post-Production - Planes Passbys – Interior-Exterior", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- "L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav" from "Griffin Sound Design - Chicago Rapid Transit - The L", Sonniss GDC 2017 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
