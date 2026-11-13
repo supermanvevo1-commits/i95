@@ -118,7 +118,7 @@ async function vehicles() {
 
 // Plants and roadside props for the city (5.4b, 5.4c): Poly Haven CC0 at 1k, and three CC BY palms from Sketchfab.
 const PLANTS = {
-  polyhaven: ['island_tree_01', 'island_tree_02', 'island_tree_03', 'shrub_01', 'shrub_02', 'shrub_03', 'shrub_04', 'grass_bermuda_01', 'grass_medium_02', 'modular_chainlink_fence', 'modular_electricity_poles', 'fire_hydrant'],
+  polyhaven: ['island_tree_01', 'island_tree_02', 'island_tree_03', 'shrub_01', 'shrub_02', 'shrub_03', 'shrub_04', 'searsia_lucida', 'grass_bermuda_01', 'grass_medium_02', 'modular_chainlink_fence', 'modular_electricity_poles', 'fire_hydrant'],
   sketchfab: [
     { name: 'coconut_palm', uid: '26e787f2ff2e4c0fb004c3b0210805a3' },
     { name: 'curly_palm', uid: '00f2b57dd0e844edbeb116034fa471ec' },

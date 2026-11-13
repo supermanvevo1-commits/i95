@@ -36,7 +36,9 @@ namespace SurviveI95.EditorTools
             ("shade_tree", PH + "/Models/island_tree_01/island_tree_01.gltf", 11f, false, false),
             ("round_tree", PH + "/Models/island_tree_02/island_tree_02.gltf", 8.5f, false, false),
             ("small_tree", PH + "/Models/island_tree_03/island_tree_03.gltf", 5.5f, false, false),
-            ("shrub", PH + "/Models/shrub_03/shrub_03.gltf", 1.8f, false, false),
+            // A dense, leafy bush (Searsia lucida), standing in for the ficus, sea grape and cocoplum hedges in Miami yards.
+            // "#name" keeps one bush out of the seven the model file holds side by side.
+            ("shrub", PH + "/Models/searsia_lucida/searsia_lucida.gltf#searsia_lucida_b", 1.6f, false, false),
         };
         const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6;
 
@@ -55,14 +57,22 @@ namespace SurviveI95.EditorTools
             var list = new List<Species>();
             foreach (var (name, file, h, palm, full) in SpeciesList)
             {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(file);
-                if (prefab == null) { Debug.LogWarning("[FloridaSlice] plant model missing: " + file + " (run node Tools/fetch_assets.js plants)"); continue; }
+                string keep = null, path = file; int hash = file.IndexOf('#');
+                if (hash >= 0) { keep = file.Substring(hash + 1); path = file.Substring(0, hash); }
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null) { Debug.LogWarning("[FloridaSlice] plant model missing: " + path + " (run node Tools/fetch_assets.js plants)"); continue; }
                 var inst = UnityEngine.Object.Instantiate(prefab);
                 inst.transform.position = new Vector3(0, -6000, 0);
                 SetLayer(inst, 30);
+                if (keep != null)
+                    foreach (var rr in inst.GetComponentsInChildren<Renderer>(true))
+                    {
+                        bool mine = false; for (var t = rr.transform; t != null && !mine; t = t.parent) mine = t.name.StartsWith(keep);
+                        if (!mine) UnityEngine.Object.DestroyImmediate(rr.gameObject);
+                    }
                 var b = RendererBounds(inst);
                 float scale = h / b.size.y;
-                var sp = new Species { name = name, file = file, height = h, palm = palm, fullModel = full };
+                var sp = new Species { name = name, file = path, height = h, palm = palm, fullModel = full };
                 var pivot = new Vector3(b.center.x, b.min.y, b.center.z);
                 if (full) sp.mesh = CombineModel(inst, name, scale, pivot, out sp.mats);
                 MakeCards(inst, sp, b, scale);
@@ -338,6 +348,29 @@ namespace SurviveI95.EditorTools
                 models++;
             }
 
+            // Pools first, so no tree lands in one: behind about three houses in ten, with its deck.
+            var poolGrid = new Dictionary<(int, int), List<Vector2>>();
+            (int, int) PoolKey(Vector2 q) => ((int)Mathf.Floor(q.x / 20f), (int)Mathf.Floor(q.y / 20f));
+            bool NearPool(Vector2 q, float clear)
+            {
+                var k = PoolKey(q);
+                for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++)
+                        if (poolGrid.TryGetValue((k.Item1 + dx, k.Item2 + dz), out var l)) foreach (var c in l) if ((c - q).sqrMagnitude < clear * clear) return true;
+                return false;
+            }
+            foreach (var y in yards)
+            {
+                if (!y.hasStreet) continue;
+                var r = new System.Random((int)(y.mid.x * 3.3f) ^ (int)(y.mid.y * 5.9f) ^ 0x5151);
+                if (r.NextDouble() >= .3) continue;
+                float depthP = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.a : y.b;
+                var back = -y.toStreet; var pc = y.c + back * (depthP + 5f); var pu = new Vector2(-back.y, back.x);
+                if (InBuilding(pc, 4.5f) || !PlantSpotOk(pc, 3f) || NearPool(pc, 10f)) continue;
+                var deck = RectPts(pc, pu, 6f, 4.2f); var water = RectPts(pc, pu, 4.2f, 2.4f);
+                var bk = Get(pools, pc, 600f, 2);
+                Fan(bk, 1, deck, -0.12f, 2f); Fan(bk, 0, water, -0.1f, 2f); poolCount++;
+                var pk = PoolKey(pc); if (!poolGrid.TryGetValue(pk, out var pl)) poolGrid[pk] = pl = new List<Vector2>(); pl.Add(pc);
+            }
             // Yards: a tree or two beside or behind each house, and shrubs along the front wall.
             foreach (var y in yards)
             {
@@ -348,23 +381,12 @@ namespace SurviveI95.EditorTools
                     {
                         float ang = (float)r.NextDouble() * Mathf.PI * 2f, dist = Mathf.Max(y.a, y.b) + 2.5f + (float)r.NextDouble() * 4f;
                         var q = y.mid + new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)) * dist;
-                        if (!PlantSpotOk(q, 1.2f)) continue;
+                        // A tree's trunk stays clear of the pool deck (about 7 m across) and its canopy mostly off the water.
+                        if (!PlantSpotOk(q, 1.2f) || NearPool(q, 8f)) continue;
                         Card(PickYardTree(r), q, .85f + (float)r.NextDouble() * .45f, r);
                         break;
                     }
                 if (!y.hasStreet) continue;
-                // A pool behind about three houses in ten, with its deck.
-                if (r.NextDouble() < .3)
-                {
-                    float depthP = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.a : y.b;
-                    var back = -y.toStreet; var pc = y.c + back * (depthP + 5f); var pu = new Vector2(-back.y, back.x);
-                    if (!InBuilding(pc, 4.5f) && PlantSpotOk(pc, 3f))
-                    {
-                        var deck = RectPts(pc, pu, 6f, 4.2f); var water = RectPts(pc, pu, 4.2f, 2.4f);
-                        var bk = Get(pools, pc, 600f, 2);
-                        Fan(bk, 1, deck, -0.12f, 2f); Fan(bk, 0, water, -0.1f, 2f); poolCount++;
-                    }
-                }
                 // Foundation shrubs: the side of the house that faces the street.
                 var w = new Vector2(-y.toStreet.y, y.toStreet.x);
                 float depth = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.a : y.b, span = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.b : y.a;
@@ -372,7 +394,7 @@ namespace SurviveI95.EditorTools
                 for (int i = 0; i < count; i++)
                 {
                     var q = y.c + y.toStreet * (depth + .9f) + w * span * ((float)r.NextDouble() * 1.6f - .8f);
-                    if (InBuilding(q, .3f)) continue;
+                    if (InBuilding(q, .3f) || NearPool(q, 5f)) continue;
                     Card(SpShrub, q, 1f + (float)r.NextDouble() * .6f, r); shrubs++;
                 }
             }

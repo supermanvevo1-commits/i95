@@ -448,6 +448,8 @@ namespace SurviveI95.EditorTools
                 built++;
             }
             int infill = Infill(p, south, map);
+            int streetFill = StreetInfill(map);
+            Debug.Log($"[FloridaSlice] street infill houses where a built-up neighborhood has an empty gap and no zone: {streetFill}");
             int chunks = Flush(map, "City", mats, CitySlots, true);
             Debug.Log($"[FloridaSlice] infill buildings where the map has a zone but no footprints: {infill}");
             Debug.Log($"[FloridaSlice] buildings placed {built} (houses {bkHouse}, apartments {bkApt}, shops {bkShop}, warehouses {bkWare}, offices {bkOffice}, towers {bkTower}, civic {bkCivic}, sheds {bkShed}), driveways {driveways}, shop lots {lotsMade}, removed from roadway {dropped}, solid {solid}, chunks {chunks}");
@@ -494,6 +496,64 @@ namespace SurviveI95.EditorTools
                     }
             }
             return n;
+        }
+
+        /// <summary>
+        /// The zoning map covers only part of Miami as homes, so whole blocks with streets but no footprints were left as
+        /// empty fields. Along side streets (7 m), where real buildings stand all around but a stretch is empty and the map
+        /// says nothing else is there (no park, school, water, shop or industry), add houses a lot apart facing the street.
+        /// </summary>
+        static int StreetInfill(Dictionary<(int, int), Bucket> map)
+        {
+            bool Occupied(int x, int y) => footGrid.TryGetValue((x, y), out var l) && l.Count > 0;
+            bool NearFoot(Vector2 q, float rad)
+            {
+                int r = Mathf.CeilToInt(rad / FootCell), cx = (int)Mathf.Floor(q.x / FootCell), cy = (int)Mathf.Floor(q.y / FootCell);
+                for (int a = -r; a <= r; a++) for (int b = -r; b <= r; b++)
+                    if (footGrid.TryGetValue((cx + a, cy + b), out var l))
+                        foreach (var pts in l) foreach (var v in pts) if ((v - q).sqrMagnitude < rad * rad) return true;
+                return false;
+            }
+            int Neighbors(Vector2 q)
+            {
+                int n = 0, cx = (int)Mathf.Floor(q.x / FootCell), cy = (int)Mathf.Floor(q.y / FootCell);
+                for (int a = -6; a <= 6; a++) for (int b = -6; b <= 6; b++) if (Occupied(cx + a, cy + b)) n++;
+                return n;
+            }
+            // Pick the sites against the real buildings first, so new houses don't block each other.
+            var sites = new List<(Vector2 c, Vector2 u, Vector2 toStreet, float a, float b, int seed)>();
+            foreach (var (sa, sb, w) in streetGrid.Values.SelectMany(x => x).Distinct())
+            {
+                if (w > 7.5f) continue;
+                var d = sb - sa; float len = d.magnitude; if (len < 20f) continue;
+                var t = d / len; var n = new Vector2(-t.y, t.x);
+                for (float x = 11f; x < len - 8f; x += 22f)
+                    for (int side = -1; side <= 1; side += 2)
+                    {
+                        var at = sa + t * x;
+                        var r = new System.Random((int)(at.x * 3.1f) ^ (int)(at.y * 7.7f) ^ side * 0x2F1 ^ 0x5EED);
+                        float a = 6f + (float)r.NextDouble() * 3f, b = 4.5f + (float)r.NextDouble() * 2f;
+                        var c = at + n * side * (w / 2f + 7.5f + b);
+                        var z = ZoneAt(c); if (z != null && z != "home") continue;
+                        if (NearFoot(c, 28f) || Neighbors(c) < 25 || InWater(c) || OnRoad(c, 25f) || NearExit(c, 20f)) continue;
+                        if (osmLots.Any(l => Inside(l, c))) continue;
+                        // The house sits square to its street: long side along it.
+                        var foot = RectPts(c, t, a, b);
+                        if (foot.Any(v => OnRoad(v, 20f) || StreetDistance(v, 8f, out _, out var sw2) < sw2 / 2f + 2f)) continue;
+                        if (StreetDistance(c, 40f, out var near, out _) < w / 2f + 7.5f + b - 1f && (near - at).sqrMagnitude > 4f) continue; // closer to another street: a corner, leave it
+                        if (sites.Any(o => (o.c - c).sqrMagnitude < 18f * 18f)) continue;
+                        sites.Add((c, t, -n * side, a, b, r.Next()));
+                    }
+            }
+            foreach (var (c, u, toStreet, a, b, seed) in sites)
+            {
+                var r = new System.Random(seed);
+                var foot = RectPts(c, u, a, b);
+                House(Get(map, c, 900f, CitySlots), foot, c, 4f * a * b, 0f, true, c, u, a, b, r);
+                AddFootprint(foot);
+                if (Locate(c, out var cs, out var clat) && Mathf.Abs(clat) < 500f) Solid(cs, clat, Mathf.Min(a, b), Mathf.Min(a, b), "building");
+            }
+            return sites.Count;
         }
 
         static float House(Bucket bk, List<Vector2> pts, Vector2 mid, float area, float h, bool rect, Vector2 c, Vector2 u, float a, float b, System.Random r)

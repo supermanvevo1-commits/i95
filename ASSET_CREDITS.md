@@ -85,3 +85,4 @@
 - "Plane_Passbys_window_02.wav" from "Fox Audio Post-Production - Planes Passbys – Interior-Exterior", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
 - "Plane_Passbys_window_08.wav" from "Fox Audio Post-Production - Planes Passbys – Interior-Exterior", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
 - "L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav" from "Griffin Sound Design - Chicago Rapid Transit - The L", Sonniss GDC 2017 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- searsia_lucida (model), Poly Haven, CC0, https://polyhaven.com/a/searsia_lucida
