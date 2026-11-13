@@ -88,3 +88,4 @@
 - searsia_lucida (model), Poly Haven, CC0, https://polyhaven.com/a/searsia_lucida
 - "Realistic HD Royal palm (9/25)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-royal-palm-925-33e06cb77a1b49d79deb2a941c64230e
 - "Realistic HD Royal palm (10/25)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-royal-palm-1025-181b331fcfb34cd0861dfabbe7cafcb8
+- "Live Oak Tree" by ASMA3D, CC Attribution, https://sketchfab.com/3d-models/live-oak-tree-13df7dae1f3840d28a5253c9ca7cfb9d

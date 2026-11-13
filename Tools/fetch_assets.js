@@ -125,6 +125,7 @@ const PLANTS = {
     { name: 'date_palm', uid: 'ced3b31f14f940d0b7480a83e6f8c9c0' },
     { name: 'royal_palm_a', uid: '33e06cb77a1b49d79deb2a941c64230e' },
     { name: 'royal_palm_b', uid: '181b331fcfb34cd0861dfabbe7cafcb8' },
+    { name: 'live_oak', uid: '13df7dae1f3840d28a5253c9ca7cfb9d' },
   ]
 };
 

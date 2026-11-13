@@ -44,8 +44,11 @@ namespace SurviveI95.EditorTools
             // Scanned-detail models (about 250,000 triangles), so cards only.
             ("royal_palm_a", "Assets/ThirdParty/Sketchfab/royal_palm_a/scene.gltf", 16f, true, false),
             ("royal_palm_b", "Assets/ThirdParty/Sketchfab/royal_palm_b/scene.gltf", 19f, true, false),
+            // Southern live oak (Quercus virginiana): long low limbs spreading wider than it is tall, hung with Spanish moss
+            // (added by the builder). The old shade trees of Coconut Grove, Coral Gables and the older Miami neighborhoods.
+            ("live_oak", "Assets/ThirdParty/Sketchfab/live_oak/scene.gltf", 12f, false, false),
         };
-        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8;
+        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8, SpOak = 9;
 
         static void SetLayer(GameObject g, int layer) { foreach (var t in g.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer; }
 
@@ -80,6 +83,7 @@ namespace SurviveI95.EditorTools
                 var sp = new Species { name = name, file = path, height = h, palm = palm, fullModel = full };
                 var pivot = new Vector3(b.center.x, b.min.y, b.center.z);
                 if (full) sp.mesh = CombineModel(inst, name, scale, pivot, out sp.mats);
+                if (name == "live_oak") AddMoss(inst, b, scale);
                 MakeCards(inst, sp, b, scale);
                 UnityEngine.Object.DestroyImmediate(inst);
                 list.Add(sp);
@@ -125,6 +129,75 @@ namespace SurviveI95.EditorTools
             mesh.RecalculateBounds();
             var f = $"{Gen}/Plants/{name}.asset"; AssetDatabase.DeleteAsset(f); AssetDatabase.CreateAsset(mesh, f);
             return mesh;
+        }
+
+        /// <summary>
+        /// Spanish moss: a few hundred gray-green clumps 0.5 to 1.8 m long (Miami's oaks carry it in clumps, not the full drape of north Florida) hanging straight down from the limbs of the oak, thickest in
+        /// the middle of the crown. Each strand is two crossed sheets with a drawn texture of fine threads.
+        /// </summary>
+        static void AddMoss(GameObject inst, Bounds b, float scale)
+        {
+            // Every bark piece, as world-space triangles (the model comes in several parts).
+            var bt = new List<Vector3>();
+            foreach (var br in inst.GetComponentsInChildren<MeshRenderer>())
+            {
+                if (!br.sharedMaterials.Any(mt => mt != null && mt.name.IndexOf("Bark", StringComparison.OrdinalIgnoreCase) >= 0)) continue;
+                var bf = br.GetComponent<MeshFilter>(); if (bf == null || bf.sharedMesh == null) continue;
+                var bv = bf.sharedMesh.vertices; var bi = bf.sharedMesh.triangles;
+                for (int i = 0; i < bi.Length; i++) bt.Add(br.transform.TransformPoint(bv[bi[i]]));
+            }
+            if (bt.Count == 0) { Debug.LogWarning("[FloridaSlice] live oak: no bark mesh for moss"); return; }
+            var r = new System.Random(77);
+            float m = 1f / scale; // meters to model units
+            var v = new List<Vector3>(); var uv = new List<Vector2>(); var t = new List<int>();
+            int made = 0;
+            for (int tries = 0; tries < 80000 && made < 340; tries++)
+            {
+                int k = r.Next(bt.Count / 3) * 3;
+                float a = (float)r.NextDouble(), c = (float)r.NextDouble(); if (a + c > 1f) { a = 1f - a; c = 1f - c; }
+                var p = bt[k] + (bt[k + 1] - bt[k]) * a + (bt[k + 2] - bt[k]) * c;
+                float up = (p.y - b.min.y) / b.size.y;
+                // On the limbs, not the trunk base or the twig tips at the top.
+                if (up < .25f || up > .68f) continue;
+                float fromAxis = new Vector2(p.x - b.center.x, p.z - b.center.z).magnitude / (Mathf.Max(b.size.x, b.size.z) * .5f);
+                if (fromAxis < .12f || r.NextDouble() < Mathf.Abs(up - .5f)) continue;
+                float len = (.5f + (float)(r.NextDouble() * r.NextDouble()) * 1.3f) * m, w = (.22f + (float)r.NextDouble() * .18f) * m;
+                float yaw = (float)r.NextDouble() * 180f;
+                for (int face = 0; face < 2; face++)
+                {
+                    var side = Quaternion.Euler(0, yaw + face * 90f, 0) * Vector3.right * w;
+                    int n = v.Count;
+                    v.Add(p - side); v.Add(p + side); v.Add(p + side * .35f + Vector3.down * len); v.Add(p - side * .35f + Vector3.down * len);
+                    uv.Add(new Vector2(0, 1)); uv.Add(new Vector2(1, 1)); uv.Add(new Vector2(1, 0)); uv.Add(new Vector2(0, 0));
+                    t.AddRange(new[] { n, n + 1, n + 2, n, n + 2, n + 3 });
+                }
+                made++;
+            }
+            var go = new GameObject("SpanishMoss", typeof(MeshFilter), typeof(MeshRenderer));
+            go.transform.SetParent(inst.transform, true); go.layer = inst.layer;
+            var mm = new Mesh { name = "SpanishMoss", indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
+            mm.SetVertices(v); mm.SetUVs(0, uv); mm.SetTriangles(t, 0); mm.RecalculateNormals(); mm.RecalculateBounds();
+            go.GetComponent<MeshFilter>().sharedMesh = mm;
+            // Threads: many fine wavy strands, thinning toward the tips.
+            var tex = new Texture2D(64, 256, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[64 * 256];
+            for (int s = 0; s < 46; s++)
+            {
+                float x0 = (float)r.NextDouble() * 58f + 3f, phase = (float)r.NextDouble() * 6f, end = 256f * (float)(r.NextDouble() * .6);
+                for (int y = 255; y >= (int)end; y--)
+                {
+                    int x = Mathf.Clamp(Mathf.RoundToInt(x0 + Mathf.Sin(y * .09f + phase) * 2.5f), 0, 62);
+                    byte g = (byte)(150 + r.Next(40));
+                    px[y * 64 + x] = px[y * 64 + x + 1] = new Color32((byte)(g - 6), g, (byte)(g - 16), 255);
+                }
+            }
+            tex.SetPixels32(px); tex.Apply();
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.SetTexture("_BaseMap", tex); mat.SetColor("_BaseColor", new Color(.8f, .83f, .74f));
+            mat.SetFloat("_AlphaClip", 1f); mat.SetFloat("_Cutoff", .5f); mat.EnableKeyword("_ALPHATEST_ON");
+            mat.SetFloat("_Cull", 0f); mat.SetFloat("_Smoothness", .05f);
+            go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            Debug.Log($"[FloridaSlice] live oak: {made} moss strands");
         }
 
         /// <summary>Photographs the model from three sides (60° apart) and from above into one strip of four pictures.</summary>
@@ -312,7 +385,7 @@ namespace SurviveI95.EditorTools
         static int PickYardTree(System.Random r)
         {
             double x = r.NextDouble();
-            return x < .2 ? SpShade : x < .38 ? SpRound : x < .5 ? SpSmall : x < .68 ? SpCoconut : x < .84 ? SpYoung : SpDate;
+            return x < .12 ? SpOak : x < .28 ? SpShade : x < .43 ? SpRound : x < .53 ? SpSmall : x < .7 ? SpCoconut : x < .85 ? SpYoung : SpDate;
         }
 
         static void BuildPlants(RoutePath p, Func<float, float> south)
@@ -336,8 +409,8 @@ namespace SurviveI95.EditorTools
                 if (!chunks.TryGetValue(key, out var cb)) chunks[key] = cb = new CardBucket(species.Count);
                 CardGeometry(cb.v[sp], cb.uv[sp], cb.n[sp], cb.t[sp], species[sp], new Vector3(q.x, -.25f, q.y), (float)r.NextDouble() * 360f, scale);
                 cards++;
-                // Where the royal palms stand along the road (s and lateral), for before-and-after shots.
-                if ((sp == SpRoyalA || sp == SpRoyalB) && Locate(q, out var rs, out var rl) && Mathf.Abs(rl) < 400f) royalSpots.Add(FormattableString.Invariant($"{rs:F0} {rl:F0}"));
+                // Where the royal palms and live oaks stand along the road (s and lateral), for before-and-after shots.
+                if ((sp == SpRoyalA || sp == SpRoyalB || sp == SpOak) && Locate(q, out var rs, out var rl) && Mathf.Abs(rl) < 400f) royalSpots.Add(FormattableString.Invariant($"{species[sp].name} {rs:F0} {rl:F0}"));
             }
             void Model(int sp, Vector2 q, float scale, System.Random r)
             {
@@ -469,7 +542,7 @@ namespace SurviveI95.EditorTools
             Flush(pools, "Pools", new[] { waterMat, deckMat }, 2, false);
             BuildFences(p, south);
             BuildWater(p); BuildPower(p, south); BuildRail(p); BuildBillboards(p, south);
-            File.WriteAllLines(".livebridge/royal_palms.txt", royalSpots);
+            File.WriteAllLines(".livebridge/plant_spots.txt", royalSpots);
             Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}), full palms near the road {models}, pools {poolCount}");
         }
 
