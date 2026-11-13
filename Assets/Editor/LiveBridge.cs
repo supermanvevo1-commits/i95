@@ -103,6 +103,7 @@ namespace SurviveI95.EditorTools
                     vc.transform.SetPositionAndRotation(keepPos, keepRot);
                     return vp;
                 }
+                case "shimmer": SurviveI95.Game.HeatShimmer.Strength = a.Length > 2 ? F(a, 2) : 2.2f; return $"heat shimmer {SurviveI95.Game.HeatShimmer.Strength} px";
                 case "kids": // name: how many objects and renderers sit under each scene object with that name
                 {
                     var kl = new System.Collections.Generic.List<string>();
