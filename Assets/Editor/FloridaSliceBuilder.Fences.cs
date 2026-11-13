@@ -52,9 +52,13 @@ namespace SurviveI95.EditorTools
         }
 
         /// <summary>A run of fence from a to b on the ground: fabric or boards, with posts every 3 m and a top rail.</summary>
-        static void FenceRun(Bucket bk, Vector2 a, Vector2 b, float h, bool wood)
+        // Every fence run, so the plants can grow weeds along them; true for the highway's own fence.
+        static readonly List<(Vector2 a, Vector2 b, bool highway)> fenceSegs = new List<(Vector2, Vector2, bool)>();
+
+        static void FenceRun(Bucket bk, Vector2 a, Vector2 b, float h, bool wood, bool highway = false)
         {
             float len = (b - a).magnitude; if (len < .5f) return;
+            fenceSegs.Add((a, b, highway));
             Vector3 P(Vector2 q, float y) => new Vector3(q.x, y, q.y);
             float y0 = -.25f;
             int slot = wood ? FWood : FFabric; var v = bk.v[slot]; var uv = bk.uv[slot]; int n = v.Count;
@@ -157,6 +161,7 @@ namespace SurviveI95.EditorTools
         static void BuildFences(RoutePath p, Func<float, float> south)
         {
             var old = GameObject.Find("Fences"); if (old != null) UnityEngine.Object.DestroyImmediate(old);
+            fenceSegs.Clear();
             var fabric = Lit("ChainLinkFabric", Color.white, .4f);
             fabric.SetTexture("_BaseMap", MakeChainLink()); fabric.SetFloat("_Metallic", .4f);
             fabric.SetFloat("_AlphaClip", 1f); fabric.SetFloat("_Cutoff", .4f); fabric.EnableKeyword("_ALPHATEST_ON"); fabric.SetFloat("_Cull", 0f); fabric.renderQueue = 2450;
@@ -174,7 +179,7 @@ namespace SurviveI95.EditorTools
                     float lat = side > 0 ? p.HalfWidth(s) + 26f : south(s) - p.HalfWidth(s) - 26f;
                     var c = p.Point(s, lat); var q = new Vector2(c.x, c.z);
                     bool ok = !p.HasSoundWall(s) && !InBuilding(q, 1.5f) && !NearExit(q, 16f) && StreetDistance(q, 10f, out _, out var w) > w / 2f + 1f && !OnRoad(q, 14f);
-                    if (ok && prev.HasValue) { FenceRun(Get(map, q, 600f, FenceSlots), prev.Value, q, 1.8f, false); highway++; }
+                    if (ok && prev.HasValue) { FenceRun(Get(map, q, 600f, FenceSlots), prev.Value, q, 1.8f, false, true); highway++; }
                     prev = ok ? q : (Vector2?)null;
                 }
             }

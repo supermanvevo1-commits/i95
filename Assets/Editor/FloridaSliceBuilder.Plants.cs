@@ -53,8 +53,11 @@ namespace SurviveI95.EditorTools
             // Butterfly (areca) palms, the bushy clumps of thin yellow-green stems in nearly every Miami yard.
             ("areca_a", "Assets/ThirdParty/Sketchfab/areca_a/scene.gltf", 4.5f, true, false),
             ("areca_b", "Assets/ThirdParty/Sketchfab/areca_b/scene.gltf", 5.5f, true, false),
+            // What grows up a fence where the mower can't reach: a thin scraggly weed and a clump of tall grass.
+            ("weed", PH + "/Models/shrub_03/shrub_03.gltf", 1.1f, false, false),
+            ("tall_grass", PH + "/Models/grass_medium_02/grass_medium_02.gltf", .75f, false, false),
         };
-        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8, SpOak = 9, SpFanA = 10, SpFanB = 11, SpArecaA = 12, SpArecaB = 13;
+        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8, SpOak = 9, SpFanA = 10, SpFanB = 11, SpArecaA = 12, SpArecaB = 13, SpWeed = 14, SpTallGrass = 15;
 
         static void SetLayer(GameObject g, int layer) { foreach (var t in g.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer; }
 
@@ -543,15 +546,38 @@ namespace SurviveI95.EditorTools
                         }
                     }
             }
+            // Fences first, so weeds and tall grass can grow along them: in clumps, on both sides, thick along the
+            // highway fence (nobody trims the state's fence line) and sparse in kept yards.
+            BuildFences(p, south);
+            int weeds = 0;
+            {
+                var r = new System.Random(4242);
+                foreach (var (a, b, highwayFence) in fenceSegs)
+                {
+                    float len = (b - a).magnitude; if (len < 1f) continue;
+                    var dir = (b - a) / len; var nrm = new Vector2(-dir.y, dir.x);
+                    float chance = highwayFence ? .8f : .14f;
+                    for (float d = (float)r.NextDouble() * 2f; d < len; d += 2.2f + (float)r.NextDouble() * 2f)
+                    {
+                        if (r.NextDouble() > chance) continue;
+                        // A clump of two to four along the wire.
+                        for (int k = (highwayFence ? 2 : 1) + r.Next(3); k > 0; k--)
+                        {
+                            var q = a + dir * Mathf.Min(len, d + (float)r.NextDouble() * 1.4f) + nrm * ((r.NextDouble() < .5 ? -1f : 1f) * (.15f + (float)r.NextDouble() * .35f));
+                            if (OnRoad(q, 7f) || InBuilding(q, .3f) || InWater(q)) continue;
+                            Card(r.NextDouble() < .55 ? SpWeed : SpTallGrass, q, .7f + (float)r.NextDouble() * .7f, r); weeds++;
+                        }
+                    }
+                }
+            }
             FlushCards(chunks, "Plants", cardMats);
             var oldPools = GameObject.Find("Pools"); if (oldPools != null) UnityEngine.Object.DestroyImmediate(oldPools);
             var waterMat = Lit("PoolWater", new Color(.18f, .62f, .78f), .92f);
             var deckMat = AssetDatabase.LoadAssetAtPath<Material>(Gen + "/Materials/CityPave.mat") ?? Lit("PoolDeck", new Color(.85f, .83f, .78f), .1f);
             Flush(pools, "Pools", new[] { waterMat, deckMat }, 2, false);
-            BuildFences(p, south);
             BuildWater(p); BuildPower(p, south); BuildRail(p); BuildBillboards(p, south);
             File.WriteAllLines(".livebridge/plant_spots.txt", royalSpots);
-            Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}), full palms near the road {models}, pools {poolCount}");
+            Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}, weeds along fences {weeds}), full palms near the road {models}, pools {poolCount}");
         }
 
         static float DistanceFromCarriageway(RoutePath p, Func<float, float> south, float s, float lat)
