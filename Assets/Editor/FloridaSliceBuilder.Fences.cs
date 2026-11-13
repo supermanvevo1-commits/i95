@@ -9,11 +9,12 @@ namespace SurviveI95.EditorTools
     /// <summary>
     /// Fences. Florida fences its limited-access highways along the property line, so I-95 has a chain-link fence
     /// beyond the clear zone wherever there's no sound wall, broken at exits and streets. Back yards are fenced too:
-    /// chain-link (most common in older Miami blocks) or a 6 ft wood privacy fence, behind about 4 houses in 10.
+    /// chain-link (most common in older Miami blocks) or a 6 ft wood privacy fence, behind about 4 houses in 10. Many of
+    /// the rest have a tall clipped ficus hedge down the side lot lines and across the front corners instead.
     /// </summary>
     public static partial class FloridaSliceBuilder
     {
-        const int FFabric = 0, FMetal = 1, FWood = 2, FenceSlots = 3;
+        const int FFabric = 0, FMetal = 1, FWood = 2, FHedge = 3, FenceSlots = 4;
 
         static Texture2D MakeChainLink()
         {
@@ -71,6 +72,88 @@ namespace SurviveI95.EditorTools
             Cuboid(bk.v[FMetal], bk.uv[FMetal], bk.t[FMetal], P((a + b) / 2f, y0 + h), rot, new Vector3(.04f, .04f, len));
         }
 
+        static Texture2D MakeHedge(out Texture2D normal)
+        {
+            // 1.6 m of clipped ficus: thousands of small glossy leaves, light on their sunny edge, in deep shade between.
+            const int S = 512; var px = new Color[S * S];
+            for (int i = 0; i < px.Length; i++) { float n = Hash(i % S, i / S, 5); px[i] = new Color(.02f + n * .01f, .05f + n * .02f, .015f, 1f); }
+            var r = new System.Random(808);
+            for (int k = 0; k < 5200; k++)
+            {
+                float cx = (float)r.NextDouble() * S, cy = (float)r.NextDouble() * S, ang = (float)r.NextDouble() * Mathf.PI;
+                float len = 9f + (float)r.NextDouble() * 6f, wid = len * .45f, tone = (float)r.NextDouble();
+                // Clumps: whole patches of the hedge sit in shade between the sunny bulges.
+                float clump = .55f + .45f * Mathf.Sin(cx * .031f + Mathf.Sin(cy * .023f) * 2f) * Mathf.Sin(cy * .037f + 1.3f);
+                var baseC = Color.Lerp(new Color(.07f, .13f, .03f), new Color(.19f, .31f, .07f), tone) * (.55f + .6f * clump);
+                float ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
+                for (int dy = -15; dy <= 15; dy++) for (int dx = -15; dx <= 15; dx++)
+                {
+                    float lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
+                    float e = (lx * lx) / (len * len) + (ly * ly) / (wid * wid); if (e > 1f) continue;
+                    // Glossy: brighter toward the upper edge of each leaf, a pale midrib.
+                    float lit = .8f + .45f * Mathf.Clamp01(-ly / wid + .3f) + (Mathf.Abs(ly) < .6f ? .15f : 0f);
+                    int x = ((int)cx + dx + S) % S, y = ((int)cy + dy + S) % S;
+                    var c = baseC * lit; c.a = 1f; px[y * S + x] = c;
+                }
+            }
+            var tex = new Texture2D(S, S, TextureFormat.RGBA32, true); tex.SetPixels(px); tex.Apply();
+            // Bumps from the leaves themselves: bright leaves stand out, the dark gaps between sink in.
+            var np = new Color[S * S];
+            float H(int x, int y) { var c = px[((y + S) % S) * S + (x + S) % S]; return c.r + c.g + c.b; }
+            for (int y = 0; y < S; y++) for (int x = 0; x < S; x++)
+            {
+                float dx = (H(x + 1, y) - H(x - 1, y)) * 4f, dy = (H(x, y + 1) - H(x, y - 1)) * 4f;
+                var n = new Vector3(-dx, -dy, 1f).normalized;
+                np[y * S + x] = new Color(n.x * .5f + .5f, n.y * .5f + .5f, n.z * .5f + .5f, 1f);
+            }
+            var nt = new Texture2D(S, S, TextureFormat.RGBA32, true); nt.SetPixels(np); nt.Apply();
+            normal = SaveTexture(nt, "HedgeNormal", false);
+            if (AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(normal)) is TextureImporter ni) { ni.textureType = TextureImporterType.NormalMap; ni.SaveAndReimport(); }
+            normal = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GetAssetPath(normal));
+            return SaveTexture(tex, "Hedge");
+        }
+
+        /// <summary>A clipped hedge from a to b: a box about 0.9 m deep with a slightly uneven top and sides.</summary>
+        static void HedgeRun(Bucket bk, Vector2 a, Vector2 b, float h, System.Random r)
+        {
+            float len = (b - a).magnitude; if (len < 1f) return;
+            var dir = (b - a) / len; var nrm = new Vector2(-dir.y, dir.x);
+            var v = bk.v[FHedge]; var uv = bk.uv[FHedge]; var t = bk.t[FHedge];
+            int steps = Mathf.Max(1, Mathf.RoundToInt(len)); float y0 = -.25f;
+            var top = new float[steps + 1]; var half = new float[steps + 1];
+            for (int i = 0; i <= steps; i++) { top[i] = h + (float)(r.NextDouble() - .5) * .25f; half[i] = .45f + (float)(r.NextDouble() - .5) * .14f; }
+            Vector3 P(Vector2 q, float y) => new Vector3(q.x, y, q.y);
+            for (int i = 0; i < steps; i++)
+            {
+                float d0 = len * i / steps, d1 = len * (i + 1) / steps;
+                var q0 = a + dir * d0; var q1 = a + dir * d1;
+                foreach (int sd in new[] { 1, -1 })
+                {
+                    // Side faces, bellying out a little at mid height.
+                    var o0 = nrm * sd * half[i]; var o1 = nrm * sd * half[i + 1];
+                    int n = v.Count;
+                    v.Add(P(q0 + o0 * .92f, y0)); v.Add(P(q1 + o1 * .92f, y0)); v.Add(P(q0 + o0, top[i] * .55f)); v.Add(P(q1 + o1, top[i + 1] * .55f)); v.Add(P(q0 + o0 * .85f, top[i])); v.Add(P(q1 + o1 * .85f, top[i + 1]));
+                    uv.Add(new Vector2(d0, 0)); uv.Add(new Vector2(d1, 0)); uv.Add(new Vector2(d0, top[i] * .55f)); uv.Add(new Vector2(d1, top[i + 1] * .55f)); uv.Add(new Vector2(d0, top[i])); uv.Add(new Vector2(d1, top[i + 1]));
+                    if (sd > 0) t.AddRange(new[] { n, n + 2, n + 1, n + 1, n + 2, n + 3, n + 2, n + 4, n + 3, n + 3, n + 4, n + 5 });
+                    else t.AddRange(new[] { n, n + 1, n + 2, n + 1, n + 3, n + 2, n + 2, n + 3, n + 4, n + 3, n + 5, n + 4 });
+                }
+                // Top, rounded over a little.
+                int m = v.Count;
+                var l0 = nrm * half[i] * .85f; var l1 = nrm * half[i + 1] * .85f;
+                v.Add(P(q0 + l0, top[i])); v.Add(P(q1 + l1, top[i + 1])); v.Add(P(q0, top[i] + .08f)); v.Add(P(q1, top[i + 1] + .08f)); v.Add(P(q0 - l0, top[i])); v.Add(P(q1 - l1, top[i + 1]));
+                uv.Add(new Vector2(d0, 0)); uv.Add(new Vector2(d1, 0)); uv.Add(new Vector2(d0, .45f)); uv.Add(new Vector2(d1, .45f)); uv.Add(new Vector2(d0, .9f)); uv.Add(new Vector2(d1, .9f));
+                t.AddRange(new[] { m, m + 1, m + 2, m + 1, m + 3, m + 2, m + 2, m + 3, m + 4, m + 3, m + 5, m + 4 });
+            }
+            // Ends.
+            foreach (var (q, i, sgn) in new[] { (a, 0, -1), (b, steps, 1) })
+            {
+                var o = nrm * half[i]; int n = v.Count;
+                v.Add(P(q + o * .92f, y0)); v.Add(P(q - o * .92f, y0)); v.Add(P(q + o * .85f, top[i])); v.Add(P(q - o * .85f, top[i]));
+                uv.Add(new Vector2(0, 0)); uv.Add(new Vector2(.9f, 0)); uv.Add(new Vector2(0, top[i])); uv.Add(new Vector2(.9f, top[i]));
+                if (sgn > 0) t.AddRange(new[] { n, n + 2, n + 1, n + 1, n + 2, n + 3 }); else t.AddRange(new[] { n, n + 1, n + 2, n + 1, n + 3, n + 2 });
+            }
+        }
+
         static void BuildFences(RoutePath p, Func<float, float> south)
         {
             var old = GameObject.Find("Fences"); if (old != null) UnityEngine.Object.DestroyImmediate(old);
@@ -79,8 +162,9 @@ namespace SurviveI95.EditorTools
             fabric.SetFloat("_AlphaClip", 1f); fabric.SetFloat("_Cutoff", .4f); fabric.EnableKeyword("_ALPHATEST_ON"); fabric.SetFloat("_Cull", 0f); fabric.renderQueue = 2450;
             var metal = Lit("FencePost", new Color(.6f, .62f, .62f), .4f); metal.SetFloat("_Metallic", .5f);
             var wood = Lit("WoodFence", Color.white, .1f); wood.SetTexture("_BaseMap", MakeWoodFence()); wood.SetFloat("_Cull", 0f);
+            var hedge = Lit("Hedge", new Color(1.6f, 1.6f, 1.15f), .25f); hedge.SetTexture("_BaseMap", MakeHedge(out var hedgeN)); hedge.SetTexture("_BumpMap", hedgeN); hedge.SetFloat("_BumpScale", 1.4f); hedge.EnableKeyword("_NORMALMAP"); hedge.SetTextureScale("_BaseMap", new Vector2(1f / 1.6f, 1f / 1.6f)); hedge.SetFloat("_Cull", 0f);
             var map = new Dictionary<(int, int), Bucket>();
-            int highway = 0, yardsFenced = 0;
+            int highway = 0, yardsFenced = 0, hedged = 0;
             // The highway fence, on both sides, at the edge of the state's land.
             foreach (int side in new[] { 1, -1 })
             {
@@ -99,7 +183,7 @@ namespace SurviveI95.EditorTools
             {
                 if (!y.hasStreet) continue;
                 var r = new System.Random((int)(y.mid.x * 9.1f) ^ (int)(y.mid.y * 3.7f) ^ 0x1f);
-                if (r.NextDouble() > .4) continue;
+                if (r.NextDouble() > .4) { if (Hedge(y, map)) hedged++; continue; }
                 bool woodFence = r.NextDouble() < .45;
                 float depth = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.a : y.b, span = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.b : y.a;
                 var back = -y.toStreet; var side = new Vector2(-back.y, back.x);
@@ -114,8 +198,41 @@ namespace SurviveI95.EditorTools
                 FenceRun(bk, c0 + back * depth, c1, h, woodFence); FenceRun(bk, c1, c2, h, woodFence); FenceRun(bk, c2, c3 + back * depth, h, woodFence);
                 yardsFenced++;
             }
-            Flush(map, "Fences", new[] { fabric, metal, wood }, FenceSlots, true);
-            Debug.Log($"[FloridaSlice] fences: highway runs {highway}, fenced yards {yardsFenced}");
+            Flush(map, "Fences", new[] { fabric, metal, wood, hedge }, FenceSlots, true);
+            Debug.Log($"[FloridaSlice] fences: highway runs {highway}, fenced yards {yardsFenced}, hedged yards {hedged}");
+        }
+
+        /// <summary>
+        /// About 1 in 4 of the unfenced yards: a clipped ficus hedge 2 to 3 m tall down both side lot lines, from the
+        /// front line to the back of the lot, and short returns across the front corners, leaving the middle open
+        /// for the driveway and the walk. Pieces that would cut a house or a street are left out.
+        /// </summary>
+        static bool Hedge(Yard y, Dictionary<(int, int), Bucket> map)
+        {
+            var r = new System.Random((int)(y.mid.x * 5.3f) ^ (int)(y.mid.y * 8.9f) ^ 0x4ed);
+            if (r.NextDouble() > .25) return false;
+            float d = StreetDistance(y.mid, 40f, out _, out var sw); if (d > 39f) return false;
+            float depth = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.a : y.b, span = Mathf.Abs(Vector2.Dot(y.u, y.toStreet)) > .7f ? y.b : y.a;
+            var fwd = y.toStreet; var side = new Vector2(-fwd.y, fwd.x);
+            // The front line sits just inside the swale; the back of the lot about 12 m behind the house.
+            float front = d - sw / 2f - 2.5f, back = -(depth + 10f + (float)r.NextDouble() * 4f), half = span + 2.8f;
+            if (front < depth + 1.5f) return false;
+            float h = 2f + (float)r.NextDouble();
+            var bk = Get(map, y.mid, 600f, FenceSlots);
+            bool Clear(Vector2 a, Vector2 b)
+            {
+                for (float k = 0; k <= 1.001f; k += .25f) { var q = Vector2.Lerp(a, b, k); if (InBuilding(q, 1f) || OnRoad(q, 10f) || NearExit(q, 8f) || StreetDistance(q, 8f, out _, out var w2) < w2 / 2f + 1.5f) return false; }
+                return true;
+            }
+            int runs = 0;
+            foreach (int sd in new[] { 1, -1 })
+            {
+                var f0 = y.c + side * sd * half + fwd * front; var b0 = y.c + side * sd * half + fwd * back;
+                if (Clear(f0, b0)) { HedgeRun(bk, f0, b0, h, r); runs++; }
+                var f1 = y.c + side * sd * half * .38f + fwd * front;
+                if (Clear(f0, f1)) { HedgeRun(bk, f0, f1, h * .8f, r); runs++; }
+            }
+            return runs > 0;
         }
     }
 }

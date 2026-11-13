@@ -47,8 +47,14 @@ namespace SurviveI95.EditorTools
             // Southern live oak (Quercus virginiana): long low limbs spreading wider than it is tall, hung with Spanish moss
             // (added by the builder). The old shade trees of Coconut Grove, Coral Gables and the older Miami neighborhoods.
             ("live_oak", "Assets/ThirdParty/Sketchfab/live_oak/scene.gltf", 12f, false, false),
+            // Mexican fan palms, the very tall thin palms with round fan fronds that tower over Miami streets, trimmed clean.
+            ("fan_palm_a", "Assets/ThirdParty/Sketchfab/fan_palm_a/scene.gltf", 15f, true, false),
+            ("fan_palm_b", "Assets/ThirdParty/Sketchfab/fan_palm_b/scene.gltf", 20f, true, false),
+            // Butterfly (areca) palms, the bushy clumps of thin yellow-green stems in nearly every Miami yard.
+            ("areca_a", "Assets/ThirdParty/Sketchfab/areca_a/scene.gltf", 4.5f, true, false),
+            ("areca_b", "Assets/ThirdParty/Sketchfab/areca_b/scene.gltf", 5.5f, true, false),
         };
-        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8, SpOak = 9;
+        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8, SpOak = 9, SpFanA = 10, SpFanB = 11, SpArecaA = 12, SpArecaB = 13;
 
         static void SetLayer(GameObject g, int layer) { foreach (var t in g.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer; }
 
@@ -385,7 +391,7 @@ namespace SurviveI95.EditorTools
         static int PickYardTree(System.Random r)
         {
             double x = r.NextDouble();
-            return x < .12 ? SpOak : x < .28 ? SpShade : x < .43 ? SpRound : x < .53 ? SpSmall : x < .7 ? SpCoconut : x < .85 ? SpYoung : SpDate;
+            return x < .11 ? SpOak : x < .24 ? SpShade : x < .36 ? SpRound : x < .45 ? SpSmall : x < .58 ? SpCoconut : x < .68 ? SpYoung : x < .78 ? SpDate : x < .85 ? SpArecaA : x < .92 ? SpArecaB : x < .96 ? SpFanA : SpFanB;
         }
 
         static void BuildPlants(RoutePath p, Func<float, float> south)
@@ -410,7 +416,7 @@ namespace SurviveI95.EditorTools
                 CardGeometry(cb.v[sp], cb.uv[sp], cb.n[sp], cb.t[sp], species[sp], new Vector3(q.x, -.25f, q.y), (float)r.NextDouble() * 360f, scale);
                 cards++;
                 // Where the royal palms and live oaks stand along the road (s and lateral), for before-and-after shots.
-                if ((sp == SpRoyalA || sp == SpRoyalB || sp == SpOak) && Locate(q, out var rs, out var rl) && Mathf.Abs(rl) < 400f) royalSpots.Add(FormattableString.Invariant($"{species[sp].name} {rs:F0} {rl:F0}"));
+                if ((sp == SpRoyalA || sp == SpRoyalB || sp == SpOak || sp == SpFanA || sp == SpFanB) && Locate(q, out var rs, out var rl) && Mathf.Abs(rl) < 400f) royalSpots.Add(FormattableString.Invariant($"{species[sp].name} {rs:F0} {rl:F0}"));
             }
             void Model(int sp, Vector2 q, float scale, System.Random r)
             {
@@ -498,9 +504,10 @@ namespace SurviveI95.EditorTools
                     var dir = (b - a) / len; var side = new Vector2(-dir.y, dir.x);
                     var r = new System.Random((int)(a.x * 1.7f) ^ (int)(a.y * 2.9f) ^ (int)(b.x * 3.1f));
                     bool avenue = w >= 12f; float step = avenue ? 18f : 34f;
-                    // Each avenue keeps one kind along its length, as cities plant them: royal palms on about 4 in 10.
+                    // Each avenue keeps one kind along its length, as cities plant them: royal palms on 3 in 10, Mexican fan
+                    // palms on 2 in 10, coconut and date palms on the rest.
                     double roll = r.NextDouble();
-                    int sp = avenue ? (roll < .4 ? (roll < .2 ? SpRoyalA : SpRoyalB) : roll < .75 ? SpCoconut : SpDate) : PickYardTree(r);
+                    int sp = avenue ? (roll < .3 ? (roll < .15 ? SpRoyalA : SpRoyalB) : roll < .5 ? (roll < .4 ? SpFanA : SpFanB) : roll < .8 ? SpCoconut : SpDate) : PickYardTree(r);
                     for (float d = step * (float)r.NextDouble(); d < len; d += step)
                         foreach (int sgn in new[] { 1, -1 })
                         {
@@ -527,7 +534,8 @@ namespace SurviveI95.EditorTools
                             var spot = p.Point(s + ds, lat + dl); var q = new Vector2(spot.x, spot.z);
                             if (occupied.Contains(((int)(spot.x / 30f), (int)(spot.z / 30f))) && InBuilding(q, 2f)) continue;
                             if (OnRoad(q, 11f) || NearExit(q, 8f)) continue;
-                            int sp = palms ? (r.NextDouble() < .45 ? SpCoconut : r.NextDouble() < .5 ? SpDate : SpYoung) : (r.NextDouble() < .5 ? SpShade : SpRound);
+                            double pr = r.NextDouble();
+                            int sp = palms ? (pr < .38 ? SpCoconut : pr < .6 ? SpDate : pr < .78 ? SpYoung : pr < .9 ? SpFanA : SpFanB) : (r.NextDouble() < .5 ? SpShade : SpRound);
                             float sc = .85f + (float)r.NextDouble() * .35f;
                             if (species[sp].fullModel) Model(sp, q, sc, r); else Card(sp, q, sc, r);
                             Solid(s + ds, lat + dl, .4f, .4f, "tree");

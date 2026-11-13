@@ -126,6 +126,10 @@ const PLANTS = {
     { name: 'royal_palm_a', uid: '33e06cb77a1b49d79deb2a941c64230e' },
     { name: 'royal_palm_b', uid: '181b331fcfb34cd0861dfabbe7cafcb8' },
     { name: 'live_oak', uid: '13df7dae1f3840d28a5253c9ca7cfb9d' },
+    { name: 'fan_palm_a', uid: '5608b950c50d41ffb4f98bbdfb843477' },
+    { name: 'fan_palm_b', uid: '1205a111ed9a4ba8a94077b58a39d10b' },
+    { name: 'areca_a', uid: '082d9ccc396d43f99cf8e033bec7e1cb' },
+    { name: 'areca_b', uid: 'a71ce76bc9b4452b9ecc6bd7582d34f8' },
   ]
 };
 

@@ -89,3 +89,7 @@
 - "Realistic HD Royal palm (9/25)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-royal-palm-925-33e06cb77a1b49d79deb2a941c64230e
 - "Realistic HD Royal palm (10/25)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-royal-palm-1025-181b331fcfb34cd0861dfabbe7cafcb8
 - "Live Oak Tree" by ASMA3D, CC Attribution, https://sketchfab.com/3d-models/live-oak-tree-13df7dae1f3840d28a5253c9ca7cfb9d
+- "Realistic HD Mexican fan palm (9/10)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-mexican-fan-palm-910-5608b950c50d41ffb4f98bbdfb843477
+- "Realistic HD Mexican fan palm (10/10)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-mexican-fan-palm-1010-1205a111ed9a4ba8a94077b58a39d10b
+- "Realistic HD Butterfly palm (18/62)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-butterfly-palm-1862-082d9ccc396d43f99cf8e033bec7e1cb
+- "Realistic HD Butterfly palm (39/62)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-butterfly-palm-3962-a71ce76bc9b4452b9ecc6bd7582d34f8
