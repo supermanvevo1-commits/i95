@@ -123,6 +123,8 @@ const PLANTS = {
     { name: 'coconut_palm', uid: '26e787f2ff2e4c0fb004c3b0210805a3' },
     { name: 'curly_palm', uid: '00f2b57dd0e844edbeb116034fa471ec' },
     { name: 'date_palm', uid: 'ced3b31f14f940d0b7480a83e6f8c9c0' },
+    { name: 'royal_palm_a', uid: '33e06cb77a1b49d79deb2a941c64230e' },
+    { name: 'royal_palm_b', uid: '181b331fcfb34cd0861dfabbe7cafcb8' },
   ]
 };
 

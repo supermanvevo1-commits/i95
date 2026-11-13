@@ -86,3 +86,5 @@
 - "Plane_Passbys_window_08.wav" from "Fox Audio Post-Production - Planes Passbys – Interior-Exterior", Sonniss GDC 2018 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
 - "L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav" from "Griffin Sound Design - Chicago Rapid Transit - The L", Sonniss GDC 2017 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
 - searsia_lucida (model), Poly Haven, CC0, https://polyhaven.com/a/searsia_lucida
+- "Realistic HD Royal palm (9/25)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-royal-palm-925-33e06cb77a1b49d79deb2a941c64230e
+- "Realistic HD Royal palm (10/25)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-royal-palm-1025-181b331fcfb34cd0861dfabbe7cafcb8

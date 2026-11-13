@@ -103,6 +103,17 @@ namespace SurviveI95.EditorTools
                     vc.transform.SetPositionAndRotation(keepPos, keepRot);
                     return vp;
                 }
+                case "mats": // name: triangles drawn with each material under that scene object
+                {
+                    var mc = new System.Collections.Generic.Dictionary<string, int>();
+                    foreach (var mt in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include))
+                        if (mt.name == a[2]) foreach (var mr in mt.GetComponentsInChildren<Renderer>(true))
+                            {
+                                var mf = mr.GetComponent<MeshFilter>(); var mms = mr.sharedMaterials;
+                                for (int mi = 0; mi < mms.Length; mi++) { string mk = mms[mi] == null ? "null" : mms[mi].name; int tri = mf != null && mf.sharedMesh != null && mi < mf.sharedMesh.subMeshCount ? (int)mf.sharedMesh.GetIndexCount(mi) / 3 : 0; mc[mk] = (mc.TryGetValue(mk, out var mn) ? mn : 0) + tri; }
+                            }
+                    return mc.Count == 0 ? "none" : string.Join(", ", System.Linq.Enumerable.Select(mc, kv => kv.Key + " " + kv.Value));
+                }
                 case "shimmer": SurviveI95.Game.HeatShimmer.Strength = a.Length > 2 ? F(a, 2) : 2.2f; return $"heat shimmer {SurviveI95.Game.HeatShimmer.Strength} px";
                 case "kids": // name: how many objects and renderers sit under each scene object with that name
                 {

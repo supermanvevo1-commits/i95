@@ -27,6 +27,7 @@ namespace SurviveI95.EditorTools
 
         const int CardPx = 512;
         static List<Species> species;
+        static readonly List<string> royalSpots = new List<string>();
 
         static readonly (string name, string file, float h, bool palm, bool full)[] SpeciesList =
         {
@@ -39,8 +40,12 @@ namespace SurviveI95.EditorTools
             // A dense, leafy bush (Searsia lucida), standing in for the ficus, sea grape and cocoplum hedges in Miami yards.
             // "#name" keeps one bush out of the seven the model file holds side by side.
             ("shrub", PH + "/Models/searsia_lucida/searsia_lucida.gltf#searsia_lucida_b", 1.6f, false, false),
+            // Royal palms, the tall smooth gray columns with a green crownshaft that line Miami's boulevards and medians.
+            // Scanned-detail models (about 250,000 triangles), so cards only.
+            ("royal_palm_a", "Assets/ThirdParty/Sketchfab/royal_palm_a/scene.gltf", 16f, true, false),
+            ("royal_palm_b", "Assets/ThirdParty/Sketchfab/royal_palm_b/scene.gltf", 19f, true, false),
         };
-        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6;
+        const int SpCoconut = 0, SpYoung = 1, SpDate = 2, SpShade = 3, SpRound = 4, SpSmall = 5, SpShrub = 6, SpRoyalA = 7, SpRoyalB = 8;
 
         static void SetLayer(GameObject g, int layer) { foreach (var t in g.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer; }
 
@@ -318,7 +323,7 @@ namespace SurviveI95.EditorTools
 
         static void PlacePlants(RoutePath p, Func<float, float> south)
         {
-            species = PrepareSpecies();
+            species = PrepareSpecies(); royalSpots.Clear();
             if (species.Count < SpeciesList.Length) { Debug.LogWarning("[FloridaSlice] plant models missing, using the old palms"); BuildTrees(p, south); return; }
             var cardMats = species.Select(s => s.cardMat).ToArray();
             var chunks = new Dictionary<(int, int), CardBucket>();
@@ -331,6 +336,8 @@ namespace SurviveI95.EditorTools
                 if (!chunks.TryGetValue(key, out var cb)) chunks[key] = cb = new CardBucket(species.Count);
                 CardGeometry(cb.v[sp], cb.uv[sp], cb.n[sp], cb.t[sp], species[sp], new Vector3(q.x, -.25f, q.y), (float)r.NextDouble() * 360f, scale);
                 cards++;
+                // Where the royal palms stand along the road (s and lateral), for before-and-after shots.
+                if ((sp == SpRoyalA || sp == SpRoyalB) && Locate(q, out var rs, out var rl) && Mathf.Abs(rl) < 400f) royalSpots.Add(FormattableString.Invariant($"{rs:F0} {rl:F0}"));
             }
             void Model(int sp, Vector2 q, float scale, System.Random r)
             {
@@ -418,14 +425,16 @@ namespace SurviveI95.EditorTools
                     var dir = (b - a) / len; var side = new Vector2(-dir.y, dir.x);
                     var r = new System.Random((int)(a.x * 1.7f) ^ (int)(a.y * 2.9f) ^ (int)(b.x * 3.1f));
                     bool avenue = w >= 12f; float step = avenue ? 18f : 34f;
-                    int sp = avenue ? (r.NextDouble() < .6 ? SpCoconut : SpDate) : PickYardTree(r);
+                    // Each avenue keeps one kind along its length, as cities plant them: royal palms on about 4 in 10.
+                    double roll = r.NextDouble();
+                    int sp = avenue ? (roll < .4 ? (roll < .2 ? SpRoyalA : SpRoyalB) : roll < .75 ? SpCoconut : SpDate) : PickYardTree(r);
                     for (float d = step * (float)r.NextDouble(); d < len; d += step)
                         foreach (int sgn in new[] { 1, -1 })
                         {
                             if (!avenue && r.NextDouble() < .55) continue;
                             var q = a + dir * d + side * sgn * (w / 2f + 2.2f);
                             if (!PlantSpotOk(q, .8f)) continue;
-                            if (Locate(q, out var qs, out var ql) && DistanceFromCarriageway(p, south, qs, ql) < 70f) Model(sp, q, .9f + (float)r.NextDouble() * .2f, r);
+                            if (species[sp].fullModel && Locate(q, out var qs, out var ql) && DistanceFromCarriageway(p, south, qs, ql) < 70f) Model(sp, q, .9f + (float)r.NextDouble() * .2f, r);
                             else Card(sp, q, .9f + (float)r.NextDouble() * .2f, r);
                         }
                 }
@@ -460,6 +469,7 @@ namespace SurviveI95.EditorTools
             Flush(pools, "Pools", new[] { waterMat, deckMat }, 2, false);
             BuildFences(p, south);
             BuildWater(p); BuildPower(p, south); BuildRail(p); BuildBillboards(p, south);
+            File.WriteAllLines(".livebridge/royal_palms.txt", royalSpots);
             Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}), full palms near the road {models}, pools {poolCount}");
         }
 
