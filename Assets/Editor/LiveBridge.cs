@@ -115,6 +115,12 @@ namespace SurviveI95.EditorTools
                     return mc.Count == 0 ? "none" : string.Join(", ", System.Linq.Enumerable.Select(mc, kv => kv.Key + " " + kv.Value));
                 }
                 case "shimmer": SurviveI95.Game.HeatShimmer.Strength = a.Length > 2 ? F(a, 2) : 2.2f; return $"heat shimmer {SurviveI95.Game.HeatShimmer.Strength} px";
+                case "hide": // name on|off: hide or show every scene object with that name (for before-and-after shots)
+                {
+                    int hn = 0; bool hon = a.Length < 4 || a[3] != "off";
+                    foreach (var ht in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)) if (ht.name == a[2]) { ht.gameObject.SetActive(!hon); hn++; }
+                    return $"{(hon ? "hid" : "showed")} {hn}";
+                }
                 case "kids": // name: how many objects and renderers sit under each scene object with that name
                 {
                     var kl = new System.Collections.Generic.List<string>();

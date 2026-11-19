@@ -403,6 +403,91 @@ namespace SurviveI95.EditorTools
             catch (Exception e) { Debug.LogError("[FloridaSlice] plants failed: " + e); throw; }
         }
 
+        const int CageScreen = 0, CageBronze = 1, CageWhite = 2, CageSlots = 3;
+
+        static Material[] CageMaterials()
+        {
+            // Charcoal fiberglass insect screen: from outside in daylight it reads as a gray haze you half see through.
+            var screen = Lit("PoolScreen", new Color(.16f, .17f, .18f, .5f), .05f);
+            screen.SetFloat("_Surface", 1f); screen.SetFloat("_Blend", 0f); screen.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            screen.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha); screen.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            screen.SetInt("_ZWrite", 0); screen.SetFloat("_Cull", 0f); screen.renderQueue = 3000; screen.SetOverrideTag("RenderType", "Transparent");
+            screen.SetShaderPassEnabled("ShadowCaster", false);
+            EditorUtility.SetDirty(screen);
+            return new[] { screen, Lit("CageBronze", new Color(.2f, .16f, .12f), .35f), Lit("CageWhite", new Color(.88f, .88f, .86f), .35f) };
+        }
+
+        /// <summary>
+        /// About 4 pools in 10 sit under a screened enclosure, the aluminum-and-screen room over Florida backyard pools
+        /// that keeps out bugs and leaves: screen walls about 2.6 m high from the back wall of the house around the deck,
+        /// a mansard roof of screen sloping up to a flat top, and a dark bronze (most) or white frame of posts every
+        /// 1.9 m, a chair rail, rafters and beams across the top.
+        /// </summary>
+        static bool PoolCage(Bucket bk, Vector2 pc, Vector2 back, Vector2 pu, System.Random r)
+        {
+            if (r.NextDouble() >= .42) return false;
+            float W = 6.4f, z0 = -4.95f, z1 = 4.7f, hw = 2.4f + (float)r.NextDouble() * .5f, ins = 1.5f, hr = hw + 1.5f + (float)r.NextDouble() * .4f;
+            Vector3 P(float x, float z, float h) { var q = pc + pu * x + back * z; return new Vector3(q.x, h - .12f, q.y); }
+            // The far corners and sides must be clear of other buildings (the house-side wall rests on the house).
+            foreach (var (x, z) in new[] { (-W, z1), (W, z1), (0f, z1), (-W, 0f), (W, 0f) })
+            { var q = pc + pu * x + back * z; if (InBuilding(q, .4f)) return false; }
+            int frame = r.NextDouble() < .7 ? CageBronze : CageWhite;
+            // Screens: four walls, four sloping roof faces and the flat top.
+            var rim = new[] { (-W, z0), (W, z0), (W, z1), (-W, z1) };
+            var top = new[] { (-W + ins, z0 + ins), (W - ins, z0 + ins), (W - ins, z1 - ins), (-W + ins, z1 - ins) };
+            for (int i = 0; i < 4; i++)
+            {
+                var a = rim[i]; var b = rim[(i + 1) % 4]; var ta = top[i]; var tb = top[(i + 1) % 4];
+                ScreenQuad(bk, CageScreen, P(a.Item1, a.Item2, 0f), P(b.Item1, b.Item2, 0f), P(b.Item1, b.Item2, hw), P(a.Item1, a.Item2, hw));
+                ScreenQuad(bk, CageScreen, P(a.Item1, a.Item2, hw), P(b.Item1, b.Item2, hw), P(tb.Item1, tb.Item2, hr), P(ta.Item1, ta.Item2, hr));
+            }
+            ScreenQuad(bk, CageScreen, P(top[0].Item1, top[0].Item2, hr), P(top[1].Item1, top[1].Item2, hr), P(top[2].Item1, top[2].Item2, hr), P(top[3].Item1, top[3].Item2, hr));
+            // Frame: rails all the way round at the foot, chair height and the top of the wall, a purlin halfway up the roof, the top ring.
+            float hm = (hw + hr) / 2f;
+            for (int i = 0; i < 4; i++)
+            {
+                var a = rim[i]; var b = rim[(i + 1) % 4]; var ta = top[i]; var tb = top[(i + 1) % 4];
+                foreach (float h in new[] { .04f, .95f, hw }) Bar(bk, frame, P(a.Item1, a.Item2, h), P(b.Item1, b.Item2, h), h == hw ? .09f : .05f);
+                Bar(bk, frame, P((a.Item1 + ta.Item1) * .5f, (a.Item2 + ta.Item2) * .5f, hm), P((b.Item1 + tb.Item1) * .5f, (b.Item2 + tb.Item2) * .5f, hm), .05f);
+                Bar(bk, frame, P(ta.Item1, ta.Item2, hr), P(tb.Item1, tb.Item2, hr), .08f);
+                // Posts along this side, each with its rafter up to the top ring.
+                float len = Mathf.Abs(b.Item1 - a.Item1) + Mathf.Abs(b.Item2 - a.Item2); int n = Mathf.Max(1, Mathf.RoundToInt(len / 1.9f));
+                for (int k = 0; k < n; k++)
+                {
+                    float t = (float)k / n, x = Mathf.Lerp(a.Item1, b.Item1, t), z = Mathf.Lerp(a.Item2, b.Item2, t);
+                    Bar(bk, frame, P(x, z, 0f), P(x, z, hw), k == 0 ? .1f : .07f);
+                    float tx = Mathf.Clamp(x, -W + ins, W - ins), tz = Mathf.Clamp(z, z0 + ins, z1 - ins);
+                    Bar(bk, frame, P(x, z, hw), P(tx, tz, hr), .06f);
+                    // Beams across the flat top from the long sides.
+                    if (i == 0 && k > 0 && tx > -W + ins + .3f && tx < W - ins - .3f) Bar(bk, frame, P(tx, z0 + ins, hr), P(tx, z1 - ins, hr), .07f);
+                }
+            }
+            return true;
+        }
+
+        static void ScreenQuad(Bucket bk, int slot, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+        {
+            var v = bk.v[slot]; int n = v.Count;
+            v.Add(a); v.Add(b); v.Add(c); v.Add(d);
+            bk.uv[slot].Add(new Vector2(0, 0)); bk.uv[slot].Add(new Vector2(1, 0)); bk.uv[slot].Add(new Vector2(1, 1)); bk.uv[slot].Add(new Vector2(0, 1));
+            bk.t[slot].AddRange(new[] { n, n + 2, n + 1, n, n + 3, n + 2 });
+        }
+
+        /// <summary>A square bar w wide from a to b, four flat sides.</summary>
+        static void Bar(Bucket bk, int slot, Vector3 a, Vector3 b, float w)
+        {
+            var d = (b - a).normalized; var s1 = Vector3.Cross(d, Mathf.Abs(d.y) > .9f ? Vector3.right : Vector3.up).normalized * (w / 2f); var s2 = Vector3.Cross(d, s1).normalized * (w / 2f);
+            var c = new[] { s1 + s2, -s1 + s2, -s1 - s2, s1 - s2 };
+            var v = bk.v[slot]; var uv = bk.uv[slot];
+            for (int i = 0; i < 4; i++)
+            {
+                var o0 = c[i]; var o1 = c[(i + 1) % 4]; int n = v.Count;
+                v.Add(a + o0); v.Add(a + o1); v.Add(b + o1); v.Add(b + o0);
+                uv.Add(Vector2.zero); uv.Add(Vector2.right); uv.Add(Vector2.one); uv.Add(Vector2.up);
+                bk.t[slot].AddRange(new[] { n, n + 1, n + 2, n, n + 2, n + 3 });
+            }
+        }
+
         static void PlacePlants(RoutePath p, Func<float, float> south)
         {
             species = PrepareSpecies(); royalSpots.Clear();
@@ -411,7 +496,8 @@ namespace SurviveI95.EditorTools
             var chunks = new Dictionary<(int, int), CardBucket>();
             var near = new GameObject("Palms");
             int cards = 0, models = 0, shrubs = 0, poolCount = 0;
-            var pools = new Dictionary<(int, int), Bucket>();
+            var pools = new Dictionary<(int, int), Bucket>(); var cages = new Dictionary<(int, int), Bucket>(); int cageCount = 0;
+            var cageSpots = new List<string>();
             void Card(int sp, Vector2 q, float scale, System.Random r)
             {
                 var key = ((int)Mathf.Floor(q.x / 600f), (int)Mathf.Floor(q.y / 600f));
@@ -458,6 +544,7 @@ namespace SurviveI95.EditorTools
                 var deck = RectPts(pc, pu, 6f, 4.2f); var water = RectPts(pc, pu, 4.2f, 2.4f);
                 var bk = Get(pools, pc, 600f, 2);
                 Fan(bk, 1, deck, -0.12f, 2f); Fan(bk, 0, water, -0.1f, 2f); poolCount++;
+                if (PoolCage(Get(cages, pc, 600f, CageSlots), pc, back, pu, r)) { cageCount++; if (Locate(pc, out var cs, out var cl) && Mathf.Abs(cl) < 300f) cageSpots.Add(FormattableString.Invariant($"cage {cs:F0} {cl:F0}")); }
                 var pk = PoolKey(pc); if (!poolGrid.TryGetValue(pk, out var pl)) poolGrid[pk] = pl = new List<Vector2>(); pl.Add(pc);
             }
             // Yards: a tree or two beside or behind each house, and shrubs along the front wall.
@@ -593,9 +680,12 @@ namespace SurviveI95.EditorTools
             var waterMat = Lit("PoolWater", new Color(.18f, .62f, .78f), .92f);
             var deckMat = AssetDatabase.LoadAssetAtPath<Material>(Gen + "/Materials/CityPave.mat") ?? Lit("PoolDeck", new Color(.85f, .83f, .78f), .1f);
             Flush(pools, "Pools", new[] { waterMat, deckMat }, 2, false);
+            var oldCages = GameObject.Find("PoolCages"); if (oldCages != null) UnityEngine.Object.DestroyImmediate(oldCages);
+            Flush(cages, "PoolCages", CageMaterials(), CageSlots, true);
+            royalSpots.AddRange(cageSpots);
             BuildWater(p); BuildPower(p, south); BuildRail(p); BuildBillboards(p, south);
             File.WriteAllLines(".livebridge/plant_spots.txt", royalSpots);
-            Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}, weeds along fences {weeds}, far city trees {farTrees}), full palms near the road {models}, pools {poolCount}");
+            Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}, weeds along fences {weeds}, far city trees {farTrees}), full palms near the road {models}, pools {poolCount} (screened {cageCount})");
         }
 
         static float DistanceFromCarriageway(RoutePath p, Func<float, float> south, float s, float lat)
