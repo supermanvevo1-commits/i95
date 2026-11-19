@@ -702,9 +702,13 @@ namespace SurviveI95.EditorTools
         /// Past the mapped band (about 420 m each side) the city carries on: low houses with tile and white roofs to 1.2 km,
         /// then blocks of mixed low buildings to 2.6 km, on a grid that follows the highway. No shadows, and haze softens them.
         /// </summary>
+        // Every far house (center, along-road axis, half sizes and how leafy its neighborhood is), so the plants can give it yard trees.
+        static readonly List<(Vector2 c, Vector2 u, float a, float b, float leafy)> farHouses = new List<(Vector2, Vector2, float, float, float)>();
+
         static void BuildFarCity(RoutePath p, Func<float, float> south, Material[] mats)
         {
             var map = new Dictionary<(int, int), Bucket>();
+            farHouses.Clear();
             int houses = 0, blocks = 0;
             for (float s = 0f; s < p.Length; s += 26f)
             {
@@ -721,15 +725,24 @@ namespace SurviveI95.EditorTools
                         var bk = Get(map, at, 1200f, CitySlots);
                         if (off < 1200f)
                         {
-                            if (r.NextDouble() < .12) continue;
+                            // Each neighborhood (about 300 m across) has its own character: when it was built decides the
+                            // roofs (1950s flat white roofs or later clay tile), whether some houses have two stories, and
+                            // how many trees have grown up in the yards.
+                            var hood = new System.Random(((int)Mathf.Floor(at.x / 300f) * 73856093) ^ ((int)Mathf.Floor(at.y / 300f) * 19349663));
+                            float flatShare = (float)hood.NextDouble() * .55f, twoStory = hood.NextDouble() < .2 ? .35f : .04f, leafy = .35f + (float)hood.NextDouble() * .65f;
+                            if (r.NextDouble() < .08 + hood.NextDouble() * .1) continue;
                             float a = 6f + (float)r.NextDouble() * 3f, b = 4.5f + (float)r.NextDouble() * 2f;
-                            var cc = at + u * (float)(r.NextDouble() * 4 - 2);
+                            var side = new Vector2(-u.y, u.x);
+                            var cc = at + u * (float)(r.NextDouble() * 6 - 3) + side * (float)(r.NextDouble() * 3 - 1.5);
                             var foot = RectPts(cc, u, a, b);
                             int row = r.Next(AtlasRows);
+                            float wall = r.NextDouble() < twoStory ? HouseStory * 2f : HouseStory;
                             AtlasWalls(bk, CHouse, foot, -0.3f, HouseStory, i => row, HouseTexW, (float)r.NextDouble() * HouseTexW);
+                            if (wall > HouseStory) AtlasWalls(bk, CHouse, foot, HouseStory, wall, i => row, HouseTexW, (float)r.NextDouble() * HouseTexW);
                             double roll = r.NextDouble();
-                            if (roll < .78) HipRoof(bk, roll < .45 ? CBarrel : roll < .68 ? CFlatTile : CShingle, cc, u, a, b, HouseStory, .5f, 22f, 2f);
-                            else Fan(bk, CMembrane, foot, HouseStory, 2f);
+                            if (roll > flatShare) { double t = r.NextDouble(); HipRoof(bk, t < .55 ? CBarrel : t < .82 ? CFlatTile : CShingle, cc, u, a, b, wall, .5f, 22f, 2f); }
+                            else Fan(bk, CMembrane, foot, wall, 2f);
+                            farHouses.Add((cc, u, a, b, leafy));
                             houses++;
                         }
                         else

@@ -546,6 +546,24 @@ namespace SurviveI95.EditorTools
                         }
                     }
             }
+            // Yard trees for the far city: one or two behind or beside most houses, more in the leafy neighborhoods, so the
+            // city past the mapped band reads as roofs in a sea of trees, as Miami does from the highway.
+            int farTrees = 0;
+            foreach (var (fc, fu, fa, fb, leafy) in farHouses)
+            {
+                var r = new System.Random((int)(fc.x * 7.3f) ^ (int)(fc.y * 5.1f) ^ 0x7ee);
+                int n = r.NextDouble() < .15f + leafy * .8f ? 1 + (r.NextDouble() < leafy ? 1 : 0) + (r.NextDouble() < leafy * .5f ? 1 : 0) : 0;
+                var fw = new Vector2(-fu.y, fu.x);
+                for (int k = 0; k < n; k++)
+                {
+                    var q = fc + fw * ((r.NextDouble() < .65 ? -1f : 1f) * (fb + 3f + (float)r.NextDouble() * 4f)) + fu * ((float)r.NextDouble() * 2f - 1f) * fa;
+                    if (InWater(q)) continue;
+                    // From this far, broad crowns are what show; thin palms nearly vanish, so they're fewer here.
+                    double t = r.NextDouble();
+                    int fsp = t < .3 ? SpShade : t < .55 ? SpRound : t < .72 ? SpOak : t < .8 ? SpSmall : t < .9 ? SpCoconut : t < .95 ? SpArecaB : SpFanA;
+                    Card(fsp, q, .95f + (float)r.NextDouble() * .5f, r); farTrees++;
+                }
+            }
             // Fences first, so weeds and tall grass can grow along them: in clumps, on both sides, thick along the
             // highway fence (nobody trims the state's fence line) and sparse in kept yards.
             BuildFences(p, south);
@@ -577,7 +595,7 @@ namespace SurviveI95.EditorTools
             Flush(pools, "Pools", new[] { waterMat, deckMat }, 2, false);
             BuildWater(p); BuildPower(p, south); BuildRail(p); BuildBillboards(p, south);
             File.WriteAllLines(".livebridge/plant_spots.txt", royalSpots);
-            Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}, weeds along fences {weeds}), full palms near the road {models}, pools {poolCount}");
+            Debug.Log($"[FloridaSlice] plants: cards {cards} (shrubs {shrubs}, weeds along fences {weeds}, far city trees {farTrees}), full palms near the road {models}, pools {poolCount}");
         }
 
         static float DistanceFromCarriageway(RoutePath p, Func<float, float> south, float s, float lat)
