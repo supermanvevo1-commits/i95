@@ -138,6 +138,25 @@ namespace SurviveI95.EditorTools
         }
 
         /// <summary>
+        /// An exit direction sign: the words on the left and a white arrow pointing up and to the right on the right,
+        /// as at the start of every real exit lane and at the gore. arrowW is the room the arrow takes.
+        /// </summary>
+        static void ArrowPlate(Transform parent, Vector3 bottom, Quaternion rot, Line[] lines, Vector2 size, float arrowW, Material face, Material border, Color ink)
+        {
+            var fwd = rot * Vector3.forward; var right = rot * Vector3.right;
+            float big = lines.Max(l => l.cap);
+            Blank(parent, bottom, rot, size, face, border);
+            float y = size.y - big * .75f; var shift = -right * (arrowW / 2f);
+            foreach (var l in lines)
+            {
+                y -= l.cap / 2f;
+                Ink(parent, bottom + Vector3.up * y - fwd * .024f + shift, rot, l.text, l.cap, ink);
+                y -= l.cap / 2f + big * .55f;
+            }
+            Arrow(parent, bottom + Vector3.up * (size.y / 2f) + right * (size.x / 2f - arrowW / 2f - .05f), rot, Mathf.Min(arrowW * .85f, size.y * .8f), 45f);
+        }
+
+        /// <summary>
         /// A roadside sign on posts. clear is the gap from the road edge to the sign's near edge, so a wider sign
         /// grows away from the road. tab is the exit number plaque on the top right corner, or null.
         /// </summary>
@@ -267,7 +286,13 @@ namespace SurviveI95.EditorTools
                 // Yellow signs mark the exits you can actually drive.
                 foreach (float back in new[] { 420f, 130f })
                     RoadSign(t, p, Mathf.Max(5f, j.divergeS - back), 3.8f, 2.5f, null, new[] { L(known ? "EXIT " + number : "EXIT", PlaceCap), L("KEEP RIGHT", ActionCap) }, m.yellow, signBlack, SignInk, m);
-                RoadSign(t, p, j.divergeS + 175f, 2.4f, 1.7f, null, known ? new[] { L("EXIT", .34f), L(number, PlaceCap) } : new[] { L("EXIT", ActionCap) }, m.signGreen, m.white, Color.white, m, placedForExit: true);
+                // The gore sign where the ramp splits off: EXIT, the number and an arrow up and to the right.
+                {
+                    var gl = known ? new[] { L("EXIT", .34f), L(number, PlaceCap) } : new[] { L("EXIT", ActionCap) };
+                    const float gw = .8f; var gs = PlateSize(gl) + new Vector2(gw, 0f);
+                    RoadSign(t, p, j.divergeS + 175f, 2.4f, 1.7f, null, gl, m.signGreen, m.white, Color.white, m, placedForExit: true, fixedSize: gs,
+                        draw: (b, r, sz) => ArrowPlate(t, b, r, gl, sz, gw, m.signGreen, m.white, Color.white));
+                }
                 Diamond(t, p, j.mergeS - 310f, 7f, "MERGING\nTRAFFIC", m, true);
                 RoadSign(t, j.road, 235f, 2.1f, 1.5f, null, new[] { L("RAMP", .2f), L("45", .42f), L("MPH", .18f) }, m.yellow, signBlack, SignInk, m, solid: false);
                 Diamond(t, j.road, j.road.Length - 250f, 3.4f, "MERGE", m, false);
@@ -282,7 +307,13 @@ namespace SurviveI95.EditorTools
                 var places = Destinations(e.name, PlaceCap);
                 if (places.Count > 0) RoadSign(t, p, e.s - 340f, 4.2f, 2.4f, "EXIT " + number, places.ToArray(), m.signGreen, m.white, Color.white, m);
                 else RoadSign(t, p, e.s - 340f, 4.2f, 2.4f, null, new[] { L("EXIT " + number, PlaceCap) }, m.signGreen, m.white, Color.white, m);
-                RoadSign(t, p, Mathf.Max(5, e.s - 15f), 7.5f, 2.4f, null, new[] { L("EXIT", .34f), L(number, PlaceCap) }, m.signGreen, m.white, Color.white, m);
+                // The exit direction sign where the exit lane begins: the tab, where it goes, and the arrow.
+                {
+                    var dl = places.Count > 0 ? places.ToArray() : new[] { L("EXIT " + number, PlaceCap) };
+                    const float aw = 1.5f; var ds = PlateSize(dl) + new Vector2(aw, 0f); ds.y = Mathf.Max(ds.y, 1.9f);
+                    RoadSign(t, p, Mathf.Max(5, e.s - 15f), 7.5f, 2.4f, places.Count > 0 ? "EXIT " + number : null, dl, m.signGreen, m.white, Color.white, m, fixedSize: ds,
+                        draw: (b, r, sz) => ArrowPlate(t, b, r, dl, sz, aw, m.signGreen, m.white, Color.white));
+                }
             }
             if (baseMile != null)
                 for (int mile = Mathf.CeilToInt(baseMile.Value); (mile - baseMile.Value) * 1609.34f < p.Length; mile++)
