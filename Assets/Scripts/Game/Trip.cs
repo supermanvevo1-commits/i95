@@ -18,7 +18,7 @@ namespace SurviveI95.Game
         [Serializable] public class Lines { public string on; public string[] say; }
         [Serializable] public class Def
         {
-            public string id, kind, goal, to, exit, place, partner, leave;
+            public string id, kind, goal, to, exit, place, where, partner, leave;
             public float dueMinutes, budget, gasPrice, startFuel;
             public Lines[] lines;
         }

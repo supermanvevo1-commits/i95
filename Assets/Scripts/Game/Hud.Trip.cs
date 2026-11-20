@@ -59,7 +59,7 @@ namespace SurviveI95.Game
             Panel(r, new Color(.05f, .06f, .07f, .88f), 14f * s);
             Text(new Rect(r.x, r.y + 22f * s, w, 22f * s), Spaced("ARRIVED"), small, Accent, false);
             Text(new Rect(r.x, r.y + 46f * s, w, 56f * s), trip.Plan.to, new GUIStyle(big) { fontSize = Mathf.RoundToInt(44 * s) }, Ink, false);
-            Text(new Rect(r.x, r.y + 100f * s, w, 24f * s), trip.Plan.place, tiny, Dim, false);
+            Text(new Rect(r.x, r.y + 100f * s, w, 24f * s), trip.Plan.place + (string.IsNullOrEmpty(trip.Plan.where) ? "" : "  ·  " + trip.Plan.where), tiny, Dim, false);
 
             float late = trip.MinutesLate;
             string verdict = late < -2f ? $"{-late:0} MIN EARLY" : late <= 2f ? "ON TIME" : $"{late:0} MIN LATE";
@@ -76,7 +76,7 @@ namespace SurviveI95.Game
                 ("Crashes", trip.Crashes == 0 ? "None" : trip.Crashes.ToString() + (trip.Missed ? "  ·  missed the exit" : "")),
                 ("Gas", $"{trip.GallonsUsed:0.00} gal  ·  ${gasCost:0.00} at ${trip.Plan.gasPrice:0.00}"),
                 ("If a trooper had clocked you", trip.Ticket(out _)),
-                ("Money left", $"${trip.Money:0.00}" + (fine > 0f ? $"   (${trip.Money - fine:0.00} after that ticket)" : "")),
+                ("Money left", $"${trip.Money:0.00}" + (fine <= 0f ? "" : trip.Money - fine >= 0f ? $"   (${trip.Money - fine:0.00} after that ticket)" : $"   (that ticket: ${fine - trip.Money:0.00} short)")),
             };
             if (trip.Crashes == 0 && trip.Missed) rows[2] = ("Crashes", "None  ·  missed the exit");
             var key = new GUIStyle(tiny) { alignment = TextAnchor.MiddleLeft };
