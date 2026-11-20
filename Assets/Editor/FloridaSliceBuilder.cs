@@ -46,6 +46,7 @@ namespace SurviveI95.EditorTools
             PrepareLookup(path, south);
             BuildGroundDetail(path, m);
             BuildBuildings(path, south, m);
+            BuildSwales(road, path, m); // needs the streets and water the city loads
             BuildLamps(path);
             BuildPillars(road, path, south, m);
             BuildEmbankments(road, path, south, m);
@@ -106,6 +107,17 @@ namespace SurviveI95.EditorTools
                 foreach (var old in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(o => o.name == "Barriers").Select(o => o.gameObject).ToList())
                     UnityEngine.Object.DestroyImmediate(old);
                 BuildBarriers(road, path, m);
+            }
+            else if (part == "swales")
+            {
+                var road = EditorSceneManager.GetActiveScene().GetRootGameObjects().First(o => o.name == "Road");
+                meshCount = 500000;
+                PrepareLookup(path, s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap));
+                LoadLand();
+                exitCorridor.Clear();
+                foreach (var j in path.Junctions)
+                    for (float s = 0f; s < j.road.Length; s += 8f) { var c = j.road.Center(s); exitCorridor.Add(new Vector2(c.x, c.z)); }
+                BuildSwales(road, path, m);
             }
             else if (part == "water")
             {

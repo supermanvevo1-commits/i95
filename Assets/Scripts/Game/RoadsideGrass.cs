@@ -95,7 +95,7 @@ namespace SurviveI95.Game
                 // builder makes it).
                 float y = path.Center(s).y, bank = y > .2f ? 2.5f * (y + .24f) : 0f;
                 float reach = path.HasSoundWall(s) ? WallGap - .6f : ToFence;
-                var right = path.Right(s); var c = path.Center(s);
+                var right = path.Right(s); var c = path.Center(s); float swale = path.SwaleAmount(s, side), vergeReach = path.VergeReach(s, side);
                 for (float d = bank; d < reach - Shoulder; d += Spacing)
                 {
                     float lat = inner + side * (d + (float)rnd.NextDouble() * Spacing);
@@ -107,7 +107,11 @@ namespace SurviveI95.Game
                     float edge = Mathf.InverseLerp(reach - Shoulder - 3f, reach - Shoulder, d);
                     float h = Mathf.Lerp(.16f, .3f, (float)rnd.NextDouble()) * (1f + edge * 1.6f);
                     float w = .5f + (float)rnd.NextDouble() * .35f;
-                    (rnd.NextDouble() < .5 ? list : more).Add(Matrix4x4.TRS(new Vector3(p.x, Ground, p.z), Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f), new Vector3(w, h, w)));
+                    // Standing on the verge: down in the swale or up on its back slope where there is one.
+                    float out_ = side * (lat - path.PavedEdge(s, side));
+                    if (out_ > vergeReach) continue; // a street, water or a ramp starts here
+                    float gy = out_ > 0f && out_ < RoutePath.SwaleReach ? Mathf.Max(Ground, RoutePath.VergeY(out_, swale, vergeReach) - .01f) : Ground;
+                    (rnd.NextDouble() < .5 ? list : more).Add(Matrix4x4.TRS(new Vector3(p.x, gy, p.z), Quaternion.Euler(0f, (float)rnd.NextDouble() * 360f, 0f), new Vector3(w, h, w)));
                 }
             }
             return (Batches(list), Batches(more));

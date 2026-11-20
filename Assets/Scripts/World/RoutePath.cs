@@ -17,6 +17,8 @@ namespace SurviveI95.World
     [Serializable] public class RouteExitFile { public RouteExitRow[] items; }
     [Serializable] public class RouteObstacle { public float s, lat, halfS, halfLat; public string kind; }
     [Serializable] public class RouteObstacleFile { public RouteObstacle[] items; }
+    /// <summary>How far the open verge reaches from the paved edge, every `step` meters, before a street, water or ramp.</summary>
+    [Serializable] public class RouteVergeFile { public float step; public float[] north, south; }
     /// <summary>A posted speed limit that holds from s until the next entry.</summary>
     [Serializable] public class RouteLimit { public float s, mph; }
     [Serializable] public class RouteLimitFile { public RouteLimit[] limits; }
@@ -169,6 +171,79 @@ namespace SurviveI95.World
             return true;
         }
 
+        // ---------- roadside swales ----------
+        /// <summary>
+        /// Florida drains its highways into grassy swales in the verge: from the edge of the paved shoulder the ground
+        /// falls about 0.2 m over 4 m to a flat bottom 1.4 m wide, then climbs a back slope to a low rise about 0.3 m high 9 to 12 m
+        /// out before easing down to the field. Lateral distances below are from the outer edge of the paved shoulder.
+        /// </summary>
+        static readonly Vector2[] SwaleProfile = { new Vector2(0f, -.02f), new Vector2(1.2f, -.1f), new Vector2(4.2f, -.21f), new Vector2(5.6f, -.21f), new Vector2(9f, .28f), new Vector2(12f, .32f), new Vector2(22f, -.255f) };
+        /// <summary>Where the swale's bottom runs, and how far the verge reaches before it's back at field level.</summary>
+        public const float SwaleBottom = 4.9f, SwaleReach = 22f, Field = -.255f;
+        /// <summary>The paved edge each side: northbound's 3.05 m shoulder; southbound's outer edge.</summary>
+        public float PavedEdge(float s, int side) => side > 0 ? HalfWidth(s) + 3.05f : -(2f * HalfWidth(s) + MedianGap) - HalfWidth(s) - 1.3f;
+
+        /// <summary>
+        /// Height of the verge d meters out from the paved edge, with the swale k of the way in (0 = plain field). Where
+        /// the open verge is narrower than the full profile (a street or a pond close by), the profile is squeezed to fit.
+        /// </summary>
+        public static float VergeY(float d, float k, float reach = SwaleReach)
+        {
+            if (reach < SwaleReach) d *= SwaleReach / Mathf.Max(reach, 1f);
+            float flat = d >= 1.2f ? Field : Mathf.Lerp(-.02f, Field, d / 1.2f);
+            if (k <= 0f) return flat;
+            float sw = Field;
+            for (int i = 0; i + 1 < SwaleProfile.Length; i++)
+                if (d >= SwaleProfile[i].x && d <= SwaleProfile[i + 1].x)
+                {
+                    float t = Mathf.InverseLerp(SwaleProfile[i].x, SwaleProfile[i + 1].x, d);
+                    sw = Mathf.Lerp(SwaleProfile[i].y, SwaleProfile[i + 1].y, Mathf.SmoothStep(0f, 1f, t));
+                    break;
+                }
+            return Mathf.Lerp(flat, sw, k);
+        }
+
+        RouteVergeFile verge;
+        /// <summary>Open verge widths written by the scene builder (null until it has run: the verge is then taken as open).</summary>
+        public RouteVergeFile Verge { get => verge; set { verge = value; swaleN = swaleS = null; } }
+        /// <summary>The narrowest a verge can be and still hold a swale.</summary>
+        public const float SwaleMinReach = 10f;
+
+        /// <summary>Meters of open verge out from the paved edge on this side before a street, water or a ramp.</summary>
+        public float VergeReach(float s, int side)
+        {
+            var a = verge == null ? null : side > 0 ? verge.north : verge.south;
+            if (a == null || a.Length == 0) return SwaleReach + 4f;
+            return a[Mathf.Clamp(Mathf.RoundToInt(s / verge.step), 0, a.Length - 1)];
+        }
+
+        float[] swaleN, swaleS;
+        /// <summary>How much swale there is here on this side: 1 along open verge, easing to 0 over 40 m toward walls, ramps, structures and streets.</summary>
+        public float SwaleAmount(float s, int side)
+        {
+            ref float[] sw = ref (side > 0 ? ref swaleN : ref swaleS);
+            if (sw == null)
+            {
+                int n = Mathf.FloorToInt(Length / Step) + 1; var on = new bool[n]; sw = new float[n];
+                for (int i = 0; i < n; i++) on[i] = SwaleHere(i * Step) && VergeReach(i * Step, side) >= SwaleMinReach;
+                for (int i = 0; i < n; i++)
+                {
+                    int near = 9;
+                    for (int j = 0; j <= 8 && near > 8; j++) if ((i - j >= 0 && !on[i - j]) || (i + j < n && !on[i + j])) near = j;
+                    sw[i] = Mathf.SmoothStep(0f, 1f, Mathf.Min(near, 8) / 8f);
+                }
+            }
+            return sw[Mathf.Clamp(Mathf.RoundToInt(s / Step), 0, sw.Length - 1)];
+        }
+
+        bool SwaleHere(float s)
+        {
+            if (IsBridge(s) || Center(s).y > .2f || HasSoundWall(s)) return false;
+            foreach (var j in Junctions) if (s > j.divergeS - 60f && s < j.mergeS + 60f) return false;
+            foreach (var o in File.overpasses) if (Mathf.Abs(o.s - s) < 35f) return false;
+            return true;
+        }
+
         /// <summary>Something solid along the right edge at BarrierRight: a concrete barrier or a steel guardrail.</summary>
         public bool HasBarrier(float s) => HasConcrete(s) || HasGuardrail(s);
 
@@ -266,6 +341,8 @@ namespace SurviveI95.World
             if (loops != null) path.LoadJunctions(JsonUtility.FromJson<RouteExitFile>(loops.text));
             var limits = Resources.Load<TextAsset>("Data/Routes/" + id + "_limits");
             if (limits != null) path.Limits = JsonUtility.FromJson<RouteLimitFile>(limits.text).limits;
+            var verge = Resources.Load<TextAsset>("Data/Routes/" + id + "_verge");
+            if (verge != null) path.Verge = JsonUtility.FromJson<RouteVergeFile>(verge.text);
             foreach (var o in path.Obstacles) path.MaxObstacleHalfS = Mathf.Max(path.MaxObstacleHalfS, o.halfS);
             return path;
         }
