@@ -10,10 +10,16 @@ namespace SurviveI95.EditorTools
     {
         const float Dt = 1f / 60f, Mph = DriveSim.MetersPerSecondToMph;
 
-        public static void Run()
+        static readonly System.Text.StringBuilder log = new System.Text.StringBuilder();
+        static void Log(string line) { Debug.Log(line); log.AppendLine(line); }
+
+        /// <summary>Runs the bench for each car and writes the results to a file too.</summary>
+        public static void Run(string file = null)
         {
+            log.Clear();
             var path = RoutePath.Load(FloridaSliceBuilder.RouteId);
             foreach (var id in new[] { "sedan", "muscle", "pickup" }) Bench(path, id);
+            if (file != null) System.IO.File.WriteAllText(file, log.ToString());
         }
 
         static void Bench(RoutePath path, string id)
@@ -21,11 +27,12 @@ namespace SurviveI95.EditorTools
             var car = CarHandling.Load(id);
             var s = new DriveSim(car); s.Reset(path, 300f);
             float t = 0, t60 = -1, t100 = -1;
-            while (t < 40f) { s.Step(path, new DriveInput { Throttle = 1f }, Dt); t += Dt; float m = s.Speed * Mph; if (t60 < 0 && m >= 60) t60 = t; if (t100 < 0 && m >= 100) t100 = t; }
+            // Held straight in its lane (as a test track would be): this measures the engine, not the steering.
+            while (t < 40f) { s.Step(path, new DriveInput { Throttle = 1f }, Dt); t += Dt; s.Lateral = path.HalfWidth(s.S) - RoutePath.LaneWidth * 1.5f; s.Theta = s.SideSpeed = s.YawRate = 0f; float m = s.Speed * Mph; if (t60 < 0 && m >= 60) t60 = t; if (t100 < 0 && m >= 100) t100 = t; }
             float reached = s.Speed * Mph;
 
             s = new DriveSim(car); s.Reset(path, 300f); s.Speed = 60 / Mph;
-            float start = s.S; while (s.Speed > 0.25f) s.Step(path, new DriveInput { Brake = 1f }, Dt);
+            float start = s.S; while (s.Speed > 0.25f) { s.Step(path, new DriveInput { Brake = 1f }, Dt); s.Theta = s.SideSpeed = s.YawRate = 0f; }
             float brakeFt = (s.S - start) * 3.281f;
 
             // Lane change at 70 mph with tap steering.
@@ -65,7 +72,7 @@ namespace SurviveI95.EditorTools
                 for (int i = 0; i < 60; i++) { q.Step(path, new DriveInput { Steer = 1f }, Dt); peakG = Mathf.Max(peakG, Mathf.Abs(q.LateralAccel) / 9.81f); }
                 sweep.Append($" {m:F0}mph:{q.Theta * Mathf.Rad2Deg:F0}deg/{peakG:F2}g/slip{q.Beta * Mathf.Rad2Deg:F0}");
             }
-            Debug.Log($"[DriveTest] {id} 1s full steer:{sweep}");
+            Log($"[DriveTest] {id} 1s full steer:{sweep}");
 
             // Handbrake turn at 60 mph must rotate the car, shed speed and recover.
             s = new DriveSim(car); s.Reset(path, 2000f); s.Lateral = 0; s.Speed = 60 / Mph;
@@ -75,8 +82,8 @@ namespace SurviveI95.EditorTools
             for (int i = 0; i < 180; i++) s.Step(path, new DriveInput(), Dt);
             float settledBeta = Mathf.Abs(s.Beta);
 
-            Debug.Log($"[DriveTest] {id}: handbrake peak slip {peakBeta * Mathf.Rad2Deg:F0} deg, exit {exitMph:F0} mph, slip after 3s {settledBeta * Mathf.Rad2Deg:F1} deg");
-            Debug.Log($"[DriveTest] {id}: 0-60 {t60:F1}s, 0-100 {t100:F1}s, 40s speed {reached:F0} mph, 60-0 {brakeFt:F0} ft, lane change settle {settle:F1}s; " +
+            Log($"[DriveTest] {id}: handbrake peak slip {peakBeta * Mathf.Rad2Deg:F0} deg, exit {exitMph:F0} mph, slip after 3s {settledBeta * Mathf.Rad2Deg:F1} deg");
+            Log($"[DriveTest] {id}: 0-60 {t60:F1}s, 0-100 {t100:F1}s, 40s speed {reached:F0} mph, 60-0 {brakeFt:F0} ft, lane change settle {settle:F1}s; " +
                       $"route {t:F0}s, lane error rms {Mathf.Sqrt(rms / n):F2} m max {maxErr:F2} m, steer flips/min {swaps / (t / 60f):F0}, max lateral {maxLat / 9.81f:F2} g, wall ticks {walls}, offroad ticks {off}");
             if (t >= limit || walls > 0 || off > 0) { Debug.LogError("[DriveTest] FAILED " + id); if (Application.isBatchMode) EditorApplication.Exit(1); }
         }

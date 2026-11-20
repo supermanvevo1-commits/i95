@@ -17,6 +17,18 @@ namespace SurviveI95.Sim
         public float cgHeight;
         /// <summary>Stability control, 0 (none, as on an old muscle car) to 1 (a modern car). Catches the tail when it steps out.</summary>
         public float stability;
+        /// <summary>What you'd read about the car: its class, and the real figures its numbers were tuned to.</summary>
+        public string name, basis;
+        /// <summary>The body on its springs: degrees of lean per g of cornering, nose dive per g of braking, squat per g of
+        /// throttle, and how many times a second the springs bounce (0 = the family sedan's 5.5, 3.2, 2 and 1.3).</summary>
+        public float rollPerG, divePerG, squatPerG, rideHz;
+        /// <summary>The engine you hear: "i4" or "v8", its redline, and the gearbox as mph per 1,000 RPM in each gear.</summary>
+        public string engine;
+        public float redline;
+        public float[] gears;
+        /// <summary>The speed the engine could reach without a governor (0 = topMph), and how late its pull fades on the way
+        /// there (0 = 2.4; lower fades sooner). A governed truck still pulls hard right up to its limit.</summary>
+        public float freeMph, pull;
 
         [Serializable] class Table { public List<CarHandling> cars = new List<CarHandling>(); }
 
@@ -41,7 +53,7 @@ namespace SurviveI95.Sim
         const float TireB = 13f, TireC = 1.45f, MaxWheelAngle = 0.6f, SteerSpeedRef = 13f;
         const int Substeps = 4;
 
-        public readonly CarHandling Car;
+        public CarHandling Car { get; private set; }
         /// <summary>Distance along road, offset right of center, heading relative to road (radians, + = right).</summary>
         public float S, Lateral, Theta;
         /// <summary>Speed is forward velocity in the car's frame; SideSpeed is its sideways velocity.</summary>
@@ -67,6 +79,10 @@ namespace SurviveI95.Sim
         public float Beta => Mathf.Atan2(SideSpeed, Mathf.Max(1f, Mathf.Abs(Speed)));
 
         public DriveSim(CarHandling car) { Car = car; }
+        /// <summary>Swaps the car under the driver (the F5 test key): position and speed carry on.</summary>
+        public void ChangeCar(CarHandling car) { Car = car; }
+        /// <summary>Tires grip harder along the way they roll than sideways: braking reaches about 15% past the cornering limit.</summary>
+        public const float BrakeGrip = 1.15f;
         public float TopSpeed => Car.topMph / MetersPerSecondToMph * (1f - 0.45f * Damage);
 
         public void Reset(RoutePath path, float s)
@@ -143,16 +159,17 @@ namespace SurviveI95.Sim
         void UpdateSpeed(DriveInput input, float grip, float dt)
         {
             float top = OffRoad ? Mathf.Min(TopSpeed, 22f) : TopSpeed;
-            float ratio = Mathf.Clamp01(Mathf.Abs(Speed) / TopSpeed);
+            float free = (Car.freeMph > 0f ? Car.freeMph : Car.topMph) / MetersPerSecondToMph * (1f - 0.45f * Damage);
+            float ratio = Mathf.Clamp01(Mathf.Abs(Speed) / free), pull = Car.pull > 0f ? Car.pull : 2.4f;
             float drag = 0.35f + 0.00042f * Speed * Speed + (OffRoad ? 3f + Mathf.Abs(Speed) * 0.1f : 0f);
             bool throttle = input.Throttle > 0.02f, brake = input.Brake > 0.02f;
             if (Mathf.Abs(Speed) < 0.08f && !throttle && !brake) { Speed = 0; return; }
 
             float a = -Mathf.Sign(Speed) * drag;
-            if (brake && Speed > 0.25f) a = -Mathf.Min(Car.brake, grip) * input.Brake - drag;
+            if (brake && Speed > 0.25f) a = -Mathf.Min(Car.brake, grip * BrakeGrip) * input.Brake - drag;
             else if (brake) a = Speed > -11f ? -4.5f * input.Brake : 0f; // reverse once stopped
-            else if (throttle && Speed < -0.25f) a = Mathf.Min(Car.brake, grip) * input.Throttle;
-            else if (throttle && Speed < top) a = Car.accel * (1f - 0.4f * Damage) * input.Throttle * (1f - Mathf.Pow(ratio, 2.4f)) - drag * (1f - input.Throttle);
+            else if (throttle && Speed < -0.25f) a = Mathf.Min(Car.brake, grip * BrakeGrip) * input.Throttle;
+            else if (throttle && Speed < top) a = Car.accel * (1f - 0.4f * Damage) * input.Throttle * (1f - Mathf.Pow(ratio, pull)) - drag * (1f - input.Throttle);
             else if (Speed > top) a = -14f;
             if (input.Handbrake) a -= Mathf.Sign(Speed) * 5f;
 
@@ -209,7 +226,9 @@ namespace SurviveI95.Sim
             float delta = shaped * MaxWheelAngle / (1f + (v * v) / (SteerSpeedRef * SteerSpeedRef));
 
             float L = Car.wheelbase, a = L * (1f - Car.frontWeight), b = L * Car.frontWeight;
-            float inertia = Car.mass * 1.65f;
+            // Resistance to turning grows with the car's length: about its mass times the distances from the center of
+            // gravity to each axle (a long pickup is slow to rotate, and slow to stop rotating).
+            float inertia = Car.mass * a * b * 0.9f;
             float kinematicYaw = Speed / L * Mathf.Tan(delta);
             float blend = Mathf.Clamp01((Speed - 3f) / 5f);
 

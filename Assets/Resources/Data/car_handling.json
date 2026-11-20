@@ -1,7 +1,22 @@
 {
   "cars": [
-    { "id": "sedan",  "topMph": 124, "accel": 5.4, "brake": 12.0, "gripG": 1.0,  "wheelbase": 2.7, "steerIn": 2.6, "steerOut": 6.0, "mass": 1400, "frontWeight": 0.55, "stability": 1.0 },
-    { "id": "muscle", "topMph": 165, "accel": 8.6, "brake": 13.0, "gripG": 0.95, "wheelbase": 2.8, "steerIn": 2.6, "steerOut": 6.0, "mass": 1700, "frontWeight": 0.53, "stability": 0.5 },
-    { "id": "pickup", "topMph": 132, "accel": 5.8, "brake": 10.5, "gripG": 0.82, "wheelbase": 3.6, "steerIn": 2.2, "steerOut": 5.0, "mass": 2300, "frontWeight": 0.57, "stability": 1.0 }
+    { "id": "sedan", "name": "Family sedan",
+      "basis": "A mid-size four-cylinder family sedan as US magazines test them: 0-60 about 7.2 s, 60-0 about 122 ft, 0.86 g on the skidpad, about 3,400 lb (1,560 kg) plus the driver, 111 in (2.83 m) wheelbase, 60% of the weight on the front tires, top speed about 124 mph. Soft springs, modern stability control.",
+      "topMph": 124, "pull": 0.95, "accel": 5.1, "brake": 9.3, "gripG": 0.86, "wheelbase": 2.83, "steerIn": 2.6, "steerOut": 6.0,
+      "mass": 1640, "frontWeight": 0.60, "cgHeight": 0.55, "stability": 1.0,
+      "rollPerG": 5.5, "divePerG": 3.2, "squatPerG": 2.0, "rideHz": 1.3,
+      "engine": "i4", "redline": 6300, "gears": [6.5, 11, 16, 21.5, 27.5, 34] },
+    { "id": "muscle", "name": "Muscle car",
+      "basis": "A V8 muscle coupe (about 460 hp, rear drive) as US magazines test them: 0-60 about 4.4 s, 0-100 about 9-10 s, 60-0 about 106 ft, 0.95 g on the skidpad, about 3,850 lb (1,750 kg) plus the driver, 107 in (2.72 m) wheelbase, 53% front, lower center of gravity, top speed limited to 155 mph. Firmer springs and more squat at the rear; stability control in its sport setting lets the tail out further before it steps in.",
+      "topMph": 155, "pull": 1.05, "accel": 7.9, "brake": 10.8, "gripG": 0.95, "wheelbase": 2.72, "steerIn": 3.0, "steerOut": 6.5,
+      "mass": 1830, "frontWeight": 0.53, "cgHeight": 0.50, "stability": 0.5,
+      "rollPerG": 4.0, "divePerG": 2.4, "squatPerG": 3.0, "rideHz": 1.6,
+      "engine": "v8", "redline": 7000, "gears": [7.8, 11.7, 16.9, 21.6, 28.5, 43.8] },
+    { "id": "pickup", "name": "Pickup truck",
+      "basis": "A full-size half-ton crew-cab pickup with a V8 and a ten-speed automatic as US magazines test them: 0-60 about 6.3 s, 60-0 about 133 ft, 0.76 g on the skidpad, about 5,200 lb (2,350 kg) plus the driver, 145 in (3.68 m) wheelbase, 58% front, a high center of gravity, slower steering, and a speed governor at about 107 mph. Soft, bouncy springs (leaf springs at the back, empty bed).",
+      "topMph": 107, "freeMph": 115, "pull": 1.2, "accel": 5.5, "brake": 8.5, "gripG": 0.76, "wheelbase": 3.68, "steerIn": 2.1, "steerOut": 5.0,
+      "mass": 2430, "frontWeight": 0.58, "cgHeight": 0.72, "stability": 1.0,
+      "rollPerG": 7.0, "divePerG": 4.0, "squatPerG": 1.6, "rideHz": 1.1,
+      "engine": "v8", "redline": 6000, "gears": [5.7, 9.0, 12.5, 15.1, 17.6, 20.9, 26.8, 31.5, 38.8, 41.9] }
   ]
 }

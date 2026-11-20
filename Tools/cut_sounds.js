@@ -5,6 +5,7 @@
 const fs = require('fs'), path = require('path'), W = require('./wav');
 const root = path.join(__dirname, '..'), src = path.join(root, 'Assets/ThirdParty/Sonniss'), out = path.join(src, 'Resources/Sound');
 fs.mkdirSync(out, { recursive: true });
+const HEMI = 'Pole Position Production - Dodge Challenger 426 Hemi - 1970/Dodge_Challenger_Hemi_-70_t3_onboard_driving_steady_rpms_shutdown_Interior_L.wav';
 const SKODA = 'Pole Position Production - Skoda Octavia 1.6 (2008)/Skoda_Octavia_1.6_t1_onboard_start_stop_idle_blip_steadies_Exhaust_Catalysator.wav';
 
 // [output name, source, start s, end s, loop?, mono?, gain dB]
@@ -16,6 +17,11 @@ const CUTS = [
   ['engine_4000', SKODA, 130, 133.5, true, true, 0],
   ['engine_5100', SKODA, 148, 151.5, true, true, 0],
   ['engine_6000', SKODA, 168, 171.5, true, true, 0],
+  // The V8 (muscle car and pickup): a 1970 426 Hemi, inside the car, at the three engine speeds it holds steady, measured
+  // from its firing frequency (four pulses per turn): a loping idle near 745 RPM (50 Hz), 1,140 (76 Hz) and 2,385 (159 Hz).
+  ['v8_0745', HEMI, 153, 157.9, true, true, 0],
+  ['v8_1140', HEMI, 144.3, 147.8, true, true, 0],
+  ['v8_2385', HEMI, 11.4, 15.6, true, true, 0],
   // Tire roar and wind: inside a car on a busy freeway, windows open.
   ['road_roar', '2496SoundEffects - Surround In the City 5.1/Auto Interior On Busy Freeway Driving Fast Windows Open, Car Bys Fast -5.1 LCRLsRsLf.wav', 30, 50, true, false, 0],
   // The highway heard from the land around it: a constant far rumble under everything.

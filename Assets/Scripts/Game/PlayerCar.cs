@@ -247,6 +247,19 @@ namespace SurviveI95.Game
             Glance = Mathf.MoveTowards(Glance, glancing && !lookingBack ? 1f : 0f, Time.deltaTime / .4f);
         }
 
+        /// <summary>The player's cars, for F5 to step through until there is a garage.</summary>
+        public static readonly string[] CarIds = { "sedan", "muscle", "pickup" };
+
+        /// <summary>Swaps to another car's handling, engine and body motion on the move (the body stays the sedan's for now).</summary>
+        public void UseCar(string id)
+        {
+            var c = CarHandling.Load(id);
+            handlingId = id; Sim.ChangeCar(c);
+            Flash($"{c.name ?? id}  (F5: next car)", 2.5f);
+        }
+
+        void NextCar() => UseCar(CarIds[(Array.IndexOf(CarIds, handlingId) + 1) % CarIds.Length]);
+
         void Setup()
         {
             Path ??= RoutePath.Load(routeId);
@@ -349,6 +362,7 @@ namespace SurviveI95.Game
             // GTA-style layout: V changes the camera, C looks back, E is the horn.
             if ((k != null && k.vKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame) || Wheel.Pressed(Wheel.Camera)) SetCockpit(!Cockpit);
             if (k != null && k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
+            if (k != null && k.f5Key.wasPressedThisFrame) NextCar();
             if (k != null && k.f3Key.wasPressedThisFrame) { RoadShake = !RoadShake; PlayerPrefs.SetInt("roadShake", RoadShake ? 1 : 0); Flash(RoadShake ? "Road feel on" : "Road feel off"); }
             // A click in the game takes the mouse back, as games do after Escape.
             var mClick = Mouse.current;
@@ -593,15 +607,19 @@ namespace SurviveI95.Game
                 pitch = Mathf.Lerp(pitch, Mathf.Clamp(-Sim.LongAccel * 0.16f, -1.6f, 2f), ease);
                 return;
             }
-            float rollTo = Mathf.Clamp(Sim.LateralAccel / 9.81f * RollPerG, -7f, 7f);
+            // Each car its own: a pickup leans and bounces more on softer springs, a muscle car sits firmer and squats more.
+            var c = Sim.Car;
+            float rollPerG = c.rollPerG > 0f ? c.rollPerG : RollPerG, dive = c.divePerG > 0f ? c.divePerG : DivePerG;
+            float squat = c.squatPerG > 0f ? c.squatPerG : SquatPerG, hz = c.rideHz > 0f ? c.rideHz : 1.3f;
+            float rollTo = Mathf.Clamp(Sim.LateralAccel / 9.81f * rollPerG, -9f, 9f);
             float decel = -Sim.LongAccel / 9.81f;
-            float pitchTo = Mathf.Clamp(decel * (decel > 0f ? DivePerG : SquatPerG), -2.5f, 4f);
+            float pitchTo = Mathf.Clamp(decel * (decel > 0f ? dive : squat), -3f, 5f);
             int n = Mathf.CeilToInt(dt * 120f); float h = dt / n;
             for (int i = 0; i < n; i++)
             {
-                Spring(ref roll, ref rollVel, rollTo, 1.3f, .35f, h);
-                Spring(ref pitch, ref pitchVel, pitchTo, 1.4f, .35f, h);
-                Spring(ref heave, ref heaveVel, 0f, 1.5f, .35f, h);
+                Spring(ref roll, ref rollVel, rollTo, hz, .35f, h);
+                Spring(ref pitch, ref pitchVel, pitchTo, hz + .1f, .35f, h);
+                Spring(ref heave, ref heaveVel, 0f, hz + .2f, .35f, h);
             }
         }
 

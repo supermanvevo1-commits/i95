@@ -71,7 +71,7 @@ namespace SurviveI95.EditorTools
             {
                 case "ping": return "ok";
                 case "laneaudit": return LaneAudit.Run(Path.Combine(Dir, "audit.txt"));
-                case "bench": DriveSmokeTest.Run(); return "bench done";
+                case "bench": DriveSmokeTest.Run(Path.Combine(Dir, "bench.txt")); return File.ReadAllText(Path.Combine(Dir, "bench.txt"));
                 case "islands": return Islands();
                 case "refresh": AssetDatabase.Refresh(); return "refreshing";
                 case "play": EditorApplication.isPlaying = true; return "entering play";
@@ -152,6 +152,7 @@ namespace SurviveI95.EditorTools
                     PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
                     return "driving";
                 case "oldbody": PlayerCar.OldBody = a[2] == "on"; return "old body motion " + a[2];
+                case "usecar": car.UseCar(a[2]); return "now driving " + car.Sim.Car.name;
                 case "body": return FormattableString.Invariant($"roll={car.BodyRoll:F2} pitch={car.BodyPitch:F2} latG={car.Sim.LateralAccel / 9.81f:F2} longG={car.Sim.LongAccel / 9.81f:F2} shift={car.Sim.LoadShift * 100f:F0}% mph={car.Sim.Speed * DriveSim.MetersPerSecondToMph:F0}");
                 case "fakewheel": return TestWheel.Command(a); // add | remove | set steer gas brake [buttons]
                 case "wheelstatus": return SurviveI95.Game.Wheel.Status();

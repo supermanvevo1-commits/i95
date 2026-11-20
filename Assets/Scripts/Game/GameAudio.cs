@@ -7,8 +7,9 @@ namespace SurviveI95.Game
     /// <summary>
     /// The game's sound, from real recordings (Sonniss GDC bundles; Tools/cut_sounds.js makes the loops).
     /// The aim is a road that sounds like a road, never a pile of effects:
-    /// - Your engine: six steady-RPM recordings of a 1.6 L four-cylinder crossfaded by the engine's RPM, from a
-    ///   six-speed automatic that shifts early when cruising and late when floored (about 2,000 RPM at 70 mph).
+    /// - Your engine: steady-RPM recordings crossfaded by the engine's RPM. The sedan has six of a 1.6 L four-cylinder
+    ///   on a six-speed automatic (about 2,000 RPM at 70 mph); the muscle car and the pickup have three of a V8 (a loping
+    ///   idle, 1,140 and 2,385 RPM, the top one pitched up past that), each on its own gearbox and redline.
     /// - Tire roar and wind from a recording made on a busy freeway, rising with speed; tire squeal when you slide.
     /// - Every nearby traffic car has its own positioned sound (tire hiss and engine by vehicle type) with Doppler,
     ///   duller the farther away it is, as air does to sound; a close fast pass gets a real pass-by recording.
@@ -18,20 +19,24 @@ namespace SurviveI95.Game
     public class GameAudio : MonoBehaviour
     {
         PlayerCar car;
-        static readonly int[] LoopRpm = { 890, 2050, 3100, 4000, 5100, 6000 };
-        readonly AudioSource[] engine = new AudioSource[6];
+        static readonly int[] FourLoops = { 890, 2050, 3100, 4000, 5100, 6000 }, V8Loops = { 745, 1135, 2385 };
+        int[] loopRpm = FourLoops;
+        AudioSource[] engine = new AudioSource[0];
+        GameObject engineObj; string engineFor;
+        bool v8; float idleRpm = 890f, redline = 6300f, engineVolume = 1f;
         AudioSource road, skid, bed, rumble, offBumps, offGravel;
         RumbleStripSound rumbleFx;
         AudioLowPassFilter engineFilter;
         AudioClip passCar, passTruck, crashHit, crashSmash, crashGlass, tireHiss, planeLoop, trainLoop, truckEngine, carEngine, bikeEngine;
         AudioClip[] horns;
         int gear = 1, lastImpacts;
-        float rpm = 890f, shiftHold;
+        float rpm = 890f, shiftHold, demand;
         public float Rpm => rpm;
         public int Gear => gear;
 
-        // mph per 1,000 RPM in each gear of a six-speed automatic, spaced like a compact sedan's.
-        static readonly float[] MphPerK = { 6.5f, 11f, 16f, 21.5f, 27.5f, 34f };
+        // mph per 1,000 RPM in each gear of a six-speed automatic, spaced like a compact sedan's (cars without their own).
+        static readonly float[] SedanGears = { 6.5f, 11f, 16f, 21.5f, 27.5f, 34f };
+        float[] mphPerK = SedanGears;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -57,9 +62,7 @@ namespace SurviveI95.Game
         {
             car = GetComponent<PlayerCar>();
             // Each engine loop on its own child so a low-pass can sit on the engine only (in the cockpit it's muffled).
-            var eng = new GameObject("EngineSound"); eng.transform.SetParent(transform, false);
-            for (int i = 0; i < 6; i++) engine[i] = Loop(eng, Load($"engine_{LoopRpm[i]:0000}"), 0f);
-            engineFilter = eng.AddComponent<AudioLowPassFilter>(); engineFilter.cutoffFrequency = 9000f;
+            BuildEngine();
             road = Loop(gameObject, Load("road_roar"), 0f);
             skid = Loop(gameObject, Load("skid_loop"), 0f);
             // Rumble strips: the same tire roar, struck groove by groove (RumbleStripSound), on its own child.
@@ -78,30 +81,53 @@ namespace SurviveI95.Game
             lastImpacts = car.Sim.ImpactCount;
         }
 
+        /// <summary>The engine loops for the car being driven; rebuilt when F5 swaps cars.</summary>
+        void BuildEngine()
+        {
+            var c = car.Sim.Car; engineFor = c.id;
+            v8 = c.engine == "v8" && Load("v8_0745") != null;
+            loopRpm = v8 ? V8Loops : FourLoops;
+            idleRpm = v8 ? 745f : 890f;
+            redline = c.redline > 0f ? c.redline : 6300f;
+            mphPerK = c.gears != null && c.gears.Length > 0 ? c.gears : SedanGears;
+            // The muscle car's exhaust is meant to be heard; the pickup's V8 is tuned quiet and sits behind more insulation.
+            engineVolume = c.id == "muscle" ? 1.7f : c.id == "pickup" ? .85f : 1f;
+            if (engineObj != null) Destroy(engineObj);
+            engineObj = new GameObject("EngineSound"); engineObj.transform.SetParent(transform, false);
+            engine = new AudioSource[loopRpm.Length];
+            for (int i = 0; i < engine.Length; i++) engine[i] = Loop(engineObj, Load((v8 ? "v8_" : "engine_") + loopRpm[i].ToString("0000")), 0f);
+            engineFilter = engineObj.AddComponent<AudioLowPassFilter>(); engineFilter.cutoffFrequency = 9000f;
+            if (gear > mphPerK.Length) gear = mphPerK.Length;
+        }
+
         // ---------- the player's car ----------
         void Update()
         {
             if (car == null) return;
+            if (car.Sim.Car.id != engineFor) BuildEngine();
             var s = car.Sim; float dt = Time.deltaTime;
             float v = Mathf.Abs(s.Speed), mph = v * DriveSim.MetersPerSecondToMph;
             float throttle = Mathf.Clamp01(car.LastInput.Throttle), brake = Mathf.Clamp01(car.LastInput.Brake);
             UpdateRpm(mph, throttle, dt, s);
             // Crossfade the two loops either side of the RPM (equal power, on a log scale), each pitched to match.
             float lr = Mathf.Log(rpm);
-            for (int i = 0; i < 6; i++)
+            int last = loopRpm.Length - 1;
+            int lo = 0; while (lo < last - 1 && rpm > loopRpm[lo + 1]) lo++;
+            float t = Mathf.Clamp01((lr - Mathf.Log(loopRpm[lo])) / (Mathf.Log(loopRpm[lo + 1]) - Mathf.Log(loopRpm[lo])));
+            for (int i = 0; i < engine.Length; i++)
             {
                 float w = 0f;
-                int lo = 0; while (lo < 4 && rpm > LoopRpm[lo + 1]) lo++;
-                float t = Mathf.Clamp01((lr - Mathf.Log(LoopRpm[lo])) / (Mathf.Log(LoopRpm[lo + 1]) - Mathf.Log(LoopRpm[lo])));
                 if (i == lo) w = Mathf.Cos(t * Mathf.PI / 2f); else if (i == lo + 1) w = Mathf.Sin(t * Mathf.PI / 2f);
-                engine[i].pitch = Mathf.Clamp(rpm / LoopRpm[i], .6f, 1.6f);
+                // The top loop carries the engine on up to its redline (the V8's only goes to 2,385 RPM, so it's pitched further).
+                engine[i].pitch = Mathf.Clamp(rpm / loopRpm[i], .6f, i == last ? Mathf.Max(1.6f, redline / loopRpm[i]) : 1.6f);
                 // Louder with RPM and with load: a car cruising is quiet, one floored is not.
-                float loud = Mathf.Lerp(.16f, .5f, Mathf.InverseLerp(800f, 6200f, rpm)) * Mathf.Lerp(.55f, 1f, throttle);
+                float loud = Mathf.Lerp(.16f, .5f, Mathf.InverseLerp(idleRpm, redline - 100f, rpm)) * Mathf.Lerp(.55f, 1f, throttle) * engineVolume;
                 if (s.Disabled) loud = 0f;
                 engine[i].volume = Mathf.MoveTowards(engine[i].volume, w * loud * (car.Cockpit ? .8f : 1f), dt * 3f);
             }
             // Inside the car the engine is behind the firewall: duller. Outside, the exhaust is open.
-            engineFilter.cutoffFrequency = Mathf.Lerp(engineFilter.cutoffFrequency, car.Cockpit ? 2600f : 9000f, dt * 4f);
+            float shut = car.Cockpit ? (engineFor == "pickup" ? 2000f : 2600f) : 9000f;
+            engineFilter.cutoffFrequency = Mathf.Lerp(engineFilter.cutoffFrequency, shut, dt * 4f);
             // Tire roar and wind grow faster than speed; at 120+ the wind takes over.
             float roar = Mathf.Pow(Mathf.Clamp01(mph / 75f), 1.4f) * .42f + Mathf.Pow(Mathf.Clamp01((mph - 75f) / 70f), 1.5f) * .3f;
             bool off = s.OffRoad && v > 1f;
@@ -135,22 +161,28 @@ namespace SurviveI95.Game
         {
             if (s.Gear != 'D' && s.Gear != 'R' || mph < 1f && throttle < .05f)
             {
-                gear = 1; float idle = 890f + (s.Gear == 'N' || s.Gear == 'P' ? throttle * 4500f : 0f);
+                gear = 1; float idle = idleRpm + (s.Gear == 'N' || s.Gear == 'P' ? throttle * (redline - 1800f) : 0f);
                 rpm = Mathf.Lerp(rpm, idle, dt * 4f); return;
             }
             if (s.Gear == 'R') gear = 1;
             // Shift up early under light throttle, late when floored; down when it would lug or for a kickdown.
-            float up = Mathf.Lerp(2100f, 5800f, throttle * throttle), down = Mathf.Lerp(1250f, 3000f, throttle);
+            // The gearbox goes by how hard the pedal has been held, not by a tap: a key is all or nothing, and an automatic
+            // waits for the pedal to stay down (about half a second) before it kicks down. Letting off counts at once.
+            demand = Mathf.MoveTowards(demand, throttle, dt / (throttle > demand ? .6f : .2f));
+            // A V8 has the pull to shift sooner: big trucks and muscle cars cruise around 1,500-1,800 RPM.
+            float up = Mathf.Lerp(v8 ? 1750f : 2100f, redline * .92f, demand * demand);
+            float down = Mathf.Lerp(v8 ? 1000f : 1250f, redline * (v8 ? .4f : .48f), demand * demand);
             shiftHold -= dt;
-            float At(int g) => mph / MphPerK[g - 1] * 1000f;
+            float At(int g) => mph / mphPerK[g - 1] * 1000f;
             if (shiftHold <= 0f)
             {
-                if (gear < 6 && At(gear) > up) { gear++; shiftHold = .6f; }
+                // Never shift up into a gear it would at once shift back down from (a tall overdrive top gear otherwise hunts).
+                if (gear < mphPerK.Length && At(gear) > up && At(gear + 1) > down + 250f) { gear++; shiftHold = .6f; }
                 else if (gear > 1 && At(gear) < down) { gear--; shiftHold = .6f; }
             }
             // Below about 12 mph the torque converter slips: the engine runs above road speed.
-            float target = Mathf.Max(At(gear), 890f + throttle * 1700f * Mathf.Clamp01(1f - mph / 14f));
-            rpm = Mathf.Lerp(rpm, Mathf.Clamp(target, 800f, 6300f), dt * (shiftHold > .3f ? 7f : 10f));
+            float target = Mathf.Max(At(gear), idleRpm + throttle * 1700f * Mathf.Clamp01(1f - mph / 14f));
+            rpm = Mathf.Lerp(rpm, Mathf.Clamp(target, idleRpm - 90f, redline), dt * (shiftHold > .3f ? 7f : 10f));
         }
 
         // ---------- crashes, from anywhere ----------
