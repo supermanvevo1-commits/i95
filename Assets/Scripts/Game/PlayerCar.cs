@@ -106,14 +106,14 @@ namespace SurviveI95.Game
         // X (Square) flashes the high beams, B (Circle) hazards.
         void UpdateSignals(Keyboard k, Gamepad pad)
         {
-            bool left = (k != null && k.zKey.wasPressedThisFrame) || (pad != null && pad.dpad.left.wasPressedThisFrame);
-            bool rightSig = (k != null && k.xKey.wasPressedThisFrame) || (pad != null && pad.dpad.right.wasPressedThisFrame);
+            bool left = (k != null && k.zKey.wasPressedThisFrame) || (pad != null && pad.dpad.left.wasPressedThisFrame) || Wheel.Pressed(Wheel.SignalLeft);
+            bool rightSig = (k != null && k.xKey.wasPressedThisFrame) || (pad != null && pad.dpad.right.wasPressedThisFrame) || Wheel.Pressed(Wheel.SignalRight);
             if (left) SetSignal(Signal == -1 ? 0 : -1);
             if (rightSig) SetSignal(Signal == 1 ? 0 : 1);
             // Cancels itself once the lane change is done, or after a while, like a real stalk.
             if (Signal != 0 && (Mathf.Abs(Sim.Lateral - signalLat) > 3.2f || Time.time - signalSince > 12f)) Signal = 0;
-            HighBeams = TestHighBeams || (k != null && k.hKey.isPressed) || (pad != null && pad.buttonWest.isPressed);
-            if ((k != null && k.gKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Hazards = !Hazards; Flash(Hazards ? "Hazards on" : "Hazards off"); }
+            HighBeams = TestHighBeams || (k != null && k.hKey.isPressed) || (pad != null && pad.buttonWest.isPressed) || Wheel.Held(Wheel.HighBeams);
+            if ((k != null && k.gKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame) || Wheel.Pressed(Wheel.Hazards)) { Hazards = !Hazards; Flash(Hazards ? "Hazards on" : "Hazards off"); }
         }
 
         void SetSignal(int s) { Signal = s; signalSince = Time.time; signalLat = Sim.Lateral; }
@@ -164,7 +164,7 @@ namespace SurviveI95.Game
             Flash($"Field of view {BaseFov:F0}°");
         }
 
-        void Flash(string text) { flash = text; flashUntil = Time.unscaledTime + 1.6f; }
+        public void Flash(string text, float seconds = 1.6f) { flash = text; flashUntil = Time.unscaledTime + seconds; }
 
         // ---------------------------------------------------------------- cruise control
 
@@ -233,9 +233,9 @@ namespace SurviveI95.Game
                 glanceSwitch = 0f;
             }
             glancing = wantGlance && mirrorParts != null && mirrorParts[glanceMirror] != null;
-            lookingBack = TestLookBack || (k != null && k.cKey.isPressed) || (pad != null && pad.rightStickButton.isPressed) || (!Cockpit && right);
+            lookingBack = TestLookBack || (k != null && k.cKey.isPressed) || (pad != null && pad.rightStickButton.isPressed) || Wheel.Held(Wheel.LookBack) || (!Cockpit && right);
             UpdateSignals(k, pad);
-            Honking = TestHorn || (k != null && k.eKey.isPressed) || (pad != null && pad.leftStickButton.isPressed);
+            Honking = TestHorn || (k != null && k.eKey.isPressed) || (pad != null && pad.leftStickButton.isPressed) || Wheel.Held(Wheel.Horn);
             if (Honking && horn == null)
             {
                 horn = gameObject.AddComponent<AudioSource>();
@@ -328,6 +328,15 @@ namespace SurviveI95.Game
                 input.Brake = Mathf.Max(input.Brake, pad.leftTrigger.ReadValue());
                 input.Handbrake |= pad.buttonSouth.isPressed || pad.rightShoulder.isPressed; // A, or RB as in GTA
             }
+            // A steering wheel and pedals (Wheel.cs), once set up with F4. Keys and the stick still work alongside it.
+            if (Wheel.Ready && Wheel.Step < 0)
+            {
+                bool stickUsed = pad != null && Mathf.Abs(pad.leftStick.x.ReadValue()) > 0.08f;
+                if (keyDir == 0 && !stickUsed) input.Steer = Wheel.Steer;
+                input.Throttle = Mathf.Max(input.Throttle, Wheel.Gas);
+                input.Brake = Mathf.Max(input.Brake, Wheel.Brake);
+                input.Handbrake |= Wheel.Held(Wheel.Handbrake);
+            }
             return ApplyCruise(input);
         }
 
@@ -335,9 +344,10 @@ namespace SurviveI95.Game
         {
             var k = Keyboard.current;
             var pad = Gamepad.current;
+            Wheel.Update(this);
             if (k != null && k.rKey.wasPressedThisFrame) { Sim.Reset(Path, Sim.S); StorePrevious(); }
             // GTA-style layout: V changes the camera, C looks back, E is the horn.
-            if ((k != null && k.vKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame)) SetCockpit(!Cockpit);
+            if ((k != null && k.vKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame) || Wheel.Pressed(Wheel.Camera)) SetCockpit(!Cockpit);
             if (k != null && k.escapeKey.wasPressedThisFrame) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; }
             if (k != null && k.f3Key.wasPressedThisFrame) { RoadShake = !RoadShake; PlayerPrefs.SetInt("roadShake", RoadShake ? 1 : 0); Flash(RoadShake ? "Road feel on" : "Road feel off"); }
             // A click in the game takes the mouse back, as games do after Escape.

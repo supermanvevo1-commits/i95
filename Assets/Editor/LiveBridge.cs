@@ -151,6 +151,9 @@ namespace SurviveI95.EditorTools
                     bot = new LaneBot { SpeedMph = F(a, 2), TargetLaneFromRight = a.Length > 3 ? (int)F(a, 3) : 0 };
                     PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
                     return "driving";
+                case "fakewheel": return TestWheel.Command(a); // add | remove | set steer gas brake [buttons]
+                case "wheelstatus": return SurviveI95.Game.Wheel.Status();
+                case "wheelsetup": SurviveI95.Game.Wheel.Begin(); return "wheel setup started";
                 case "edge": // mph offset: drives that far right of the lane edge (0.4 rumble strip, 5 grass)
                     bot = new LaneBot { SpeedMph = F(a, 2), EdgeOffset = F(a, 3) };
                     PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
