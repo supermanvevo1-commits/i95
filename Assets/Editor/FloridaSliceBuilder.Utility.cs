@@ -75,13 +75,17 @@ namespace SurviveI95.EditorTools
             if (land == null) return;
             var water = Lit("Water", new Color(.1f, .22f, .22f), .93f);
             var bank = Lit("WaterBank", new Color(.34f, .38f, .22f), .05f, "grass_ground");
-            var map = new Dictionary<(int, int), Bucket>(); int ponds = 0, canals = 0;
+            var grassMat = AssetDatabase.LoadAssetAtPath<Material>(Gen + "/Materials/Grass.mat") ?? bank;
+            var riprap = Lit("Riprap", new Color(.9f, .89f, .85f), .06f); riprap.SetTexture("_BaseMap", SaveTexture(RiprapTexture(), "RiprapTex")); EditorUtility.SetDirty(riprap);
+            var seawall = Lit("Seawall", new Color(.82f, .8f, .75f), .1f, "concrete_wall_004");
+            var map = new Dictionary<(int, int), Bucket>(); int ponds = 0, canals = 0; float wallM = 0f, bankM = 0f;
+            var houses = HouseGrid();
             var fountains = new List<(Vector2, float)>(); var fr = new System.Random(4711);
             foreach (var z in zones)
             {
                 if (z.k != "water" || z.pts.Count < 3) continue;
                 if (z.pts.Any(q => OnRoad(q, 4f))) continue;
-                var bk = Get(map, z.pts[0], 900f, 2);
+                var bk = Get(map, z.pts[0], 900f, WaterSlots);
                 FlatPoly(bk, 1, z.pts, -.215f, 6f);
                 FlatPoly(bk, 0, Inset(z.pts, 2.5f), -.2f, 30f);
                 ponds++;
@@ -104,15 +108,115 @@ namespace SurviveI95.EditorTools
                     var a = pts[i]; var b = pts[i + 1]; var mid = (a + b) / 2f;
                     if (OnRoad(mid, 2f)) continue; // a culvert carries it under the highway
                     var dir = (b - a).normalized; var n = new Vector2(-dir.y, dir.x);
-                    var bk = Get(map, mid, 900f, 2);
-                    Strip(bk, 1, a - dir * .5f, b + dir * .5f, n * (width / 2f + 2.5f), -.215f, width + 5f);
-                    Strip(bk, 0, a - dir * .5f, b + dir * .5f, n * (width / 2f), -.2f, width);
+                    var bk = Get(map, mid, 900f, WaterSlots);
+                    Strip(bk, 0, a - dir * .5f, b + dir * .5f, n * (width / 2f + .6f), -.2f, width);
+                    float len = (b - a).magnitude, e = width / 2f;
+                    var a1 = a - dir * Mathf.Min(1f, len * .2f); var b1 = b + dir * Mathf.Min(1f, len * .2f);
+                    foreach (int side in new[] { 1, -1 })
+                    {
+                        var nn = n * side;
+                        // Room before a street on this bank, and whether buildings line it.
+                        float room = 13f;
+                        for (float d = 1f; d <= 13f; d += 1f)
+                        {
+                            var q = mid + nn * (e + d);
+                            if (StreetDistance(q, 12f, out _, out var sw) < sw / 2f + 1f) { room = d - 1f; break; }
+                        }
+                        bool built = Houses(houses, mid + nn * (e + 20f), 30f) >= 2;
+                        if (built || room < 4f)
+                        {
+                            // Seawall: a concrete face up from the water to a cap 0.35 m above it, and the lawn easing down
+                            // from the cap. (The water can't sit lower than the field yet, so the wall is only its top.)
+                            Bank(bk, WaterCrete, a1, b1, nn, e, -.25f, e, .15f);
+                            Bank(bk, WaterCrete, a1, b1, nn, e, .15f, e + .5f, .15f);
+                            float lawn = Mathf.Max(1.5f, Mathf.Min(3f, room - .5f));
+                            Bank(bk, WaterGrass, a1, b1, nn, e + .5f, .13f, e + .5f + lawn, -.255f);
+                            wallM += len;
+                        }
+                        else
+                        {
+                            // Flood-control canal: a band of limestone riprap along the waterline, its top edge just
+                            // above the grass so the field runs right up to it. (A raised berm hid the water from the road.)
+                            float k = Mathf.Clamp(room / 4f, .5f, 1f);
+                            Bank(bk, WaterRock, a1, b1, nn, e - .4f, -.19f, e + 1.8f * k, -.17f);
+                            bankM += len;
+                        }
+                    }
                 }
                 canals++;
             }
-            Flush(map, "Water", new[] { water, bank }, 2, false);
+            Flush(map, "Water", new[] { water, bank, grassMat, riprap, seawall }, WaterSlots, false);
             BuildFountains(fountains);
-            Debug.Log($"[FloridaSlice] water: ponds and lakes {ponds} ({fountains.Count} with a fountain), canals and ditches {canals}");
+            Debug.Log($"[FloridaSlice] water: ponds and lakes {ponds} ({fountains.Count} with a fountain), canals and ditches {canals} ({bankM / 1000f:F1} km of grass and rock bank, {wallM / 1000f:F1} km of seawall)");
+        }
+
+        const int WaterSlots = 5, WaterGrass = 2, WaterRock = 3, WaterCrete = 4;
+
+        /// <summary>
+        /// One band of a canal bank along a segment, from (e0 out, height y0) to (e1 out, y1), measured from the canal's
+        /// middle along nn. Both faces, each with its own points, so it lights from either side.
+        /// </summary>
+        static void Bank(Bucket bk, int slot, Vector2 a, Vector2 b, Vector2 nn, float e0, float y0, float e1, float y1)
+        {
+            var p0 = a + nn * e0; var p1 = a + nn * e1; var p2 = b + nn * e0; var p3 = b + nn * e1;
+            var q = new[] { new Vector3(p0.x, y0, p0.y), new Vector3(p1.x, y1, p1.y), new Vector3(p2.x, y0, p2.y), new Vector3(p3.x, y1, p3.y) };
+            var v = bk.v[slot]; var uv = bk.uv[slot];
+            for (int face = 0; face < 2; face++)
+            {
+                int n = v.Count;
+                foreach (var c in q) { v.Add(c); uv.Add(new Vector2(c.x / (slot == WaterGrass ? 12f : 2.5f), (c.z + c.y) / (slot == WaterGrass ? 12f : 2.5f))); }
+                if (face == 0) bk.t[slot].AddRange(new[] { n, n + 1, n + 2, n + 2, n + 1, n + 3 });
+                else bk.t[slot].AddRange(new[] { n, n + 2, n + 1, n + 2, n + 3, n + 1 });
+            }
+        }
+
+        /// <summary>Riprap seen from a distance: pale limestone blocks of mixed size with dark shadowed gaps between them.</summary>
+        static Texture2D RiprapTexture()
+        {
+            const int N = 256; var px = new Color32[N * N]; var r = new System.Random(64);
+            var pts = new List<(Vector2 c, float tone)>();
+            for (int i = 0; i < 70; i++) pts.Add((new Vector2((float)r.NextDouble() * N, (float)r.NextDouble() * N), .72f + (float)r.NextDouble() * .28f));
+            for (int y = 0; y < N; y++)
+                for (int x = 0; x < N; x++)
+                {
+                    float d1 = 1e9f, d2 = 1e9f; float tone = 1f;
+                    foreach (var (c, t) in pts)
+                        for (int ox = -1; ox <= 1; ox++) for (int oy = -1; oy <= 1; oy++)
+                            {
+                                float d = (new Vector2(x + ox * N, y + oy * N) - c).magnitude;
+                                if (d < d1) { d2 = d1; d1 = d; tone = t; } else if (d < d2) d2 = d;
+                            }
+                    float gap = Mathf.SmoothStep(0f, 1f, (d2 - d1) / 5f);
+                    float v = tone * (.35f + .65f * gap) * (.9f + (float)r.NextDouble() * .1f);
+                    px[y * N + x] = new Color32((byte)(v * 236), (byte)(v * 232), (byte)(v * 222), 255);
+                }
+            var tex = new Texture2D(N, N, TextureFormat.RGBA32, true); tex.SetPixels32(px); tex.Apply();
+            return tex;
+        }
+
+        /// <summary>The middle of every mapped building, in 50 m cells, for telling a built-up canal from an open one.</summary>
+        static Dictionary<(int, int), List<Vector2>> HouseGrid()
+        {
+            var g = new Dictionary<(int, int), List<Vector2>>();
+            var file = $"Tools/Data/{RouteId}_buildings.json";
+            if (!File.Exists(file)) return g;
+            foreach (var b in JsonUtility.FromJson<BuildingFile>(File.ReadAllText(file)).items)
+            {
+                if (b.p == null || b.p.Length < 6) continue;
+                float x = 0f, z = 0f; int n = b.p.Length / 2;
+                for (int i = 0; i < n; i++) { x += b.p[2 * i]; z += b.p[2 * i + 1]; }
+                var c = new Vector2(x / n, z / n); var k = ((int)Mathf.Floor(c.x / 50f), (int)Mathf.Floor(c.y / 50f));
+                if (!g.TryGetValue(k, out var l)) g[k] = l = new List<Vector2>(); l.Add(c);
+            }
+            return g;
+        }
+
+        static int Houses(Dictionary<(int, int), List<Vector2>> g, Vector2 q, float r)
+        {
+            int n = 0; int cx = (int)Mathf.Floor(q.x / 50f), cz = (int)Mathf.Floor(q.y / 50f);
+            for (int a = -1; a <= 1; a++) for (int b = -1; b <= 1; b++)
+                    if (g.TryGetValue((cx + a, cz + b), out var l)) foreach (var c in l) if ((c - q).sqrMagnitude < r * r) n++;
+            return n;
         }
 
         static float SegDist(Vector2 q, Vector2 a, Vector2 b)
