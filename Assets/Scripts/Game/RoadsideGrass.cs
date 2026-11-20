@@ -91,9 +91,12 @@ namespace SurviveI95.Game
                 if (overpass) continue;
                 float hw = path.HalfWidth(s), south = -(2f * hw + RoutePath.MedianGap);
                 float inner = side > 0 ? hw + Shoulder : south - hw - Shoulder;
+                // Where the road climbs on earth fill, the grass starts past the foot of the bank (1 in 2.5, as the
+                // builder makes it).
+                float y = path.Center(s).y, bank = y > .2f ? 2.5f * (y + .24f) : 0f;
                 float reach = path.HasSoundWall(s) ? WallGap - .6f : ToFence;
                 var right = path.Right(s); var c = path.Center(s);
-                for (float d = 0f; d < reach - Shoulder; d += Spacing)
+                for (float d = bank; d < reach - Shoulder; d += Spacing)
                 {
                     float lat = inner + side * (d + (float)rnd.NextDouble() * Spacing);
                     float along = (float)(rnd.NextDouble() - .5) * Spacing;

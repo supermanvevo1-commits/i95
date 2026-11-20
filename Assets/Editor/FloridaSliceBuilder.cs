@@ -48,6 +48,7 @@ namespace SurviveI95.EditorTools
             BuildBuildings(path, south, m);
             BuildLamps(path);
             BuildPillars(road, path, south, m);
+            BuildEmbankments(road, path, south, m);
             BuildExitRoads(road, path, m);
             BuildSoundWalls(road, path, south, m);
             BuildPlants(path, south);
@@ -105,6 +106,15 @@ namespace SurviveI95.EditorTools
                 foreach (var old in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(o => o.name == "Barriers").Select(o => o.gameObject).ToList())
                     UnityEngine.Object.DestroyImmediate(old);
                 BuildBarriers(road, path, m);
+            }
+            else if (part == "embankment")
+            {
+                var road = EditorSceneManager.GetActiveScene().GetRootGameObjects().First(o => o.name == "Road");
+                var oldP = road.transform.Find("Pillars"); if (oldP != null) UnityEngine.Object.DestroyImmediate(oldP.gameObject);
+                meshCount = 400000;
+                Func<float, float> sth = s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap);
+                BuildPillars(road, path, sth, m);
+                BuildEmbankments(road, path, sth, m);
             }
             else if (part == "guardrail")
             {
@@ -1085,7 +1095,7 @@ namespace SurviveI95.EditorTools
             for (float s = 16f; s < p.Length; s += 32f)
             {
                 float y = p.Center(s).y;
-                if (y < 2.4f) continue;
+                if (y < 2.4f || (y < FillTop && !p.IsBridge(s))) continue; // lower than that it stands on earth fill
                 var rot = Quaternion.LookRotation(p.Tangent(s), Vector3.up);
                 foreach (var c in new[] { 0f, south(s) })
                 {
