@@ -151,6 +151,8 @@ namespace SurviveI95.EditorTools
                     bot = new LaneBot { SpeedMph = F(a, 2), TargetLaneFromRight = a.Length > 3 ? (int)F(a, 3) : 0 };
                     PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
                     return "driving";
+                case "oldbody": PlayerCar.OldBody = a[2] == "on"; return "old body motion " + a[2];
+                case "body": return FormattableString.Invariant($"roll={car.BodyRoll:F2} pitch={car.BodyPitch:F2} latG={car.Sim.LateralAccel / 9.81f:F2} longG={car.Sim.LongAccel / 9.81f:F2} shift={car.Sim.LoadShift * 100f:F0}% mph={car.Sim.Speed * DriveSim.MetersPerSecondToMph:F0}");
                 case "fakewheel": return TestWheel.Command(a); // add | remove | set steer gas brake [buttons]
                 case "wheelstatus": return SurviveI95.Game.Wheel.Status();
                 case "wheelsetup": SurviveI95.Game.Wheel.Begin(); return "wheel setup started";

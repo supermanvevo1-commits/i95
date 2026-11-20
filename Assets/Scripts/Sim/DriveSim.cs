@@ -13,6 +13,8 @@ namespace SurviveI95.Sim
     {
         public string id;
         public float topMph, accel, brake, gripG, wheelbase, steerIn, steerOut, mass, frontWeight;
+        /// <summary>Height of the center of gravity, m (0 = a sedan's 0.55).</summary>
+        public float cgHeight;
         /// <summary>Stability control, 0 (none, as on an old muscle car) to 1 (a modern car). Catches the tail when it steps out.</summary>
         public float stability;
 
@@ -44,6 +46,10 @@ namespace SurviveI95.Sim
         public float S, Lateral, Theta;
         /// <summary>Speed is forward velocity in the car's frame; SideSpeed is its sideways velocity.</summary>
         public float Speed, SideSpeed, YawRate, Steer, LateralAccel, LongAccel;
+        /// <summary>Share of the car's weight moved onto the front tires by braking (+) or off them by throttle (-).</summary>
+        public float LoadShift;
+        /// <summary>Off only for comparisons in the steering bench.</summary>
+        public static bool WeightTransfer = true;
         public bool OffRoad, HitWall, Sliding, OnRumble;
         /// <summary>Automatic transmission selector: P, R, N or D.</summary>
         /// <summary>Most recent solid hit: closing speed in m/s and what was struck.</summary>
@@ -67,7 +73,7 @@ namespace SurviveI95.Sim
         {
             S = s; Lateral = path.HalfWidth(s) - RoutePath.LaneWidth / 2f;
             Current = null; CurrentJunction = null;
-            Theta = Speed = SideSpeed = YawRate = Steer = LateralAccel = LongAccel = 0;
+            Theta = Speed = SideSpeed = YawRate = Steer = LateralAccel = LongAccel = LoadShift = 0;
             Gear = 'P';
             Damage = FrontCrush = 0f; crashDecel = crashTurn = stunned = 0f; pinS = float.PositiveInfinity; wallContact = sideContact = false;
             RepairCount++;
@@ -124,6 +130,11 @@ namespace SurviveI95.Sim
             for (int i = 0; i < Substeps; i++) Integrate(path, input, mu, h);
 
             LongAccel = (Speed - before) / dt;
+            // Weight transfer: braking loads the front tires and unloads the rear, throttle the other way, by
+            // acceleration x CG height / wheelbase, as the springs settle (about a tenth of a second).
+            float cg = Car.cgHeight > 0f ? Car.cgHeight : 0.55f;
+            float shiftTo = !WeightTransfer ? 0f : Mathf.Clamp(-LongAccel * cg / (G * Car.wheelbase), -0.12f, 0.14f);
+            LoadShift = Mathf.Lerp(LoadShift, shiftTo, 1f - Mathf.Exp(-dt / 0.12f));
             Sliding = Mathf.Abs(Speed) > 6f && Mathf.Abs(Beta) > 0.07f;
             ApplyLimits(path);
             CheckJunctions(mainRoad);
@@ -204,8 +215,9 @@ namespace SurviveI95.Sim
 
             float brakeUse = Speed > 0.25f ? Mathf.Clamp01(input.Brake) : 0f;
             float lateralShare = Mathf.Sqrt(1f - 0.6f * brakeUse * brakeUse);
-            float frontPeak = mu * G * Car.mass * Car.frontWeight * lateralShare;
-            float rearPeak = mu * 1.08f * G * Car.mass * (1f - Car.frontWeight) * lateralShare * (input.Handbrake ? 0.3f : 1f);
+            float front = Car.frontWeight + LoadShift;
+            float frontPeak = mu * G * Car.mass * front * lateralShare;
+            float rearPeak = mu * 1.08f * G * Car.mass * (1f - front) * lateralShare * (input.Handbrake ? 0.3f : 1f);
 
             float vx = Mathf.Max(3f, Speed);
             float slipF = Mathf.Atan2(SideSpeed + a * YawRate, vx) - delta;

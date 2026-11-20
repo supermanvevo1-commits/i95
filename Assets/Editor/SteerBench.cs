@@ -106,6 +106,25 @@ namespace SurviveI95.EditorTools
             return FormattableString.Invariant($"{at05:F2}g@0.5s peak{peakG:F2}g slip{peakSlip:F0}");
         }
 
+        // Weight transfer: a key held into a turn for a second, then the brake stamped (or the gas floored) for 1.5 s.
+        // Braking should tighten the turn without spinning (stability control catches it); throttle should push wide.
+        static string Weight(RoutePath path, string carId, float mph, bool brake)
+        {
+            var s = Start(path, carId, mph, "new");
+            float held = 0f, peakSlip = 0f, peakShift = 0f, turned = 0f, theta0 = 0f, maxTheta = 0f;
+            for (float t = 0f; t < 2.5f; t += Dt)
+            {
+                held += Dt; bool late = t >= 1f;
+                if (late && theta0 == 0f) theta0 = s.Theta;
+                var input = new DriveInput { Steer = s.KeySteer(held), Throttle = late ? (brake ? 0f : 1f) : (s.Speed * Mph < mph ? 1f : 0f), Brake = late && brake ? 1f : 0f };
+                s.Step(path, input, Dt);
+                if (late) { peakSlip = Mathf.Max(peakSlip, Mathf.Abs(s.Beta) * Mathf.Rad2Deg); peakShift = Mathf.Max(peakShift, Mathf.Abs(s.LoadShift)); }
+                maxTheta = Mathf.Max(maxTheta, Mathf.Abs(s.Theta) * Mathf.Rad2Deg);
+            }
+            turned = (s.Theta - theta0) * Mathf.Rad2Deg;
+            return FormattableString.Invariant($"turned{turned:F1}deg slip{peakSlip:F0} shift{peakShift * 100f:F0}% {(peakSlip > 20f ? "SPUN" : "held")}");
+        }
+
         public static string Run(string carId, string file)
         {
             var path = RoutePath.Load(FloridaSliceBuilder.RouteId);
@@ -120,6 +139,13 @@ namespace SurviveI95.EditorTools
                     string dodge = d.time < 0f ? "dodge: none clean" : FormattableString.Invariant($"dodge {d.time:F2}s peak{d.peakG:F2}g slip{d.peakSlip:F0} over{Mathf.Max(0f, d.overshoot):F1}m");
                     sb.AppendLine(FormattableString.Invariant($"{mph,4:F0}mph  {dodge} | tap.15 {Tap(path, carId, law, mph, .15f)} tap.3 {Tap(path, carId, law, mph, .3f)} | hold {Hold(path, carId, law, mph)}"));
                 }
+            }
+            sb.AppendLine("== weight transfer (off -> on): brake in a turn | throttle in a turn");
+            foreach (float mph in new[] { 40f, 60f, 80f })
+            {
+                DriveSim.WeightTransfer = false; string b0 = Weight(path, carId, mph, true), t0 = Weight(path, carId, mph, false);
+                DriveSim.WeightTransfer = true; string b1 = Weight(path, carId, mph, true), t1 = Weight(path, carId, mph, false);
+                sb.AppendLine(FormattableString.Invariant($"{mph,4:F0}mph  brake {b0} -> {b1} | gas {t0} -> {t1}"));
             }
             if (Verbose)
                 foreach (var law in new[] { "old", "new" })

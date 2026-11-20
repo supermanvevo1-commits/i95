@@ -359,9 +359,7 @@ namespace SurviveI95.Game
             float t = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
             Pose(Mathf.Lerp(prevS, Sim.S, t), Mathf.Lerp(prevLat, Sim.Lateral, t), Mathf.Lerp(prevTheta, Sim.Theta, t));
 
-            float ease = 1f - Mathf.Exp(-Time.deltaTime * 8f);
-            roll = Mathf.Lerp(roll, Mathf.Clamp(Sim.LateralAccel * 0.3f, -3f, 3f), ease);
-            pitch = Mathf.Lerp(pitch, Mathf.Clamp(-Sim.LongAccel * 0.16f, -1.6f, 2f), ease);
+            UpdateBody();
             // Real rotation is too fast for a display and strobes on the spokes, so cap the step per frame.
             // smoothDeltaTime removes the frame-to-frame jitter that showed up as a slight stutter.
             float spinStep = Sim.Speed / WheelRadius * Mathf.Rad2Deg * Time.smoothDeltaTime;
@@ -576,6 +574,44 @@ namespace SurviveI95.Game
             }
         }
 
+        // ---- the body on its springs (5b.1)
+        // A soft family sedan: about 5.5 degrees of lean per g of cornering, 3 of nose dive per g of braking and 2 of squat
+        // per g of throttle, on springs that bounce about 1.3 times a second and are lightly damped, so the body leans in,
+        // overshoots a touch and settles, and rocks back when the car stops. The tires stay on the road.
+        public const float RollPerG = 5.5f, DivePerG = 3.2f, SquatPerG = 2f;
+        [NonSerialized] public static bool OldBody;
+        float rollVel, pitchVel, heave, heaveVel; Vector3 modelBase; bool modelBaseSet;
+        public float BodyRoll => roll; public float BodyPitch => pitch;
+
+        void UpdateBody()
+        {
+            float dt = Time.deltaTime; if (dt <= 0f) return;
+            if (OldBody) // the motion before 5b.1, for before-and-after pictures
+            {
+                float ease = 1f - Mathf.Exp(-dt * 8f); heave = 0f;
+                roll = Mathf.Lerp(roll, Mathf.Clamp(Sim.LateralAccel * 0.3f, -3f, 3f), ease);
+                pitch = Mathf.Lerp(pitch, Mathf.Clamp(-Sim.LongAccel * 0.16f, -1.6f, 2f), ease);
+                return;
+            }
+            float rollTo = Mathf.Clamp(Sim.LateralAccel / 9.81f * RollPerG, -7f, 7f);
+            float decel = -Sim.LongAccel / 9.81f;
+            float pitchTo = Mathf.Clamp(decel * (decel > 0f ? DivePerG : SquatPerG), -2.5f, 4f);
+            int n = Mathf.CeilToInt(dt * 120f); float h = dt / n;
+            for (int i = 0; i < n; i++)
+            {
+                Spring(ref roll, ref rollVel, rollTo, 1.3f, .35f, h);
+                Spring(ref pitch, ref pitchVel, pitchTo, 1.4f, .35f, h);
+                Spring(ref heave, ref heaveVel, 0f, 1.5f, .35f, h);
+            }
+        }
+
+        static void Spring(ref float x, ref float v, float target, float hz, float zeta, float h)
+        {
+            float w = 2f * Mathf.PI * hz;
+            v += (w * w * (target - x) - 2f * zeta * w * v) * h;
+            x += v * h;
+        }
+
         /// <summary>Applies wheel, steering-wheel and body motion. Also used for test renders.</summary>
         public void ApplyVisuals(float steer)
         {
@@ -591,7 +627,12 @@ namespace SurviveI95.Game
             if (rrSpin) rrSpin.localRotation = spin;
             if (steeringPivot) steeringPivot.localRotation = Quaternion.AngleAxis(steer * 140f, SteeringAxis);
             // Only the body leans; tires stay planted on the road.
-            if (model) model.localRotation = Quaternion.Euler(pitch, 0, roll);
+            if (model)
+            {
+                if (!modelBaseSet) { modelBase = model.localPosition; modelBaseSet = true; }
+                model.localRotation = Quaternion.Euler(pitch, 0, roll);
+                model.localPosition = modelBase + Vector3.up * heave;
+            }
         }
 
         public void SetTestView(float steer, float yaw, float pitchLook)
@@ -687,8 +728,10 @@ namespace SurviveI95.Game
             }
             if (Cockpit)
             {
-                var head = transform.TransformPoint(cockpitEye + new Vector3(Mathf.Sin(lookYaw * Mathf.Deg2Rad) * 0.1f, 0, 0));
-                var rot = transform.rotation * Quaternion.Euler(1.5f - lookPitch, lookYaw, 0);
+                // The head rides the body as it leans and dives; the eyes hold on to the horizon a little.
+                var body = Quaternion.Euler(pitch, 0, roll);
+                var head = transform.TransformPoint(body * (cockpitEye + new Vector3(Mathf.Sin(lookYaw * Mathf.Deg2Rad) * 0.1f, 0, 0)) + Vector3.up * heave);
+                var rot = transform.rotation * Quaternion.Slerp(Quaternion.identity, body, .6f) * Quaternion.Euler(1.5f - lookPitch, lookYaw, 0);
                 if (Glance > 0f && mirrorParts != null && mirrorParts[glanceMirror] != null)
                 {
                     var mirror = mirrorParts[glanceMirror].bounds.center;
@@ -719,6 +762,8 @@ namespace SurviveI95.Game
             float aside = Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(0f, orbitYaw)) / 35f);
             var target = transform.position + Vector3.up * 1.05f + dir * Mathf.Lerp(12f, 0f, aside);
             chaseCamera.transform.rotation = Quaternion.LookRotation(target - pos);
+            // The camera sways a little with the body's lean, so the weight is felt, not just seen.
+            if (!OldBody) chaseCamera.transform.rotation *= Quaternion.Euler(0f, 0f, roll * .2f);
         }
 
         // ---- speed feel (5b.4): the road through the camera, never shake for its own sake
@@ -741,7 +786,7 @@ namespace SurviveI95.Game
             if (!RoadShake || v < 1f) return;
             // Joints and patches: a pavement joint about every 20 m on average, uneven.
             nextJoint -= v * Time.deltaTime;
-            if (nextJoint <= 0f) { thump = Mathf.Clamp01(.35f + mph / 160f); nextJoint = 9f + UnityEngine.Random.value * 25f; }
+            if (nextJoint <= 0f) { thump = Mathf.Clamp01(.35f + mph / 160f); nextJoint = 9f + UnityEngine.Random.value * 25f; heaveVel -= .05f + mph * .0006f; }
             thump = Mathf.MoveTowards(thump, 0f, Time.deltaTime * 9f);
             float k = Mathf.Clamp01((mph - 20f) / 120f); k *= k;
             float t = Time.time * (6f + mph * .12f);
