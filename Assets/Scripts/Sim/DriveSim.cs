@@ -108,7 +108,7 @@ namespace SurviveI95.Sim
             float half = path.HalfWidth(S);
             OffRoad = Lateral > half + RightShoulder || Lateral < -half - LeftShoulder;
             float edge = Mathf.Abs(Lateral) - half + 0.9f;
-            OnRumble = !OffRoad && edge > 0.4f && edge < 2.1f;
+            OnRumble = !OffRoad && edge > 0.4f && edge < 2.1f && (Lateral < 0f || path.IsRamp || path.RightRumble(S));
             float mu = Car.gripG * (OffRoad ? 0.5f : 1f) * (1f - 0.2f * Damage);
             float before = Speed;
 
@@ -433,6 +433,8 @@ namespace SurviveI95.Sim
         public float SpeedMph = 200f;
         /// <summary>When set, heads for the shoulder past this distance to take an exit.</summary>
         public float ExitAtS = -1f;
+        /// <summary>When set, holds this far right of the lane edge instead of a lane (tests: rumble strip, shoulder, grass).</summary>
+        public float? EdgeOffset;
 
         public DriveInput Think(RoutePath path, DriveSim car)
         {
@@ -440,6 +442,7 @@ namespace SurviveI95.Sim
             float half = path.HalfWidth(car.S);
             float target = path.IsRamp ? 0f : half - RoutePath.LaneWidth * (TargetLaneFromRight + 0.5f);
             if (!path.IsRamp && ExitAtS > 0f && car.S > ExitAtS) target = half + 2.2f;
+            if (!path.IsRamp && EdgeOffset.HasValue) target = half + EdgeOffset.Value;
             float aim = Mathf.Clamp((target - car.Lateral) * 0.055f, -0.09f, 0.09f);
             float look = path.Curvature(car.S + car.Speed * 0.4f);
             float err = aim - car.Theta - car.Beta - car.YawRate * 0.3f + look * car.Speed * 0.22f;

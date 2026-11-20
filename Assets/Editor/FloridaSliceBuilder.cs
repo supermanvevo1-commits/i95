@@ -428,7 +428,7 @@ namespace SurviveI95.EditorTools
             bool main = Mathf.Abs(c(0f)) < .01f;
             Func<float, float> aux = s => main ? AuxLane(p, s) : 0f;
             Func<float, float> shoulder = s => main ? ShoulderWidth(p, s, 3.05f) : 3.05f;
-            Func<float, bool> plainEdge = s => aux(s) <= 0f && shoulder(s) >= 1.3f;
+            Func<float, bool> plainEdge = s => !main || p.RightRumble(s);
             var g = new GameObject(name); g.transform.SetParent(root.transform);
             Func<float, float> h = p.HalfWidth;
             const float rightShoulder = 3.05f, leftShoulder = 1.3f;

@@ -20,7 +20,8 @@ namespace SurviveI95.Game
         PlayerCar car;
         static readonly int[] LoopRpm = { 890, 2050, 3100, 4000, 5100, 6000 };
         readonly AudioSource[] engine = new AudioSource[6];
-        AudioSource road, skid, bed;
+        AudioSource road, skid, bed, rumble, offBumps, offGravel;
+        RumbleStripSound rumbleFx;
         AudioLowPassFilter engineFilter;
         AudioClip passCar, passTruck, crashHit, crashSmash, crashGlass, tireHiss, planeLoop, trainLoop, truckEngine, carEngine, bikeEngine;
         AudioClip[] horns;
@@ -61,6 +62,10 @@ namespace SurviveI95.Game
             engineFilter = eng.AddComponent<AudioLowPassFilter>(); engineFilter.cutoffFrequency = 9000f;
             road = Loop(gameObject, Load("road_roar"), 0f);
             skid = Loop(gameObject, Load("skid_loop"), 0f);
+            // Rumble strips: the same tire roar, struck groove by groove (RumbleStripSound), on its own child.
+            var strip = new GameObject("RumbleStrip"); strip.transform.SetParent(transform, false);
+            rumble = Loop(strip, Load("road_roar"), 0f); rumble.volume = 1f; rumbleFx = strip.AddComponent<RumbleStripSound>(); rumbleFx.Init(rumble.clip);
+            offBumps = Loop(gameObject, Load("offroad_bumps"), 0f); offGravel = Loop(gameObject, Load("offroad_gravel"), 0f);
             var amb = new GameObject("HighwayBed"); amb.transform.SetParent(transform, false);
             bed = Loop(amb, Load("highway_bed"), 0f); bed.volume = .14f;
             passCar = Load("passby_car"); passTruck = Load("passby_truck");
@@ -99,7 +104,16 @@ namespace SurviveI95.Game
             engineFilter.cutoffFrequency = Mathf.Lerp(engineFilter.cutoffFrequency, car.Cockpit ? 2600f : 9000f, dt * 4f);
             // Tire roar and wind grow faster than speed; at 120+ the wind takes over.
             float roar = Mathf.Pow(Mathf.Clamp01(mph / 75f), 1.4f) * .42f + Mathf.Pow(Mathf.Clamp01((mph - 75f) / 70f), 1.5f) * .3f;
-            road.volume = Mathf.MoveTowards(road.volume, roar * (car.Cockpit ? .85f : 1f), dt);
+            bool off = s.OffRoad && v > 1f;
+            road.volume = Mathf.MoveTowards(road.volume, roar * (car.Cockpit ? .85f : 1f) * (off ? .45f : 1f), dt * (off ? 3f : 1f));
+            // Rumble strips: a hard low buzz the moment the tires touch them, at the rate they hit the grooves.
+            rumbleFx.Rate = v / RumbleStripSound.GrooveSpacing;
+            float strip = s.OnRumble && v > 2f ? Mathf.Pow(Mathf.Clamp01(mph / 45f), .7f) * .6f : 0f;
+            rumbleFx.Level = strip * (car.Cockpit ? 1.1f : 1f);
+            // Off the pavement: the car thumps over rough ground and the tires crunch dirt, louder and quicker with speed.
+            offBumps.volume = Mathf.MoveTowards(offBumps.volume, off ? Mathf.Clamp01(mph / 35f) * .55f : 0f, dt * 5f);
+            offGravel.volume = Mathf.MoveTowards(offGravel.volume, off ? Mathf.Clamp01(mph / 30f) * .3f : 0f, dt * 5f);
+            offBumps.pitch = offGravel.pitch = .85f + Mathf.Clamp01(mph / 60f) * .3f;
             road.pitch = .82f + Mathf.Clamp01(mph / 140f) * .3f;
             // Squeal when the tires slide or a hard stop locks them up.
             float slip = Mathf.Abs(s.Beta);

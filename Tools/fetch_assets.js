@@ -179,6 +179,9 @@ const SOUNDS = [
   ['2018', 'Fox Audio Post-Production - Planes Passbys – Interior-Exterior/Plane_Passbys_window_02.wav'],
   ['2018', 'Fox Audio Post-Production - Planes Passbys – Interior-Exterior/Plane_Passbys_window_08.wav'],
   ['2017', 'Griffin Sound Design - Chicago Rapid Transit - The L/L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav'],
+  // Leaving the pavement: inside a car on a gravel road, and riding over rough ground.
+  ['2016', '3maze -  1960 Cadillac DeVille/cadillac_1960_int_drive_gravel_road_001_wide.wav'],
+  ['2019', 'Airborne Sound - Vehicles Car Sound Effects 1 Elements/Mazda,3,2011,Ride POV,Medium,Bumpy,Decelerate,Stop.wav'],
 ];
 
 async function sounds() {

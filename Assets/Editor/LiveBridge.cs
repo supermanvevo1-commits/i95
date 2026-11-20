@@ -151,6 +151,10 @@ namespace SurviveI95.EditorTools
                     bot = new LaneBot { SpeedMph = F(a, 2), TargetLaneFromRight = a.Length > 3 ? (int)F(a, 3) : 0 };
                     PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
                     return "driving";
+                case "edge": // mph offset: drives that far right of the lane edge (0.4 rumble strip, 5 grass)
+                    bot = new LaneBot { SpeedMph = F(a, 2), EdgeOffset = F(a, 3) };
+                    PlayerCar.AutoDriver = (p, c) => bot.Think(p, c);
+                    return "edge driving";
                 case "hold":
                     float hs = F(a, 2), hm = F(a, 3);
                     PlayerCar.AutoDriver = (p, c) => new DriveInput { Steer = hs, Throttle = c.Speed * DriveSim.MetersPerSecondToMph < hm ? 1f : 0f };
@@ -222,7 +226,7 @@ namespace SurviveI95.EditorTools
                 case "place": car.Place(F(a, 2)); return "placed";
                 case "status":
                     var s = car.Sim;
-                    string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} onRamp={s.Current != null} rampS={(s.Current != null ? s.S : 0f):F0} roadY={(s.Current ?? car.Path).Center(s.S).y:F1} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph slide={s.Sliding} latG={s.LateralAccel / 9.81f:F2} slipDeg={s.Beta * Mathf.Rad2Deg:F1}");
+                    string r = FormattableString.Invariant($"mph={s.Speed * DriveSim.MetersPerSecondToMph:F1} km={s.S / 1000f:F2} lateral={s.Lateral:F2} heading={s.Theta * Mathf.Rad2Deg:F1} steer={s.Steer:F2} offroad={s.OffRoad} rumble={s.OnRumble} half={(s.Current ?? car.Path).HalfWidth(s.S):F2} wall={s.HitWall} slowestFrameMs={slowest * 1000f:F0} cockpit={car.Cockpit} gear={s.Gear} onRamp={s.Current != null} rampS={(s.Current != null ? s.S : 0f):F0} roadY={(s.Current ?? car.Path).Center(s.S).y:F1} damage={s.Damage * 100f:F0} crush={s.FrontCrush:F2} disabled={s.Disabled} impacts={s.ImpactCount} lastHit={s.LastHitKind}@{s.LastImpact * DriveSim.MetersPerSecondToMph:F0}mph slide={s.Sliding} latG={s.LateralAccel / 9.81f:F2} slipDeg={s.Beta * Mathf.Rad2Deg:F1}");
                     slowest = 0;
                     return r;
                 case "fps":

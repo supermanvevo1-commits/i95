@@ -181,6 +181,23 @@ namespace SurviveI95.World
         /// <summary>Where the swale's bottom runs, and how far the verge reaches before it's back at field level.</summary>
         public const float SwaleBottom = 4.9f, SwaleReach = 22f, Field = -.255f;
         /// <summary>The paved edge each side: northbound's 3.05 m shoulder; southbound's outer edge.</summary>
+        /// <summary>
+        /// Whether the right edge has its milled rumble strip here: not where an exit lane widens the pavement, nor
+        /// where the shoulder past the split is too narrow for one (the builder paints by the same rule).
+        /// </summary>
+        public bool RightRumble(float s)
+        {
+            foreach (var j in Junctions)
+                if (s >= j.divergeS && s <= j.mergeS)
+                {
+                    float d = s - j.divergeS, e = Mathf.Min(d, j.mergeS - s);
+                    if (e <= ExitHold) return e <= 0f;
+                    float left = ExitOffset(d) - ExitHalf - Mathf.Lerp(.2f, ExitWallGap, Mathf.InverseLerp(ExitOpen, ExitOpen + 20f, e));
+                    return Mathf.Clamp(left - .05f, .05f, 3.05f) >= 1.3f;
+                }
+            return true;
+        }
+
         public float PavedEdge(float s, int side) => side > 0 ? HalfWidth(s) + 3.05f : -(2f * HalfWidth(s) + MedianGap) - HalfWidth(s) - 1.3f;
 
         /// <summary>

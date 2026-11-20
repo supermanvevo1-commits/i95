@@ -33,6 +33,9 @@ const CUTS = [
   ['plane_pass', 'Fox Audio Post-Production - Planes Passbys – Interior-Exterior/Plane_Passbys_window_02.wav', 3, 26.5, false, true, 0],
   ['plane_loop', 'Fox Audio Post-Production - Planes Passbys – Interior-Exterior/Plane_Passbys_window_02.wav', 13, 19, true, true, 0],
   ['train_loop', 'Griffin Sound Design - Chicago Rapid Transit - The L/L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav', 6, 12, true, true, 0],
+  // Off the pavement: the thumps of a car riding rough ground, and the crunch of gravel and dirt under the tires, inside.
+  ['offroad_bumps', 'Airborne Sound - Vehicles Car Sound Effects 1 Elements/Mazda,3,2011,Ride POV,Medium,Bumpy,Decelerate,Stop.wav', 7.5, 15.5, true, false, 0],
+  ['offroad_gravel', '3maze -  1960 Cadillac DeVille/cadillac_1960_int_drive_gravel_road_001_wide.wav', 8, 12.3, true, false, 0],
   ['train_pass', 'Griffin Sound Design - Chicago Rapid Transit - The L/L_TRAIN_by_open_air_track_center_of_expressway_under_tracks_persp002.wav', 3, 15.5, false, true, 0],
 ];
 
