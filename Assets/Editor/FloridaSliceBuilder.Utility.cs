@@ -76,6 +76,7 @@ namespace SurviveI95.EditorTools
             var water = Lit("Water", new Color(.1f, .22f, .22f), .93f);
             var bank = Lit("WaterBank", new Color(.34f, .38f, .22f), .05f, "grass_ground");
             var map = new Dictionary<(int, int), Bucket>(); int ponds = 0, canals = 0;
+            var fountains = new List<(Vector2, float)>(); var fr = new System.Random(4711);
             foreach (var z in zones)
             {
                 if (z.k != "water" || z.pts.Count < 3) continue;
@@ -84,6 +85,15 @@ namespace SurviveI95.EditorTools
                 FlatPoly(bk, 1, z.pts, -.215f, 6f);
                 FlatPoly(bk, 0, Inset(z.pts, 2.5f), -.2f, 30f);
                 ponds++;
+                // About a third of the ponds big enough for one get an aerating fountain in the middle (not the big lakes).
+                float area = Mathf.Abs(PolyArea(z.pts));
+                if (area > 1200f && area < 250000f && fr.NextDouble() < .35)
+                {
+                    var mid = new Vector2(z.pts.Average(q => q.x), z.pts.Average(q => q.y));
+                    float room = float.MaxValue;
+                    for (int i = 0; i < z.pts.Count; i++) room = Mathf.Min(room, SegDist(mid, z.pts[i], z.pts[(i + 1) % z.pts.Count]));
+                    if (Inside(z.pts, mid) && room > 9f) fountains.Add((mid, room - 2.5f));
+                }
             }
             foreach (var w in land.ways)
             {
@@ -101,7 +111,14 @@ namespace SurviveI95.EditorTools
                 canals++;
             }
             Flush(map, "Water", new[] { water, bank }, 2, false);
-            Debug.Log($"[FloridaSlice] water: ponds and lakes {ponds}, canals and ditches {canals}");
+            BuildFountains(fountains);
+            Debug.Log($"[FloridaSlice] water: ponds and lakes {ponds} ({fountains.Count} with a fountain), canals and ditches {canals}");
+        }
+
+        static float SegDist(Vector2 q, Vector2 a, Vector2 b)
+        {
+            var ab = b - a; float t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(q - a, ab) / ab.sqrMagnitude) : 0f;
+            return (a + ab * t - q).magnitude;
         }
 
         // ---------- power ----------

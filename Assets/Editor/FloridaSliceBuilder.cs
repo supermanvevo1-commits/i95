@@ -107,6 +107,12 @@ namespace SurviveI95.EditorTools
                     UnityEngine.Object.DestroyImmediate(old);
                 BuildBarriers(road, path, m);
             }
+            else if (part == "water")
+            {
+                PrepareLookup(path, s => -(2 * path.HalfWidth(s) + RoutePath.MedianGap));
+                LoadLand();
+                BuildWater(path);
+            }
             else if (part == "embankment")
             {
                 var road = EditorSceneManager.GetActiveScene().GetRootGameObjects().First(o => o.name == "Road");
