@@ -252,6 +252,7 @@ namespace SurviveI95.Game
 
             DrawMap(!right, bottom); // across from the speedometer
             DrawCard();
+            DrawTrip();
 
             // Center messages: short confirmations, looking back, and a disabled car.
             if (car.FlashText != null)

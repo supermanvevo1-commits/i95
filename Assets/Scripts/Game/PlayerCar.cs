@@ -62,6 +62,9 @@ namespace SurviveI95.Game
         public bool Honking { get; private set; }
         /// <summary>What the driver asked of the car on the last physics step (for sound).</summary>
         public DriveInput LastInput { get; private set; }
+        /// <summary>Set by the trip when the tank runs dry.</summary>
+        [NonSerialized] public bool OutOfGas;
+        public Trip Trip { get; private set; }
         AudioSource horn;
         static readonly string[] MirrorParts = { "Mirror_L", "Mirror_Rear", "Mirror_R" };
         Renderer[] mirrorParts;
@@ -137,7 +140,7 @@ namespace SurviveI95.Game
 
         void Awake()
         {
-            Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); lamps = new CarLamps(transform, model); Hud = gameObject.AddComponent<Hud>(); Hud.Init(this); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious();
+            Time.fixedDeltaTime = 1f / 60f; Setup(); EnsureCabinLight(); mirrors = gameObject.AddComponent<MirrorRig>(); lamps = new CarLamps(transform, model); Hud = gameObject.AddComponent<Hud>(); Hud.Init(this); Trip = gameObject.AddComponent<Trip>(); SetupDamageVisuals(); Sim.Reset(Path, startS); StorePrevious();
             BaseFov = Mathf.Clamp(PlayerPrefs.GetFloat("fov", DefaultFov), 40f, 80f); fovSmooth = BaseFov; RoadShake = PlayerPrefs.GetInt("roadShake", 1) == 1;
             FindMirrors();
         }
@@ -311,6 +314,7 @@ namespace SurviveI95.Game
             StorePrevious();
             int roads = Sim.RoadSwitches;
             BrakeLights = TestBrakeLights ?? (input.Brake > .02f && Sim.Speed > -.3f);
+            if (OutOfGas) input.Throttle = 0f; // the engine has quit; the car coasts
             LastInput = input;
             Sim.Step(Path, input, Time.fixedDeltaTime);
             if (Mathf.Abs(Sim.S - prevS) > 20f || roads != Sim.RoadSwitches) StorePrevious(); // respawned or changed road

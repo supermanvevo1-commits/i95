@@ -153,6 +153,7 @@ namespace SurviveI95.EditorTools
                     return "driving";
                 case "oldbody": PlayerCar.OldBody = a[2] == "on"; return "old body motion " + a[2];
                 case "usecar": car.UseCar(a[2]); return "now driving " + car.Sim.Car.name;
+                case "trip": if (a.Length > 2 && a[2] == "begin") car.Trip.Begin(); return car.Trip.Status(); // [begin]: the first trip, from the start
                 case "body": return FormattableString.Invariant($"roll={car.BodyRoll:F2} pitch={car.BodyPitch:F2} latG={car.Sim.LateralAccel / 9.81f:F2} longG={car.Sim.LongAccel / 9.81f:F2} shift={car.Sim.LoadShift * 100f:F0}% mph={car.Sim.Speed * DriveSim.MetersPerSecondToMph:F0}");
                 case "fakewheel": return TestWheel.Command(a); // add | remove | set steer gas brake [buttons]
                 case "wheelstatus": return SurviveI95.Game.Wheel.Status();

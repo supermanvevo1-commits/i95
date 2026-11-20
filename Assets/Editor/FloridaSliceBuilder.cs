@@ -976,7 +976,7 @@ namespace SurviveI95.EditorTools
             float last = -9999f;
             foreach (var e in p.File.exits.Where(x => System.Text.RegularExpressions.Regex.IsMatch(x.@ref ?? "", "^[0-9]+[A-Z]?$")).OrderBy(x => x.s))
             {
-                if (rows.Count >= 12) break;
+                if (rows.Count >= 20) break; // every exit the spacing allows, through Fort Lauderdale (5b.3 ends at one)
                 float at = -1f;
                 for (int n = 0; n <= 12 && at < 0f; n++)
                 {

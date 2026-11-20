@@ -29,6 +29,8 @@ namespace SurviveI95.Sim
         /// <summary>The speed the engine could reach without a governor (0 = topMph), and how late its pull fades on the way
         /// there (0 = 2.4; lower fades sooner). A governed truck still pulls hard right up to its limit.</summary>
         public float freeMph, pull;
+        /// <summary>Fuel: tank size in US gallons and the EPA city and highway ratings.</summary>
+        public float tankGal, mpgCity, mpgHwy;
 
         [Serializable] class Table { public List<CarHandling> cars = new List<CarHandling>(); }
 
