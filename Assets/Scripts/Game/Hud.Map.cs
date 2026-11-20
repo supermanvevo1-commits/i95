@@ -21,9 +21,15 @@ namespace SurviveI95.Game
             if (DestinationName == null) DestinationName = places.Length > 0 ? places[places.Length - 1].name : "END OF ROAD";
         }
 
+        /// <summary>The expanded map: M (or the gamepad's Start button) opens a big map zoomed out about four times, and closes it.</summary>
+        public bool MapExpanded { get; set; }
+
         void UpdateMap()
         {
             if (map == null) return;
+            var k = UnityEngine.InputSystem.Keyboard.current; var pad = UnityEngine.InputSystem.Gamepad.current;
+            if ((k != null && k.mKey.wasPressedThisFrame) || (pad != null && pad.startButton.wasPressedThisFrame)) MapExpanded = !MapExpanded;
+            map.ZoomScale = MapExpanded ? 4f : 1f;
             map.Follow(car.transform, car.Sim.Speed, Time.deltaTime);
         }
 
@@ -31,8 +37,9 @@ namespace SurviveI95.Game
         void DrawMap(bool right, bool bottom)
         {
             if (map == null) return;
-            float s = scale, M = 250f * s, margin = 34f * s;
+            float s = scale, M = (MapExpanded ? 640f : 250f) * s, margin = 34f * s;
             float x = right ? Screen.width - margin - M : margin, y = bottom ? Screen.height - margin - M : margin;
+            if (MapExpanded) { x = (Screen.width - M) / 2f; y = (Screen.height - M) / 2f + 20f * s; } // the big map sits in the middle
             var r = new Rect(x, y, M, M); float radius = 18f * s;
             Panel(new Rect(r.x + 2f * s, r.y + 4f * s, M, M), new Color(0f, 0f, 0f, .35f), radius);
             GUI.DrawTexture(r, map.Texture, ScaleMode.StretchToFill, false, 0f, new Color(1f, 1f, 1f, .94f), 0f, radius);

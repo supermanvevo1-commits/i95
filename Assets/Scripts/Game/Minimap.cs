@@ -14,7 +14,7 @@ namespace SurviveI95.Game
     public class Minimap
     {
         public const int Layer = 31;
-        const float Floor = -4000f, Size = 512;
+        const float Floor = -4000f, Size = 1024; // sharp enough for the expanded map (M)
         // Map widths are wider than the real roads so a side street still reads at highway zoom.
         static readonly Color Ground = new Color(.115f, .13f, .145f), Street = new Color(.25f, .275f, .3f), Avenue = new Color(.34f, .365f, .39f);
         static readonly Color Ramp = new Color(.62f, .65f, .68f), Casing = new Color(.03f, .1f, .2f), Route = new Color(.24f, .56f, 1f);
@@ -117,15 +117,18 @@ namespace SurviveI95.Game
         }
 
         /// <summary>Follows the car: heading up, smoothed so a bump doesn't shake the map, zooming out with speed.</summary>
+        /// <summary>How far out the map looks: 1 for the corner map, larger for the expanded one (M).</summary>
+        public float ZoomScale = 1f;
+
         public void Follow(Transform car, float speed, float dt)
         {
             var f = car.forward; f.y = 0f;
             if (f.sqrMagnitude < 1e-4f) return;
             float heading = Mathf.Atan2(f.x, f.z) * Mathf.Rad2Deg;
-            float zoom = Mathf.Lerp(230f, 470f, Mathf.InverseLerp(12f, 42f, Mathf.Abs(speed)));
+            float zoom = Mathf.Lerp(230f, 470f, Mathf.InverseLerp(12f, 42f, Mathf.Abs(speed))) * ZoomScale;
             if (!placed) { Yaw = heading; Radius = zoom; placed = true; }
             Yaw = Mathf.LerpAngle(Yaw, heading, 1f - Mathf.Exp(-dt * 5f));
-            Radius = Mathf.Lerp(Radius, zoom, 1f - Mathf.Exp(-dt * 1.2f));
+            Radius = Mathf.Lerp(Radius, zoom, 1f - Mathf.Exp(-dt * (ZoomScale > 1f || Radius > zoom * 1.5f ? 6f : 1.2f))); // opening or closing the big map is quick
             var rot = Quaternion.Euler(0f, Yaw, 0f);
             Center = new Vector3(car.position.x, 0f, car.position.z) + rot * Vector3.forward * (Radius * Ahead);
             cam.orthographicSize = Radius;
