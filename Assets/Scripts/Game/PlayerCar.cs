@@ -95,6 +95,37 @@ namespace SurviveI95.Game
         /// <summary>The player's turn signal: -1 left, +1 right, 0 off (same as traffic). Z and X toggle it.</summary>
         public int Signal { get; private set; }
         public bool HighBeams { get; private set; }
+        /// <summary>Headlights on (automatic at dusk).</summary>
+        public bool LightsOn { get; private set; }
+        DayNight dayNight; Light[] headBeams;
+
+        // Two real light beams from the headlights: low beams light about 60 m of road, aimed a little down;
+        // high beams reach about twice as far, level. Off in daylight.
+        void UpdateHeadlightBeams()
+        {
+            bool on = LightsOn || (HighBeams && dayNight != null && dayNight.Night > .1f);
+            if (headBeams == null)
+            {
+                if (!on) return;
+                headBeams = new Light[2];
+                for (int i = 0; i < 2; i++)
+                {
+                    var l = new GameObject(i == 0 ? "HeadlightL" : "HeadlightR").AddComponent<Light>();
+                    l.transform.SetParent(transform, false);
+                    l.transform.localPosition = new Vector3(i == 0 ? -.62f : .62f, .72f, 2.25f);
+                    l.type = LightType.Spot; l.shadows = LightShadows.None; l.color = new Color(.95f, .97f, 1f); // no shadows: they cost about a sixth of the frame rate
+                    headBeams[i] = l;
+                }
+            }
+            foreach (var l in headBeams)
+            {
+                l.enabled = on;
+                if (!on) continue;
+                l.range = HighBeams ? 160f : 75f; l.spotAngle = HighBeams ? 40f : 62f; l.innerSpotAngle = HighBeams ? 14f : 28f;
+                l.intensity = HighBeams ? 420f : 160f;
+                l.transform.localRotation = Quaternion.Euler(HighBeams ? 0f : 1.1f, 0f, 0f); // low beams dip about 1 degree, reaching 50-60 m
+            }
+        }
         /// <summary>Hazard lights, toggled with G.</summary>
         public bool Hazards { get; private set; }
         /// <summary>True while the brake lights are on: the brake pedal is down (cruise's gentle braking counts, as in a real car).</summary>
@@ -387,7 +418,13 @@ namespace SurviveI95.Game
             ApplyVisuals(visualSteer);
             UpdateGauges();
             UpdateDamageVisuals();
-            lamps?.Update(Signal, Hazards, BrakeLights, HighBeams);
+            if (dayNight == null) dayNight = FindAnyObjectByType<DayNight>();
+            // Automatic headlights, as on modern cars: on when the street lamps come on.
+            LightsOn = dayNight != null && dayNight.LampsOn > .5f;
+            lamps?.Update(Signal, Hazards, BrakeLights, HighBeams, LightsOn);
+            UpdateHeadlightBeams();
+            // The cabin light fills shadow in daylight; at night the cabin is dark but for the gauges.
+            if (cabinLight != null) cabinLight.intensity = dayNight != null ? Mathf.Lerp(.4f, .03f, dayNight.Night) : .4f;
             if (Sim.BrokenCount != shownBroken) { shownBroken = Sim.BrokenCount; KnockDownSign(); }
         }
 

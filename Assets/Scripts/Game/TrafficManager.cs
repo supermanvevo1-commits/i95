@@ -26,7 +26,7 @@ namespace SurviveI95.Game
         class View
         {
             public GameObject Root; public MeshFilter Filter; public MeshRenderer Renderer;
-            public GameObject SignalLeft, SignalRight, Brake, High;
+            public GameObject SignalLeft, SignalRight, Brake, High, Tail, Low;
             public TrafficModels.Set Set; public bool IsFar, Used;
             public AudioSource Horn;
             public void Lamp(GameObject g, bool on) { if (g.activeSelf != on) g.SetActive(on); }
@@ -39,7 +39,8 @@ namespace SurviveI95.Game
         readonly Dictionary<string, Stack<View>> free = new Dictionary<string, Stack<View>>();
         Material[][] paintMaterials;
         Material[] taxi;
-        Material amber, red, white;
+        Material amber, red, white, tailGlow, lowGlow;
+        DayNight dayNight; readonly Light[] beams = new Light[10];
         AudioClip carHorn, carHornLong, airHorn, airHornLong;
         string notice; float noticeUntil;
         /// <summary>Every line shown this session, for tests.</summary>
@@ -87,6 +88,7 @@ namespace SurviveI95.Game
             for (int i = 0; i < Paints.Length; i++) paintMaterials[i] = Set(Surface(lit, Paints[i], .62f, .1f));
             taxi = Set(Surface(lit, new Color(.85f, .55f, .03f), .62f, .1f));
             amber = Glow(CarLamps.Amber); red = Glow(CarLamps.Red); white = Glow(CarLamps.White); // the same lit colors as the player car
+            tailGlow = Glow(CarLamps.DimRed); lowGlow = Glow(CarLamps.White * .8f); // lights on at night: tail lamps dimmer than the brake
         }
 
         void FixedUpdate()
@@ -120,6 +122,8 @@ namespace SurviveI95.Game
             v.SignalRight = Lamp(go.transform, "SignalR", set.SignalRight, amber);
             v.Brake = Lamp(go.transform, "Brake", set.Brake, red);
             v.High = Lamp(go.transform, "High", set.HighBeam, white);
+            v.Tail = Lamp(go.transform, "Tail", set.Brake, tailGlow);
+            v.Low = Lamp(go.transform, "Low", set.HighBeam, lowGlow);
             return v;
         }
 
@@ -195,6 +199,8 @@ namespace SurviveI95.Game
             float t = Mathf.Clamp01((Time.time - Time.fixedTime) / Time.fixedDeltaTime);
             float playerS = player.Sim.Current == null ? player.Sim.S : player.Sim.CurrentJunction.divergeS + player.Sim.S;
             bool blink = CarLamps.Blink;
+            if (dayNight == null) dayNight = FindAnyObjectByType<DayNight>();
+            bool night = dayNight != null && dayNight.LampsOn > .5f; // drivers put their lights on about when the street lamps come on
             foreach (var c in Sim.Cars)
             {
                 var v = c.View as View;
@@ -217,7 +223,40 @@ namespace SurviveI95.Game
                 v.Lamp(v.SignalRight, lamps && blink && (c.Hazards || c.Signal > 0));
                 v.Lamp(v.Brake, lamps && c.Braking);
                 v.Lamp(v.High, lamps && c.FlashingHighBeams);
+                bool lightsOn = night && !c.NoLights && !c.Wrecked;
+                v.Lamp(v.Tail, lightsOn && !c.Braking); // the brake lamp is the brighter one over it
+                v.Lamp(v.Low, lightsOn && !c.FlashingHighBeams);
             }
+            UpdateBeams(playerS, night);
+        }
+    
+        // The nearest cars with their lights on throw real light ahead of them; the rest only show their lamps.
+        void UpdateBeams(float playerS, bool night)
+        {
+            if (beams[0] == null)
+                for (int i = 0; i < beams.Length; i++)
+                {
+                    var l = new GameObject("TrafficBeam").AddComponent<Light>();
+                    l.type = LightType.Spot; l.spotAngle = 55f; l.innerSpotAngle = 25f; l.range = 45f; l.intensity = 0f;
+                    l.color = new Color(1f, .97f, .92f); l.shadows = LightShadows.None; l.enabled = false;
+                    l.transform.SetParent(root, false); beams[i] = l;
+                }
+            int n = 0;
+            if (night)
+            {
+                var near = new List<TrafficCar>();
+                foreach (var c in Sim.Cars) if (!c.NoLights && !c.Wrecked && c.View is View v && v.Root.activeSelf && Mathf.Abs(c.S - playerS) < 160f) near.Add(c);
+                near.Sort((a, b) => Mathf.Abs(a.S - playerS).CompareTo(Mathf.Abs(b.S - playerS)));
+                foreach (var c in near)
+                {
+                    if (n >= beams.Length) break;
+                    var t = ((View)c.View).Root.transform;
+                    var l = beams[n++]; l.enabled = true; l.intensity = 6f;
+                    l.transform.position = t.position + t.forward * (c.Length * .5f + .2f) + Vector3.up * .75f;
+                    l.transform.rotation = Quaternion.LookRotation(t.forward * 1f - t.up * .09f, Vector3.up); // low beams aim a little down
+                }
+            }
+            for (int i = n; i < beams.Length; i++) if (beams[i] != null && beams[i].enabled) beams[i].enabled = false;
         }
     }
 }

@@ -95,3 +95,6 @@
 - "Realistic HD Butterfly palm (39/62)" by PlantCatalog, CC Attribution, https://sketchfab.com/3d-models/realistic-hd-butterfly-palm-3962-a71ce76bc9b4452b9ecc6bd7582d34f8
 - "cadillac_1960_int_drive_gravel_road_001_wide.wav" from "3maze -  1960 Cadillac DeVille", Sonniss GDC 2016 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
 - "Mazda,3,2011,Ride POV,Medium,Bumpy,Decelerate,Stop.wav" from "Airborne Sound - Vehicles Car Sound Effects 1 Elements", Sonniss GDC 2019 Game Audio Bundle, royalty-free (https://sonniss.com/gameaudiogdc)
+- qwantani_sunset_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/qwantani_sunset_puresky
+- qwantani_dusk_2_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/qwantani_dusk_2_puresky
+- qwantani_night_puresky (HDRI), Poly Haven, CC0, https://polyhaven.com/a/qwantani_night_puresky

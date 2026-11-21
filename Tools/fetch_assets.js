@@ -17,7 +17,7 @@ const ENV = {
     // City surfaces (5.4): stucco grain for walls, clay and concrete roof tiles, tilt-up concrete.
     'grey_plaster', 'painted_plaster_wall', 'clay_roof_tiles_02', 'grey_roof_tiles', 'concrete_wall_004'],
   // "id@4k" asks for a sharper file; the sky fills the screen, so the main one needs it.
-  hdris: ['derelict_highway_noon', 'evening_road_01', 'citrus_orchard_road_puresky', 'autumn_field_puresky', 'kloofendal_48d_partly_cloudy_puresky@4k'],
+  hdris: ['derelict_highway_noon', 'evening_road_01', 'citrus_orchard_road_puresky', 'autumn_field_puresky', 'kloofendal_48d_partly_cloudy_puresky@4k', 'qwantani_sunset_puresky@4k', 'qwantani_dusk_2_puresky@4k', 'qwantani_night_puresky@4k'], // the last three: the sky through dusk into night (5b.3b)
   models: ['concrete_road_barrier', 'street_lamp_01', 'pine_tree_01', 'grass_medium_01'],
   // Overpass is an open-license lookalike of the US highway sign typeface.
   fonts: [{ file: 'Overpass-Bold.ttf', url: 'https://github.com/RedHatOfficial/Overpass/raw/master/fonts/ttf/Overpass-Bold.ttf', credit: 'Overpass (font) by Delve Withrington / Red Hat, SIL Open Font License 1.1, https://overpassfont.org' },

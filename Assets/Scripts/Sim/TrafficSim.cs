@@ -24,6 +24,8 @@ namespace SurviveI95.Sim
         /// <summary>-1 left, +1 right, 0 off.</summary>
         public int Signal;
         public bool Braking, Wrecked, Hazards, FlashingHighBeams;
+        /// <summary>Forgot their headlights: at night this car shows no lights at all until it brakes (about 1 in 80; 5b.3b).</summary>
+        public bool NoLights;
         /// <summary>True once this car has been hit, or hit a wreck, so a crash always has a traceable cause.</summary>
         public bool Involved;
         /// <summary>Set once this driver has had a run-in with the player. They then stay in the run, on screen or not.</summary>
@@ -184,6 +186,8 @@ namespace SurviveI95.Sim
                 Signals = rng.NextDouble() < 0.25f + 0.75f * traits.LaneDiscipline
             };
             c.Profile = profile;
+            // Picked from values the car already drew, so the rest of the traffic stays exactly as it was.
+            c.NoLights = (c.Paint * 31 + c.Id * 17) % 1000 < 12;
             PickPerson(c, profile);
             ApplyPerson(c);
             PickPlate(c);

@@ -112,21 +112,23 @@ namespace SurviveI95.Game
         public static bool? BlinkTest;
 
         /// <summary>signal: -1 left, +1 right, 0 off.</summary>
-        public void Update(int signal, bool hazards, bool braking, bool highBeams)
+        public void Update(int signal, bool hazards, bool braking, bool highBeams, bool lightsOn = false)
         {
             bool blink = Blink;
             bool left = blink && (hazards || signal < 0), right = blink && (hazards || signal > 0);
             bool leftFlashing = hazards || signal < 0, rightFlashing = hazards || signal > 0;
             // A US combined lamp: the flashing side blinks between bright and off even while braking; the other side shows the brake.
-            Set(tailL, leftFlashing ? left : braking, Red);
-            Set(tailR, rightFlashing ? right : braking, Red);
+            // With the lights on, the tail lamps glow dim red; the brake (or the flashing signal) is the bright one.
+            Set(tailL, leftFlashing ? left || (!left && lightsOn) : braking || lightsOn, leftFlashing ? (left ? Red : DimRed) : braking ? Red : DimRed);
+            Set(tailR, rightFlashing ? right || (!right && lightsOn) : braking || lightsOn, rightFlashing ? (right ? Red : DimRed) : braking ? Red : DimRed);
             Set(signalL, left, Amber);
             Set(signalR, right, Amber);
-            Set(headL, highBeams, Headlight);
-            Set(headR, highBeams, Headlight);
+            bool head = highBeams || lightsOn; var beam = highBeams ? Headlight : Headlight * .55f;
+            Set(headL, head, beam);
+            Set(headR, head, beam);
             // The corner shows the signal when flashing, and is part of the headlight otherwise.
-            Set(cornerL, left || (!leftFlashing && highBeams), left ? Amber : Headlight);
-            Set(cornerR, right || (!rightFlashing && highBeams), right ? Amber : Headlight);
+            Set(cornerL, left || (!leftFlashing && head), left ? Amber : beam);
+            Set(cornerR, right || (!rightFlashing && head), right ? Amber : beam);
         }
 
         /// <summary>For tests: what each lamp shows right now.</summary>

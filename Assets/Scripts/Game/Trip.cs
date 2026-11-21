@@ -44,8 +44,9 @@ namespace SurviveI95.Game
         public float WorstOver { get; private set; } float worstMph, worstLimit, overFor;
         public bool Missed => missed;
         public float Elapsed => elapsed;
+        public float LeaveMinutes => leaveMinutes;
 
-        public string Clock(float minutesAfterLeaving) => ClockText(leaveMinutes + minutesAfterLeaving);
+        public string Clock(float minutesAfterLeaving) => ClockText(leaveMinutes + DayNight.StartShift + minutesAfterLeaving);
         public string Now => Clock(elapsed / 60f);
         public string Due => Clock(Plan.dueMinutes);
         public float MinutesLate => (Arrived ? ArriveMinutes : elapsed / 60f) - Plan.dueMinutes;

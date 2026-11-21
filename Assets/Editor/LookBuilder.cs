@@ -25,6 +25,8 @@ namespace SurviveI95.EditorTools
             public float skyExposure, sunAzimuth, sunIntensity, shadowStrength, ambient, groundBounce, hazeDensity, hazeBrightness;
             public Color sunColor;
             public float exposure, contrast, saturation, temperature, tint, bloomThreshold, bloomIntensity, bloomScatter, vignette;
+            /// <summary>Exposure of the sunset, dusk and night photos, and the color temperature of the highway lamps.</summary>
+            public float[] nightSkies; public float lampKelvin;
         }
         [Serializable] class LookFile { public List<Look> looks; }
 
@@ -41,12 +43,7 @@ namespace SurviveI95.EditorTools
             var look = Load(id);
             foreach (var old in new[] { "Sun", "Look" }) { var go = GameObject.Find(old); if (go != null) UnityEngine.Object.DestroyImmediate(go); }
 
-            string skyFile = Skies + look.sky + ".hdr";
-            // Mipmaps make a visible vertical seam where the panorama's edges meet.
-            if (AssetImporter.GetAtPath(skyFile) is TextureImporter imp && (imp.mipmapEnabled || imp.wrapMode != TextureWrapMode.Repeat || imp.maxTextureSize < 4096))
-            { imp.mipmapEnabled = false; imp.wrapMode = TextureWrapMode.Repeat; imp.maxTextureSize = 4096; imp.SaveAndReimport(); }
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyFile);
-            if (tex == null) throw new InvalidOperationException("Missing sky: " + skyFile + " (run node Tools/fetch_assets.js environment)");
+            var tex = LoadSky(look.sky);
             Measure(tex, out float sunLongitude, out float sunElevation, out Color horizon, out Color overhead);
 
             // Compass azimuth: 0 is north (+Z), 90 is east (+X). The panorama is turned until its sun sits there.
@@ -87,6 +84,8 @@ namespace SurviveI95.EditorTools
             volume.isGlobal = true;
             volume.sharedProfile = Grade(look);
 
+            BuildDayNight(look, tex, sunLongitude, sunElevation, horizon, overhead);
+
             if (cam != null)
             {
                 var data = cam.GetUniversalAdditionalCameraData();
@@ -111,6 +110,43 @@ namespace SurviveI95.EditorTools
                 result += " saved";
             }
             return result;
+        }
+
+        static Texture2D LoadSky(string name)
+        {
+            string skyFile = Skies + name + ".hdr";
+            // Mipmaps make a visible vertical seam where the panorama's edges meet.
+            if (AssetImporter.GetAtPath(skyFile) is TextureImporter imp && (imp.mipmapEnabled || imp.wrapMode != TextureWrapMode.Repeat || imp.maxTextureSize < 4096))
+            { imp.mipmapEnabled = false; imp.wrapMode = TextureWrapMode.Repeat; imp.maxTextureSize = 4096; imp.SaveAndReimport(); }
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(skyFile);
+            if (tex == null) throw new InvalidOperationException("Missing sky: " + skyFile + " (run node Tools/fetch_assets.js environment)");
+            return tex;
+        }
+
+        // The day-night cycle (5b.3b): the day photo plus a sunset, a dusk and a night photo from one place (Qwantani, Poly Haven),
+        // each measured like the day one, and the real sun height each stands for.
+        static void BuildDayNight(Look look, Texture2D dayTex, float dayLon, float dayEl, Color dayHorizon, Color dayOverhead)
+        {
+            var old = GameObject.Find("DayNight"); if (old != null) UnityEngine.Object.DestroyImmediate(old);
+            var dn = new GameObject("DayNight").AddComponent<SurviveI95.Game.DayNight>();
+            SurviveI95.Game.DayNight.SkyKey Key(string name, float at, float exposure)
+            {
+                var t = LoadSky(name);
+                Measure(t, out float lon, out float el, out Color h, out Color o, quiet: true);
+                return new SurviveI95.Game.DayNight.SkyKey { name = name, tex = t, sunLongitude = lon, photoElevation = el, atElevation = at, exposure = exposure, horizon = h, overhead = o };
+            }
+            dn.keys = new[]
+            {
+                new SurviveI95.Game.DayNight.SkyKey { name = look.sky, tex = dayTex, sunLongitude = dayLon, photoElevation = dayEl, atElevation = 20f, exposure = look.skyExposure, horizon = dayHorizon, overhead = dayOverhead },
+                Key("qwantani_sunset_puresky", 3f, look.nightSkies != null && look.nightSkies.Length > 0 ? look.nightSkies[0] : 1f),
+                Key("qwantani_dusk_2_puresky", -5f, look.nightSkies != null && look.nightSkies.Length > 1 ? look.nightSkies[1] : 1f),
+                Key("qwantani_night_puresky", -13f, look.nightSkies != null && look.nightSkies.Length > 2 ? look.nightSkies[2] : 1f),
+            };
+            dn.sunIntensity = look.sunIntensity; dn.sunColor = look.sunColor; dn.ambient = look.ambient; dn.groundBounce = look.groundBounce;
+            dn.hazeDensity = look.hazeDensity; dn.hazeBrightness = look.hazeBrightness; dn.postExposure = look.exposure;
+            dn.lampKelvin = look.lampKelvin > 0f ? look.lampKelvin : 3000f;
+            dn.skyShader = Shader.Find("SurviveI95/SkyBlend");
+            foreach (var k in dn.keys) Debug.Log(FormattableString.Invariant($"[Look] sky {k.name}: photo sun {k.photoElevation:F1} deg at {k.sunLongitude:F0}, shown at real sun {k.atElevation:F0}, overhead ({k.overhead.r:F2},{k.overhead.g:F2},{k.overhead.b:F2})"));
         }
 
         static VolumeProfile Grade(Look look)
@@ -146,7 +182,7 @@ namespace SurviveI95.EditorTools
         }
 
         // Finds the sun (the brightest patch) and the average color just above the horizon in a latitude-longitude sky picture.
-        static void Measure(Texture2D tex, out float sunLongitude, out float sunElevation, out Color horizon, out Color overhead)
+        static void Measure(Texture2D tex, out float sunLongitude, out float sunElevation, out Color horizon, out Color overhead, bool quiet = false)
         {
             const int W = 2048, H = 1024;
             var rt = RenderTexture.GetTemporary(W, H, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
@@ -191,7 +227,7 @@ namespace SurviveI95.EditorTools
             horizon = new Color(hazeSum.x, hazeSum.y, hazeSum.z, 1f);
             skySum /= Mathf.Max(1e-5f, skyWeight);
             overhead = new Color(skySum.x, skySum.y, skySum.z, 1f);
-            if (sunElevation < 5f) Debug.LogError("[Look] sun measured below the horizon in " + tex.name + ": " + sunElevation.ToString("F1", CultureInfo.InvariantCulture));
+            if (sunElevation < 5f && !quiet) Debug.LogError("[Look] sun measured below the horizon in " + tex.name + ": " + sunElevation.ToString("F1", CultureInfo.InvariantCulture));
         }
     }
 }
