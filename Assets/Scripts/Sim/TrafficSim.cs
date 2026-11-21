@@ -28,6 +28,15 @@ namespace SurviveI95.Sim
         public bool NoLights;
         /// <summary>True once this car has been hit, or hit a wreck, so a crash always has a traceable cause.</summary>
         public bool Involved;
+        /// <summary>When a motorcycle went down (sim clock) and to which side (+1 right), for its fall; -1 while upright.</summary>
+        public float DownAt = -1f, DownSide = 1f;
+        /// <summary>After a minor crash the driver keeps control, pulls onto the right shoulder, stops with hazards on and
+        /// waits, as Florida's "Move It" law asks when only property is damaged (s. 316.061).</summary>
+        public bool PullingOver;
+        /// <summary>A knock the driver caught: extra heading (radians) that swings and dies away.</summary>
+        public float Wobble;
+        internal float WobbleRate, PullOverLeft, TailRidden, TailTapLeft, TailNext, ShoulderOffset;
+        internal int TailTaps;
         /// <summary>Set once this driver has had a run-in with the player. They then stay in the run, on screen or not.</summary>
         public Regular Regular;
         /// <summary>The furthest this driver will ever take a grudge: 0 shrugs it off, 1 honks, 2 follows and blocks, 3 yells and cuts in, 4 rams.</summary>
@@ -86,6 +95,8 @@ namespace SurviveI95.Sim
         readonly System.Random rng;
         float totalWeight, lastAnchor = float.NaN, clock;
         int nextId, tick;
+        /// <summary>Seconds of simulated time, for animations that follow events (a bike falling over).</summary>
+        public float Clock => clock;
 
         struct Body { public bool Present; public float S, Lateral, SpeedS, SpeedLat, HalfLength, HalfWidth; }
         Body player;
@@ -407,7 +418,12 @@ namespace SurviveI95.Sim
 
         void Think(TrafficCar c, int i, float dt, bool far)
         {
-            if (c.Wrecked) { c.Accel = c.Speed > 0f ? -6.5f : 0f; c.Braking = c.Speed > .1f; c.Signal = 0; c.Hazards = true; return; }
+            if (c.Wrecked)
+            {
+                // Out of control: a car skidding sideways sheds speed fast (about 0.7 g); a bike sliding on its side less (about 0.45 g).
+                float skid = c.Def.category == "motorcycle" ? 4.4f : Mathf.Abs(c.Yaw) > .3f ? 6.9f : 6f;
+                c.Accel = c.Speed > 0f ? -skid : 0f; c.Braking = c.Speed > .1f; c.Signal = 0; c.Hazards = true; return;
+            }
             c.Cooldown -= dt;
             c.StartledLeft -= dt;
 
@@ -422,6 +438,7 @@ namespace SurviveI95.Sim
                 c.Pressured = backGap < Mathf.Max(12f, c.Speed * .9f) && backV > c.Speed - 1f ? c.Pressured + dt * push : Mathf.Max(0f, c.Pressured - dt * .5f);
             }
             else Yielding(c, backGap, backV, backPlayer, dt);
+            Tailgated(c, backGap, backPlayer, dt);
             if (Mathf.Abs(c.Lateral - laneCenter) > .4f)
             {
                 Scan(i, c.Lateral, c.Width, out float g2, out float v2, out _, out _, out var l2);
@@ -444,7 +461,10 @@ namespace SurviveI95.Sim
             float cap = float.PositiveInfinity;
             // The speed this driver wants follows the posted limit as it changes.
             if (!c.HoldDesired) c.Desired = c.Regular != null ? CruiseFor(c.Regular, c.S) : CruiseAt(c, c.S);
-            if (near) cap = Personal(c, gap, leadPlayer, backGap, backPlayer, dt);
+            // Slowing down on a tailgater to make the point (regulars with a grudge do this in Personal).
+            if (c.Regular == null && c.BlockLeft > 0f) { c.BlockLeft -= dt; c.Desired = Mathf.Min(c.Desired, c.BlockSpeed); }
+            if (c.PullingOver) PullOver(c, dt);
+            else if (near) cap = Personal(c, gap, leadPlayer, backGap, backPlayer, dt);
             if (near) Challenge(c, dt);
             StartWander(c, i, dt);
             // For tests: how long this driver has been around, and the gap they keep when following at speed.
@@ -453,6 +473,7 @@ namespace SurviveI95.Sim
 
             float a = c.TightFollow && leadPlayer ? Idm(c.Speed, c.Desired, MaxAccel(c), 2.6f, .35f, 1.5f, gap, seen) : AccelFor(c, gap, seen);
             a = BrakeTaps(c, a, dt);
+            if (c.TailTapLeft > 0f) { c.TailTapLeft -= dt; a = Mathf.Min(a, -1.8f); } // a warning tap: brake lights, a little slowing
             if (endGap < 160f) a = Mathf.Min(a, AccelFor(c, endGap, 0f));
             if (c.StartledLeft > 0f) a = Mathf.Min(a, -2.5f);
             a = Mathf.Min(a, cap);
@@ -468,7 +489,8 @@ namespace SurviveI95.Sim
             c.Accel = Mathf.Clamp(a, -9f, MaxAccel(c));
             c.Braking = c.Accel < -1.1f;
             UpdateTailgate(c, gap, leadV, leader, dt);
-            c.Hazards = false;
+            c.Hazards = c.PullingOver && (c.Lane == 0 && c.Offset > 1.5f || c.Speed < 8f);
+            if (c.PullingOver) c.Signal = c.Hazards ? 0 : 1;
             if (!far || !float.IsInfinity(end)) UpdateLaneChange(c, i, a, dt, !float.IsInfinity(end));
         }
 
@@ -619,7 +641,8 @@ namespace SurviveI95.Sim
                 float edge = path.HalfWidth(c.S) + 2.4f;
                 c.Lateral = Mathf.Clamp(c.Lateral, -path.HalfWidth(c.S) - .4f, edge);
                 c.Yaw += c.YawRate * dt;
-                c.YawRate = Mathf.MoveTowards(c.YawRate, 0f, 1.2f * dt);
+                // Skidding tires (or a bike's side on the asphalt) slow the spin down.
+                c.YawRate = Mathf.MoveTowards(c.YawRate, 0f, (c.Def.category == "motorcycle" ? .8f : 1.1f) * dt);
                 return;
             }
             float from = 0f;
@@ -636,7 +659,7 @@ namespace SurviveI95.Sim
                 c.ShoveLeft -= dt;
                 c.OffsetVelocity = Mathf.MoveTowards(c.OffsetVelocity, c.ShoveDir * 4.5f, 25f * dt);
             }
-            else { c.ShoveLeft = 0f; c.OffsetVelocity += (-c.Offset * 3f - c.OffsetVelocity * 3.2f) * dt; }
+            else { c.ShoveLeft = 0f; c.OffsetVelocity += ((c.ShoulderOffset - c.Offset) * 3f - c.OffsetVelocity * 3.2f) * dt; }
             c.Offset += c.OffsetVelocity * dt;
             // Everyone sways a little in the lane; inattentive and unskilled drivers sway more, and now and then drift onto the line.
             float drift = Mathf.Sin(clock * .55f + c.Phase) * ((1f - c.Traits.Attention) * .32f + (1f - c.Skill) * .2f) + WanderOffset(c, dt);
@@ -645,7 +668,10 @@ namespace SurviveI95.Sim
             c.Lateral = lat;
             // A driver still in control never points more than about 25° off the lane, however hard a bump pushed them
             // sideways; past that they'd have lost it (and be wrecked). This was the sideways snap of the second playtest.
-            c.Yaw = Mathf.Clamp(Mathf.Atan2(side, Mathf.Max(4f, c.Speed)), -.44f, .44f);
+            // A knock the driver caught swings the nose and dies away in about a second (a damped spring).
+            c.WobbleRate += (-c.Wobble * 28f - c.WobbleRate * 6.5f) * dt;
+            c.Wobble += c.WobbleRate * dt;
+            c.Yaw = Mathf.Clamp(Mathf.Atan2(side, Mathf.Max(4f, c.Speed)) + c.Wobble, -.44f, .44f);
         }
 
         // --------------------------------------------------------------- contact
@@ -668,12 +694,26 @@ namespace SurviveI95.Sim
         }
 
         /// <summary>For tests: wrecks a car as a crash would, spinning at the given rate (rad/s).</summary>
-        public static void ForceWreck(TrafficCar c, float yawRate) => Wreck(c, yawRate);
+        public void ForceWreck(TrafficCar c, float yawRate) => Wreck(c, yawRate);
 
-        static void Wreck(TrafficCar c, float yawRate)
+        void Wreck(TrafficCar c, float yawRate, float side = 0f)
         {
             if (!c.Wrecked) c.YawRate = yawRate;
-            c.Wrecked = true; c.Involved = true; c.Signal = 0; c.PendingLane = -1; c.ChangeDuration = 0f;
+            if (c.Def.category == "motorcycle" && c.DownAt < 0f) { c.DownAt = clock; c.DownSide = side != 0f ? Mathf.Sign(side) : (yawRate >= 0f ? 1f : -1f); }
+            c.Wrecked = true; c.Involved = true; c.Signal = 0; c.PendingLane = -1; c.ChangeDuration = 0f; c.PullingOver = false; c.Wobble = 0f;
+        }
+
+        /// <summary>After a minor crash: signal right, work over to the right lane, onto the shoulder, stop, hazards on, and
+        /// wait a while (police come in M8), then carry on.</summary>
+        void PullOver(TrafficCar c, float dt)
+        {
+            c.PullOverLeft -= dt;
+            if (c.PullOverLeft <= 0f) { c.PullingOver = false; c.ShoulderOffset = 0f; return; }
+            c.WantLane = 0;
+            bool onShoulder = c.Lane == 0 && c.Offset > 2.4f;
+            c.ShoulderOffset = c.Lane == 0 ? 3.3f : 0f;
+            c.Desired = onShoulder ? 0f : Mathf.Min(c.Desired, c.Lane == 0 ? 9f : 16f);
+            c.HoldDesired = false;
         }
 
         void Pair(TrafficCar back, TrafficCar front)
@@ -692,10 +732,19 @@ namespace SurviveI95.Sim
             Wreck(front, side * Mathf.Min(1.8f, closing * .12f));
         }
 
-        /// <summary>Resolves contact between one traffic car and the player. Player position and speed come back through ApplyVehicleHit.</summary>
+        /// <summary>
+        /// Resolves contact between one traffic vehicle and the player as two bodies trading a push (6.0, reworked after the
+        /// creator's playtest): the push along the line of contact depends on how fast they close and on both masses, with a
+        /// little bounce (bodywork absorbs most of it) and some sliding friction across it. Where the push lands, away from a
+        /// vehicle's middle, turns it. The other driver keeps control unless the push slides their tires past their grip
+        /// (about 7 degrees of slip for a car, far less for a bike, or a spin a driver can't catch); a knock they catch makes
+        /// the car wobble, then they pull over. A fallen bike is under the car, not in front of it. Player position, speed,
+        /// spin and damage come back through ApplyVehicleHit.
+        /// </summary>
         public void HitPlayer(DriveSim car)
         {
             if (car == null || !player.Present) return;
+            const float Bounce = .15f, Friction = .45f;
             for (int k = 0; k < Cars.Count; k++)
             {
                 var c = Cars[k];
@@ -704,80 +753,98 @@ namespace SurviveI95.Sim
                 float overL = player.HalfWidth + c.Width / 2f - Mathf.Abs(dl);
                 if (overS <= 0f || overL <= 0f) continue;
 
-                float mp = car.Car.mass, total = mp + c.Mass;
+                float mp = car.Car.mass, mc = c.Mass, mEff = mp * mc / (mp + mc);
                 bool fresh = clock - c.LastPlayerHit > .45f;
                 bool bike = c.Def.category == "motorcycle";
-                // A bike that's down is under the car, not in front of it: the car rolls over it with a jolt (6.0).
-                if (bike && c.Wrecked)
+                if (bike && c.DownAt >= 0f) { RunOver(c, car, dl, fresh); continue; }
+
+                // The player's velocity relative to this vehicle, and the line of contact (from the vehicle toward the player).
+                float cLat = (c.Lateral - c.PrevLateral) / Mathf.Max(.001f, lastDt);
+                float relS = player.SpeedS - c.Speed, relL = player.SpeedLat - cLat;
+                bool endHit = overS < overL;
+                float nS = endHit ? (ds >= 0f ? 1f : -1f) : 0f, nL = endHit ? 0f : (dl >= 0f ? 1f : -1f);
+                float closing = -(relS * nS + relL * nL);
+                float sepS = nS * overS, sepL = nL * overL;
+                float dvS = 0f, dvL = 0f, damage = 0f, crush = 0f, yawKick = 0f, impact = 0f;
+                bool playerFault = endHit ? nS < 0f : Mathf.Abs(player.SpeedLat) >= Mathf.Abs(cLat);
+
+                if (closing > .05f)
                 {
-                    if (fresh && Mathf.Abs(player.SpeedS - c.Speed) > 1.5f) { c.LastPlayerHit = clock; car.ApplyVehicleHit(0f, 0f, -Mathf.Sign(player.SpeedS) * .8f, 0f, .015f, 0f, 0f, 2.5f, -dl); }
-                    continue;
+                    // Pressed together after the first moment, only the closing is taken out (no bounce, no friction, no
+                    // damage): pushing a car along is possible, being glued to one is not.
+                    float jn = (fresh ? 1f + Bounce : 1f) * mEff * closing;
+                    float tS = endHit ? 0f : relS, tL = endHit ? relL : 0f, tSpeed = Mathf.Sqrt(tS * tS + tL * tL);
+                    float jt = fresh && tSpeed > .01f ? Mathf.Min(Friction * jn, mEff * tSpeed) : 0f;
+                    // The push on the traffic vehicle (and the opposite on the player's car).
+                    float jS = -nS * jn + (jt > 0f ? tS / tSpeed * jt : 0f), jL = -nL * jn + (jt > 0f ? tL / tSpeed * jt : 0f);
+                    float dvcS = jS / mc, dvcL = jL / mc;
+                    // Where it landed on each body, from its middle, and how much that turns it (+ is nose to the right).
+                    float rS = endHit ? nS * c.Length / 2f : Mathf.Clamp(ds, -c.Length / 2f, c.Length / 2f);
+                    float rL = endHit ? Mathf.Clamp(dl, -c.Width / 2f, c.Width / 2f) : nL * c.Width / 2f;
+                    float spinC = (rS * jL - rL * jS) / (mc * (c.Length * c.Length + c.Width * c.Width) / 12f);
+                    float prS = endHit ? -nS * player.HalfLength : Mathf.Clamp(-ds, -player.HalfLength, player.HalfLength);
+                    float prL = endHit ? Mathf.Clamp(-dl, -player.HalfWidth, player.HalfWidth) : -nL * player.HalfWidth;
+                    float spinP = (prS * -jL - prL * -jS) / (mp * 2.1f);
+                    dvS = -jS / mp; dvL = -jL / mp;
+                    if (fresh) yawKick = Mathf.Clamp(spinP, -1.4f, 1.4f);
+
+                    c.Speed = Mathf.Max(0f, c.Speed + dvcS);
+                    c.OffsetVelocity += dvcL;
+                    if (fresh)
+                    {
+                        impact = closing;
+                        // Will this driver keep it? Sideways slip at either axle against the road speed, and the spin.
+                        float v = Mathf.Max(8f, c.Speed), axle = c.Length * .38f;
+                        float slip = Mathf.Max(Mathf.Abs(dvcL + spinC * axle), Mathf.Abs(dvcL - spinC * axle)) / v;
+                        bool loses = bike ? slip > .045f || Mathf.Abs(spinC) > .3f || Mathf.Abs(dvcS) > 2.6f
+                                          : slip > .14f || Mathf.Abs(spinC) > .9f || Mathf.Abs(dvcS) > 9f; // stability control (standard since 2012) catches a fair twist
+                        LastHit = System.FormattableString.Invariant($"{(endHit ? "end" : "side")} closing={closing:F1} dvS={dvcS:F1} dvL={dvcL:F1} spin={spinC:F2} slip={slip:F3} loses={loses} rS={rS:F1} rL={rL:F1}");
+                        if (c.Wrecked) c.YawRate += spinC;
+                        else if (loses) Wreck(c, Mathf.Clamp(spinC * 1.3f, -3.5f, 3.5f), dvcL); // the rear lets go, so the turn keeps building a moment
+                        else
+                        {
+                            // Caught it: the nose swings and settles, they brake, and after a real knock they pull over.
+                            c.WobbleRate += spinC * .8f + dvcL / v;
+                            c.StartledLeft = 1.3f;
+                            float knock = Mathf.Sqrt(dvcS * dvcS + dvcL * dvcL);
+                            if (!c.PullingOver && c.Kind != DriverKind.Truck && (knock > 1.2f || bike && knock > .6f))
+                            {
+                                c.PullingOver = true; c.PullOverLeft = Rand(60f, 120f); PullOvers++;
+                                Notice?.Invoke($"The {c.Def.name.ToLower()} pulls onto the shoulder after the crash. In Florida, leaving the scene of a crash is a crime.");
+                            }
+                        }
+                        // The player's damage grows with the speed change they took; the nose crumples when they hit with it.
+                        float change = Mathf.Sqrt(dvS * dvS + dvL * dvL);
+                        damage = .75f * Mathf.Pow(change / 26f, 2f) + jt / mp * .02f;
+                        if (endHit && nS < 0f) crush = Mathf.Min(.5f, change * .022f);
+                    }
                 }
-                const float Bounce = 1.18f; // 0.18 of restitution: bodywork absorbs nearly all of it
-                float dvS = 0f, dvL = 0f, sepS = 0f, sepL = 0f, impact = 0f, damage = 0f, crush = 0f, yaw = 0f;
-                bool playerFault;
-                if (overS < overL)
-                {
-                    float n = ds >= 0f ? 1f : -1f; // +1: the player is in front of this car
-                    float closing = Mathf.Max(0f, (c.Speed - player.SpeedS) * n);
-                    playerFault = n < 0f; // the player drove into the back of them
-                    sepS = n * overS;
-                    dvS = n * Bounce * closing * c.Mass / total;
-                    impact = closing;
-                    if (closing > .3f) c.Speed = Mathf.Max(0f, c.Speed - n * Bounce * closing * mp / total);
-                    float change = Mathf.Abs(dvS);
-                    damage = Mathf.Pow(change / 26f, 2f) * .75f;
-                    // Only the nose crumples, and only when the player drove into something.
-                    if (n < 0f) crush = Mathf.Min(.5f, change * .022f);
-                    yaw = Mathf.Clamp(-dl * closing * .04f, -1.6f, 1.6f);
-                    // A bike goes down from a nudge a car would shrug off.
-                    float knock = closing * mp / total;
-                    // Hit off-center, the struck end is shoved sideways and the car spins about its middle: the further
-                    // toward the corner and the harder the hit, the more (a dead-center hit just pushes it ahead).
-                    float offCenter = Mathf.Clamp(dl / (c.Width / 2f + player.HalfWidth), -1f, 1f);
-                    float spinRate = Mathf.Clamp(offCenter * closing * .2f * Mathf.Clamp(mp / c.Mass, .25f, 1.5f), -2.6f, 2.6f);
-                    if (Mathf.Abs(spinRate) < Mathf.Abs(dl * closing * .05f)) spinRate = Mathf.Clamp(dl * closing * .05f, -1.8f, 1.8f);
-                    if (fresh && (knock > 3f || bike && closing > 1.5f || Mathf.Abs(offCenter) > .5f && closing > 4f && mp / c.Mass > .45f)) Wreck(c, -n * spinRate);
-                    else if (fresh && closing > .8f) c.StartledLeft = 1.3f;
-                }
-                else
-                {
-                    float n = dl >= 0f ? 1f : -1f; // +1: the player is to the right of this car
-                    float mine = -player.SpeedLat * n, theirs = (c.Lateral - c.PrevLateral) / Mathf.Max(.001f, lastDt) * n;
-                    float closing = Mathf.Max(0f, mine + Mathf.Max(0f, theirs));
-                    playerFault = mine >= theirs;
-                    sepL = n * overL;
-                    dvL = n * 1.08f * closing * c.Mass / total;
-                    float push = 1.08f * closing * mp / total;
-                    c.OffsetVelocity -= n * push;
-                    // Trading paint scrapes speed off both cars, once as the contact starts; pressed together after that,
-                    // they slide apart instead of dragging each other along.
-                    float rub = Mathf.Abs(player.SpeedS - c.Speed);
-                    if (fresh) dvS = -Mathf.Sign(player.SpeedS - c.Speed) * Mathf.Min(rub, rub * .25f + 1f) * c.Mass / total;
-                    impact = Mathf.Max(closing, rub * .35f);
-                    damage = .28f * Mathf.Pow(closing / 15f, 2f) + rub * .0016f;
-                    yaw = -n * Mathf.Clamp(closing * .08f, 0f, 1.1f);
-                    // Hit near a corner by a faster car, a car spins: the faster car drags that end around (the same physics
-                    // as the police PIT maneuver), more the bigger the speed difference and the lighter the car. A hard
-                    // sideways bump at highway speed also takes control away from the other driver.
-                    float corner = Mathf.Clamp01((Mathf.Abs(ds) - c.Length * .2f) / (c.Length * .3f));
-                    float spinKick = (rub * .1f * corner + push * .3f) * Mathf.Clamp(mp / c.Mass, .25f, 1.5f);
-                    float end = ds >= 0f ? 1f : -1f; // which end got hit: the front of the other car or its back
-                    bool loses = push > 2.2f || (corner > .3f && rub > 5f && mp / c.Mass > .45f) || bike && (closing > 1f || rub > 2.5f);
-                    if (fresh && loses) Wreck(c, -n * end * Mathf.Clamp(spinKick, .4f, 2.6f));
-                    else if (fresh && (closing > .6f || rub > 2f)) c.StartledLeft = 1.3f;
-                }
-                // Cars pressed together are one contact, not a new crash every frame.
-                if (!fresh || impact < 1f) { damage = 0f; crush = 0f; yaw = 0f; }
                 if (fresh && impact >= 1f)
                 {
                     c.LastPlayerHit = clock; c.Involved = true; c.ShoveLeft = 0f;
                     CrashesWithPlayer++;
                     if (playerFault && clock - c.RamAt > 1.5f) Grudge(c, Grievance.Hit, .3f + impact * .025f + (c.Wrecked ? .3f : 0f));
                 }
-                car.ApplyVehicleHit(sepS, sepL, dvS, dvL, damage, crush, yaw, impact, -dl);
+                car.ApplyVehicleHit(sepS, sepL, dvS, dvL, damage, crush, yawKick, impact, -dl);
                 player.S += sepS; player.Lateral += sepL;
             }
+        }
+
+        public int PullOvers, RunOvers;
+        /// <summary>For tests: the numbers behind the last fresh hit.</summary>
+        public string LastHit = "";
+
+        // A bike on its side is low enough to go under the car: the car rides over it with a jolt (front wheels, then rear),
+        // and drags and flings the bike along a little.
+        void RunOver(TrafficCar bike, DriveSim car, float dl, bool fresh)
+        {
+            if (!fresh || Mathf.Abs(player.SpeedS - bike.Speed) < 1f) return;
+            bike.LastPlayerHit = clock; bike.Involved = true; RunOvers++;
+            float rel = player.SpeedS - bike.Speed;
+            bike.Speed = Mathf.Max(0f, bike.Speed + rel * .45f);
+            bike.YawRate += (dl >= 0f ? -1f : 1f) * Mathf.Min(2f, Mathf.Abs(rel) * .08f);
+            car.ApplyVehicleHit(0f, 0f, -Mathf.Sign(rel) * Mathf.Min(1.2f, Mathf.Abs(rel) * bike.Mass / car.Car.mass * .5f), 0f, .015f, 0f, 0f, 2.5f, -dl);
+            car.RunOverBumps++;
         }
     }
 }

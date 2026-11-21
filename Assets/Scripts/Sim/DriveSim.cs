@@ -117,8 +117,12 @@ namespace SurviveI95.Sim
             if (damage <= 0f) return;
             TakeDamage(damage, impact, pull);
             FrontCrush = Mathf.Min(0.55f, FrontCrush + crush);
-            if (impact > 7f) stunned = 0.5f;
+            // Only a real smash takes the controls away for a moment (a 25 mph change); a knock doesn't.
+            if (impact > 11f) stunned = 0.4f;
         }
+
+        /// <summary>Counts the times the car rode over something low (a fallen motorcycle): the body jolts front, then rear.</summary>
+        public int RunOverBumps;
 
         public void Step(RoutePath path, DriveInput input, float dt)
         {

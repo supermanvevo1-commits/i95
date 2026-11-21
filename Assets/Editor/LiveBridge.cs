@@ -158,7 +158,7 @@ namespace SurviveI95.EditorTools
                 case "clock": // HH:MM sets the clock for tests, off gives it back to the trip
                     if (a[2] == "off") SurviveI95.Game.DayNight.TestMinutes = null; else { var clk = a[2].Split(':'); SurviveI95.Game.DayNight.TestMinutes = int.Parse(clk[0]) * 60 + int.Parse(clk[1]); }
                     return "clock " + a[2];
-                case "wreckahead": { TrafficCar best = null; foreach (var o in car.GetComponent<TrafficManager>().Sim.Cars) if (o.S > car.Sim.S && (best == null || o.S < best.S)) best = o; if (best == null) return "no car ahead"; TrafficSim.ForceWreck(best, F(a, 2)); return $"wrecked {best.Def.id} {best.S - car.Sim.S:F0} m ahead"; }
+                case "wreckahead": { TrafficCar best = null; foreach (var o in car.GetComponent<TrafficManager>().Sim.Cars) if (o.S > car.Sim.S && (best == null || o.S < best.S)) best = o; if (best == null) return "no car ahead"; car.GetComponent<TrafficManager>().Sim.ForceWreck(best, F(a, 2)); return $"wrecked {best.Def.id} {best.S - car.Sim.S:F0} m ahead"; }
                 case "swishes": { var pb = car.GetComponent<SurviveI95.Game.PassBy>(); return pb == null ? "no pass-by" : "swishes " + pb.Swishes; }
                 case "nightlamps": { int tails = 0, lows = 0, cars = 0; foreach (var tf in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)) { if (tf.name == "Tail" && tf.gameObject.activeInHierarchy) tails++; if (tf.name == "Low" && tf.gameObject.activeInHierarchy) lows++; if (tf.name == "Brake") cars++; } return $"traffic cars {cars}, tail lamps lit {tails}, headlights lit {lows}, player lights {car.LightsOn}"; }
                 case "daynight": { var dn = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.DayNight>(); return dn == null ? "no day-night" : dn.Status(); }
@@ -252,6 +252,32 @@ namespace SurviveI95.EditorTools
                 case "shot": return Shot(a[2]);
                 case "traffic": return TrafficStatus(car);
                 case "trafficcount": car.GetComponent<TrafficManager>().Sim.Target = (int)F(a, 2); return "traffic target " + a[2];
+                case "tailgate": // seconds lane: rides the bumper of whatever is ahead at that many seconds of gap, braking a quarter second late, as a person would
+                {
+                    var tm = car.GetComponent<TrafficManager>();
+                    float headway = F(a, 2);
+                    bot = new LaneBot { SpeedMph = 85f, TargetLaneFromRight = (int)F(a, 3) };
+                    var seen = new System.Collections.Generic.Queue<float>();
+                    PlayerCar.AutoDriver = (p, c) =>
+                    {
+                        var input = bot.Think(p, c);
+                        float gap = float.MaxValue, lead = 0f;
+                        foreach (var o in tm.Sim.Cars)
+                        {
+                            float d = o.S - c.S - o.Length / 2f - DriveSim.CarHalfLength;
+                            if (d > -3f && d < gap && Mathf.Abs(o.Lateral - c.Lateral) < (o.Width / 2f + 1.1f)) { gap = d; lead = o.Speed; }
+                        }
+                        // What the driver sees is a quarter second old (15 steps at 60 Hz).
+                        seen.Enqueue(gap < 200f ? lead : -1f); float leadSeen = seen.Count > 15 ? seen.Dequeue() : lead;
+                        if (gap > 200f || leadSeen < 0f) return input;
+                        float want = leadSeen + (gap - headway * c.Speed) * .6f;
+                        input.Throttle = want > c.Speed + .3f ? Mathf.Clamp01((want - c.Speed) * .4f) : 0f;
+                        input.Brake = want < c.Speed - .3f ? Mathf.Clamp01((c.Speed - want) * .35f) : 0f;
+                        return input;
+                    };
+                    return "tailgating at " + headway + " s";
+                }
+                case "tailstats": { var ts = car.GetComponent<TrafficManager>().Sim; return $"runOvers={ts.RunOvers} maxRidden={ts.MaxRidden:F1}s backSeen={ts.BackPlayerSeen} ridden={ts.RiddenSeen} taps={ts.TailTapsGiven} brakeChecks={ts.TailBrakeChecks} slowdowns={ts.TailSlowdowns} yields={ts.Yields} crashes={ts.CrashesWithPlayer} pullovers={ts.PullOvers} | {ts.LastHit}"; }
                 case "cruise": // mph lane: stays in lane and brakes for traffic, like a careful driver
                 {
                     var tm = car.GetComponent<TrafficManager>();

@@ -62,8 +62,49 @@ namespace SurviveI95.Sim
                 Grudge(c, Grievance.Tailgated, .25f + (PlayerHorn || PlayerFlash ? .15f : 0f));
                 return;
             }
+            // Pushed from right behind (not just a faster car coming up), plenty of drivers won't be bullied out of their lane:
+            // the more assertive, the likelier they hold it and answer with the brakes instead (Tailgated).
+            if (backPlayer && riding && rng.NextDouble() < Mathf.Lerp(.15f, .8f, c.Traits.Aggression)) { YieldRefusals++; c.Noticed = -6f; return; }
             c.YieldFor = Rand(6f, 12f); Yields++;
             c.Cooldown = Mathf.Min(c.Cooldown, .3f);
+        }
+
+        public int TailTapsGiven, TailBrakeChecks, TailSlowdowns, BackPlayerSeen, RiddenSeen;
+        public float MaxRidden;
+
+        /// <summary>
+        /// The player riding this driver's bumper (closer than about 0.6 s). Drivers notice in a second or a few, by how
+        /// attentive they are and how well they see out the back, and answer as people do: a tap of the brakes to say "back
+        /// off" (brake lights and a little slowing), then, if it goes on, the easygoing ones ease off to make the point or move
+        /// over (Yielding), and the hotheads brake-check, hard. So tailgating stops being free: the car ahead can slow down on
+        /// you at any moment, and at half a second behind there's no room to react.
+        /// </summary>
+        void Tailgated(TrafficCar c, float backGap, bool backPlayer, float dt)
+        {
+            bool ridden = backPlayer && !c.Wrecked && !c.PullingOver && c.Speed > 10f && backGap > 0f && backGap < Mathf.Max(5f, c.Speed * .6f);
+            c.TailRidden = ridden ? c.TailRidden + dt : Mathf.Max(0f, c.TailRidden - dt * .5f);
+            if (backPlayer) { BackPlayerSeen++; if (ridden) RiddenSeen++; }
+            MaxRidden = Mathf.Max(MaxRidden, c.TailRidden);
+            if (!ridden) { if (c.TailRidden <= 0f) { c.TailTaps = 0; c.TailNext = 0f; } return; }
+            if (c.Kind == DriverKind.Truck) return; // a trucker watches you in the mirror and carries on
+            c.TailNext -= dt;
+            float notice = Mathf.Lerp(3.5f, 1.2f, c.Traits.Attention) / MirrorView(c.Def);
+            if (c.TailRidden < notice || c.TailNext > 0f) return;
+            bool hot = c.Traits.Aggression > .75f || c.Temper >= 3;
+            float checkOdds = hot ? .55f : c.Traits.Aggression > .55f ? .22f : 0f; // a brake-check is a hothead's answer, now and then an assertive driver's
+            if (c.TailTaps >= 1 && clock - c.LastPlayerHit > 6f && rng.NextDouble() < checkOdds)
+            {
+                c.BrakeCheckLeft = Rand(.5f, .9f); BrakeChecks++; TailBrakeChecks++;
+                Notice?.Invoke($"The {c.Def.name.ToLower()} you're tailgating brake-checks you.");
+            }
+            else
+            {
+                c.TailTapLeft = Rand(.3f, .55f); TailTapsGiven++;
+                // After a couple of taps an easygoing driver slows down to make the point (or moves over, if they can).
+                if (c.TailTaps >= 2 && !hot && rng.NextDouble() < .5) { c.BlockSpeed = Mathf.Max(9f, c.Speed - MphToMs(Rand(5f, 10f))); c.BlockLeft = Rand(8f, 16f); TailSlowdowns++; }
+            }
+            c.TailTaps++;
+            c.TailNext = Rand(3.5f, 7f);
         }
     }
 }

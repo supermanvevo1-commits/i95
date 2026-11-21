@@ -21,6 +21,8 @@ namespace SurviveI95.Game
         /// <summary>Test view from high above, for inspecting the surroundings.</summary>
         public float TopView;
         public float cameraBack = 6.6f, cameraUp = 2.25f;
+        /// <summary>The point the chase camera circles: about the roof of the car.</summary>
+        const float PivotHeight = 1.45f;
 
         /// <summary>When set, replaces the keyboard. Used by automated play tests.</summary>
         public static Func<RoutePath, DriveSim, DriveInput> AutoDriver;
@@ -639,6 +641,7 @@ namespace SurviveI95.Game
         public const float RollPerG = 5.5f, DivePerG = 3.2f, SquatPerG = 2f;
         [NonSerialized] public static bool OldBody;
         float rollVel, pitchVel, heave, heaveVel; Vector3 modelBase; bool modelBaseSet;
+        int shownBumps; float rearBumpAt;
         public float BodyRoll => roll; public float BodyPitch => pitch;
 
         void UpdateBody()
@@ -658,6 +661,13 @@ namespace SurviveI95.Game
             float rollTo = Mathf.Clamp(Sim.LateralAccel / 9.81f * rollPerG, -9f, 9f);
             float decel = -Sim.LongAccel / 9.81f;
             float pitchTo = Mathf.Clamp(decel * (decel > 0f ? dive : squat), -3f, 5f);
+            // Riding over something low (a fallen bike): the front wheels jolt the nose up, then the rear a wheelbase later.
+            if (Sim.RunOverBumps != shownBumps)
+            {
+                shownBumps = Sim.RunOverBumps; heaveVel += .9f; pitchVel -= 14f;
+                rearBumpAt = Time.time + Sim.Car.wheelbase / Mathf.Max(2f, Mathf.Abs(Sim.Speed));
+            }
+            if (rearBumpAt > 0f && Time.time >= rearBumpAt) { rearBumpAt = 0f; heaveVel += .7f; pitchVel += 12f; }
             int n = Mathf.CeilToInt(dt * 120f); float h = dt / n;
             for (int i = 0; i < n; i++)
             {
@@ -736,7 +746,7 @@ namespace SurviveI95.Game
             camYaw = Mathf.LerpAngle(camYaw, yaw, 1f - Mathf.Exp(-Time.deltaTime * 7f));
             ApplyCamera();
             float ratio = Mathf.Clamp01(Sim.Speed / Sim.TopSpeed);
-            float fov = Cockpit ? BaseFov + 4f * ratio : BaseFov - 3f + 11f * ratio * ratio; // the chase view: a bit wider at rest, widening with speed
+            float fov = Cockpit ? BaseFov + 4f * ratio : BaseFov - 4f + 8f * ratio * ratio; // the chase view: 54 at rest, widening to 62 at top speed
             fovSmooth = Mathf.Lerp(fovSmooth, fov, 1f - Mathf.Exp(-Time.deltaTime * 4f));
             float g = Mathf.SmoothStep(0f, 1f, Glance);
             chaseCamera.fieldOfView = lookingBack ? BaseFov : Mathf.Lerp(fovSmooth, glanceFov, g);
@@ -816,18 +826,22 @@ namespace SurviveI95.Game
                 chaseCamera.transform.rotation = rot;
                 return;
             }
-            // Behind the car, swung around it by the mouse (orbit), as in GTA.
-            var dir = Quaternion.Euler(0, camYaw + orbitYaw, 0) * Vector3.forward;
+            // Behind the car, swung around it by the mouse (orbit), as in GTA: the camera rides a sphere around a point at the
+            // roof, always looking at that point, so the car stays at the same place on screen however you swing, a little
+            // below the middle so the road ahead shows. Straight behind it frames the car exactly as before; it can climb to
+            // about 30 degrees above the car (it used to reach 57, a drone's view) and dip a little below the roof.
+            var pivot = transform.position + Vector3.up * PivotHeight;
             float back = cameraBack + 0.9f * Mathf.Clamp01(Sim.Speed / Sim.TopSpeed);
-            float p = orbitPitch * Mathf.Deg2Rad;
-            var pos = transform.position - dir * back * Mathf.Cos(p) + Vector3.up * (cameraUp + back * Mathf.Sin(p));
-            pos.y = Mathf.Max(pos.y, transform.position.y + 0.5f);
+            float radius = Mathf.Sqrt(back * back + (cameraUp - PivotHeight) * (cameraUp - PivotHeight));
+            float restPitch = Mathf.Atan2(cameraUp - PivotHeight, back) * Mathf.Rad2Deg;
+            float p = Mathf.Clamp(restPitch + orbitPitch, -6f, 30f) * Mathf.Deg2Rad;
+            var dir = Quaternion.Euler(0, camYaw + orbitYaw, 0) * Vector3.forward;
+            var pos = pivot - dir * radius * Mathf.Cos(p) + Vector3.up * radius * Mathf.Sin(p);
+            pos.y = Mathf.Max(pos.y, transform.position.y + 0.45f);
             chaseCamera.transform.position = pos;
-            // Straight behind, aim down the road ahead; swung round to the side, aim at the car itself.
-            // The aim slides evenly over the whole swing, not all at once in the first few degrees.
-            float aside = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(0f, orbitYaw)) / 75f));
-            var target = transform.position + Vector3.up * 1.05f + dir * Mathf.Lerp(12f, 0f, aside) * Mathf.Lerp(1f, .4f, Mathf.Clamp01(orbitPitch / 40f));
-            chaseCamera.transform.rotation = Quaternion.LookRotation(target - pos);
+            // Aim at the roof point, then tilt up a little (the same tilt that put the car where it sits straight behind).
+            float lift = restPitch - Mathf.Atan2(cameraUp - 1.05f, back + 12f) * Mathf.Rad2Deg;
+            chaseCamera.transform.rotation = Quaternion.LookRotation(pivot - pos) * Quaternion.Euler(-lift, 0f, 0f);
             // The camera sways a little with the body's lean, so the weight is felt, not just seen.
             if (!OldBody) chaseCamera.transform.rotation *= Quaternion.Euler(0f, 0f, roll * .2f);
         }
@@ -885,7 +899,7 @@ namespace SurviveI95.Game
             // The mouse moves where the camera is headed; the camera glides there (about a tenth of a second), so a hand's
             // small jitters and uneven frames don't shake the view, and it has a little weight, as in GTA.
             orbitYawTarget = Mathf.Repeat(orbitYawTarget + delta.x + 180f, 360f) - 180f;
-            orbitPitchTarget = Mathf.Clamp(orbitPitchTarget - delta.y * .6f, -8f, 50f);
+            orbitPitchTarget = Mathf.Clamp(orbitPitchTarget - delta.y * .5f, -13f, 23f); // the view's 30 degree cap, measured from where it rests
             // Left alone while driving, it eases back behind the car: a slow start and a soft landing.
             if (orbitIdle > 1.4f && Mathf.Abs(Sim.Speed) > 3f)
             {
@@ -893,8 +907,8 @@ namespace SurviveI95.Game
                 orbitPitchTarget = Mathf.SmoothDamp(orbitPitchTarget, 0f, ref returnPitchVel, .55f);
             }
             else { returnYawVel = returnPitchVel = 0f; }
-            orbitYaw = Mathf.SmoothDampAngle(orbitYaw, orbitYawTarget, ref orbitYawVel, .09f);
-            orbitPitch = Mathf.SmoothDamp(orbitPitch, orbitPitchTarget, ref orbitPitchVel, .09f);
+            orbitYaw = Mathf.SmoothDampAngle(orbitYaw, orbitYawTarget, ref orbitYawVel, .06f);
+            orbitPitch = Mathf.SmoothDamp(orbitPitch, orbitPitchTarget, ref orbitPitchVel, .06f);
         }
 
         public void SnapCamera()

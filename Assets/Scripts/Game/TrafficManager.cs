@@ -207,9 +207,14 @@ namespace SurviveI95.Game
                 if (v == null) c.View = v = Acquire(c);
                 float s = Mathf.Lerp(c.PrevS, c.S, t), lat = Mathf.Lerp(c.PrevLateral, c.Lateral, t);
                 var rot = Quaternion.LookRotation(road.Tangent(s), Vector3.up) * Quaternion.Euler(0, Mathf.LerpAngle(c.PrevYaw, c.Yaw, t) * Mathf.Rad2Deg, 0);
-                // A wreck sits crooked on a broken corner (which corner and how much picked from the car itself); a bike lies on its side.
-                if (c.Wrecked) rot *= c.Def.category == "motorcycle" ? Quaternion.Euler(0f, 0f, (c.Id & 1) == 0 ? 82f : -82f) : Quaternion.Euler((c.Id % 3 - 1) * 2.5f, 0f, ((c.Id & 1) == 0 ? 1f : -1f) * 3.5f);
-                v.Root.transform.SetPositionAndRotation(road.Point(s, lat) + (c.Wrecked && c.Def.category != "motorcycle" ? Vector3.down * .06f : Vector3.zero), rot);
+                // A bike that goes down topples over in about half a second (falling faster as it goes) toward the side it was
+                // pushed, and lies there; one whose rider caught a knock leans with the wobble. A car wreck sits crooked on a
+                // broken corner (which corner and how much picked from the car itself).
+                bool bike = c.Def.category == "motorcycle";
+                if (bike && c.DownAt >= 0f) { float fall = Mathf.Clamp01((Sim.Clock - c.DownAt) / .55f); rot *= Quaternion.Euler(0f, 0f, -c.DownSide * 82f * fall * fall); }
+                else if (bike) rot *= Quaternion.Euler(0f, 0f, -c.Wobble * 55f);
+                else if (c.Wrecked) rot *= Quaternion.Euler((c.Id % 3 - 1) * 2.5f, 0f, ((c.Id & 1) == 0 ? 1f : -1f) * 3.5f);
+                v.Root.transform.SetPositionAndRotation(road.Point(s, lat) + (c.Wrecked && !bike ? Vector3.down * .06f : Vector3.zero), rot);
 
                 float distance = Mathf.Abs(s - playerS);
                 bool far = distance > TrafficSim.FarDistance;
