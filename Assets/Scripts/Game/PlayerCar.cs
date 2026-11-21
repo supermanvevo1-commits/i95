@@ -497,10 +497,13 @@ namespace SurviveI95.Game
             burst = MakeParticles("ImpactBurst", new Vector3(0, 0.55f, 2.2f), 0.18f, 6f, 0.5f, new Color(.45f, .45f, .42f, .9f), 0);
         }
 
-        ParticleSystem MakeParticles(string name, Vector3 at, float size, float speed, float life, Color color, float rate)
+        /// <summary>Engine smoke for a wrecked traffic car, the same smoke as the player's own damage (6.0).</summary>
+        public ParticleSystem MakeWreckSmoke(Transform parent) => MakeParticles("WreckSmoke", Vector3.zero, 1.2f, 1.3f, 3.2f, new Color(.32f, .32f, .33f, .55f), 22f, parent);
+
+        ParticleSystem MakeParticles(string name, Vector3 at, float size, float speed, float life, Color color, float rate, Transform parent = null)
         {
             var go = new GameObject(name);
-            go.transform.SetParent(transform, false); go.transform.localPosition = at;
+            go.transform.SetParent(parent != null ? parent : transform, false); go.transform.localPosition = at;
             var ps = go.AddComponent<ParticleSystem>();
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main; main.startSize = size; main.startSpeed = speed; main.startLifetime = life; main.startColor = color; main.simulationSpace = ParticleSystemSimulationSpace.World; main.maxParticles = 400; main.gravityModifier = name == "ImpactBurst" ? 1.2f : -0.05f;

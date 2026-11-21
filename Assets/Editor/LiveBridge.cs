@@ -71,6 +71,7 @@ namespace SurviveI95.EditorTools
             {
                 case "ping": return "ok";
                 case "laneaudit": return LaneAudit.Run(Path.Combine(Dir, "audit.txt"));
+                case "crashbench": return CrashBench.Run(Path.Combine(Dir, "crashbench.txt")); // scripted crashes with one traffic vehicle (6.0)
                 case "bench": DriveSmokeTest.Run(Path.Combine(Dir, "bench.txt")); return File.ReadAllText(Path.Combine(Dir, "bench.txt"));
                 case "islands": return Islands();
                 case "refresh": AssetDatabase.Refresh(); return "refreshing";
@@ -157,6 +158,7 @@ namespace SurviveI95.EditorTools
                 case "clock": // HH:MM sets the clock for tests, off gives it back to the trip
                     if (a[2] == "off") SurviveI95.Game.DayNight.TestMinutes = null; else { var clk = a[2].Split(':'); SurviveI95.Game.DayNight.TestMinutes = int.Parse(clk[0]) * 60 + int.Parse(clk[1]); }
                     return "clock " + a[2];
+                case "wreckahead": { TrafficCar best = null; foreach (var o in car.GetComponent<TrafficManager>().Sim.Cars) if (o.S > car.Sim.S && (best == null || o.S < best.S)) best = o; if (best == null) return "no car ahead"; TrafficSim.ForceWreck(best, F(a, 2)); return $"wrecked {best.Def.id} {best.S - car.Sim.S:F0} m ahead"; }
                 case "swishes": { var pb = car.GetComponent<SurviveI95.Game.PassBy>(); return pb == null ? "no pass-by" : "swishes " + pb.Swishes; }
                 case "nightlamps": { int tails = 0, lows = 0, cars = 0; foreach (var tf in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)) { if (tf.name == "Tail" && tf.gameObject.activeInHierarchy) tails++; if (tf.name == "Low" && tf.gameObject.activeInHierarchy) lows++; if (tf.name == "Brake") cars++; } return $"traffic cars {cars}, tail lamps lit {tails}, headlights lit {lows}, player lights {car.LightsOn}"; }
                 case "daynight": { var dn = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.DayNight>(); return dn == null ? "no day-night" : dn.Status(); }

@@ -1,0 +1,80 @@
+using System.Text;
+using SurviveI95.Data;
+using SurviveI95.Sim;
+using SurviveI95.World;
+using UnityEngine;
+
+namespace SurviveI95.EditorTools
+{
+    /// <summary>
+    /// Scripted crashes between the player's car and one traffic vehicle, without rendering (6.0): a rear-end, a fast
+    /// overtake that clips the other car's corner (the 99 mph hit of the first playtest), a sideswipe, a motorcycle and
+    /// a semi. For each: did the other vehicle wreck, how far it spun, where it stopped, and whether the player stayed
+    /// stuck to it. Bridge: crashbench.
+    /// </summary>
+    public static class CrashBench
+    {
+        const float Dt = 1f / 60f, Mph = DriveSim.MetersPerSecondToMph, Start = 42300f;
+
+        public static string Run(string file)
+        {
+            var path = RoutePath.Load("miami_ftl");
+            var sb = new StringBuilder();
+            sb.AppendLine(Case(path, "rear-end 75 into 50", "sedan", 75f, 50f, 0f, 0f));
+            sb.AppendLine(Case(path, "corner clip 99 past 60", "sedan", 99f, 60f, 1.3f, 0f));
+            sb.AppendLine(Case(path, "corner clip 70 past 55", "sedan", 70f, 55f, 1.3f, 0f));
+            sb.AppendLine(Case(path, "sideswipe 65 beside 65", "sedan", 65f, 65f, 2.9f, -3f));
+            sb.AppendLine(Case(path, "rear-end 40 into motorcycle 20", "motorcycle_sport", 40f, 20f, 0f, 0f));
+            sb.AppendLine(Case(path, "corner clip 60 past motorcycle 45", "motorcycle_sport", 60f, 45f, 1.0f, 0f));
+            sb.AppendLine(Case(path, "rear-end 60 into semi 30", "semi", 60f, 30f, 0f, 0f));
+            sb.AppendLine(Case(path, "sideswipe 60 beside semi 60", "semi", 60f, 60f, 3.0f, -3f));
+            System.IO.File.WriteAllText(file, sb.ToString());
+            return sb.ToString();
+        }
+
+        // offset: how far right of the other vehicle the player starts (0 = straight behind it); sideSpeed: the player's
+        // sideways speed toward it (m/s, negative = moving left), for sideswipes.
+        static string Case(RoutePath path, string name, string vehicle, float playerMph, float otherMph, float offset, float sideSpeed)
+        {
+            var chapter = GameData.LoadStateTraffic().chapters.Find(c => c.id == "florida");
+            var sim = new TrafficSim(path, GameData.LoadVehicles(), chapter, 7) { Target = 0 };
+            sim.Clear();
+            var def = GameData.LoadVehicles().vehicles.Find(v => v.id == vehicle);
+            var car = new DriveSim(CarHandling.Load("sedan"));
+            car.Reset(path, Start);
+            sim.Step(Dt, car); // the first step clears and refills traffic, so the test vehicle comes after it
+            bool side = sideSpeed != 0f;
+            var other = sim.Create(def, DriverKind.Normal, Start + (side ? 0f : 30f), 1, otherMph / Mph);
+            other.Desired = other.Speed; other.HoldDesired = true;
+            sim.Step(Dt, car);
+            car.Lateral = other.Lateral + offset * (side ? 1f : 1f);
+            if (offset > 0f && !side) car.Lateral = other.Lateral + (other.Width / 2f + DriveSim.CarHalfWidth) - .45f; // overlapping by 45 cm: a corner
+            car.Speed = playerMph / Mph;
+            float t = 0f, contactAt = -1f, spin = 0f, startYaw = other.Yaw, before = 0f, playerBefore = 0f, startLat = other.Lateral;
+            int touchingLate = 0; bool wasWrecked = false;
+            while (t < 9f)
+            {
+                var input = new DriveInput { Throttle = car.Speed * Mph < playerMph && contactAt < 0f ? .6f : 0f };
+                if (side && contactAt < 0f) car.SideSpeed = 0f;
+                if (side && contactAt < 0f && t < 2.5f) car.Lateral += sideSpeed * Dt; // steering into it
+                if (contactAt >= 0f && t > contactAt + .4f && car.Speed > 1f) input.Brake = .7f; // after a crash the driver brakes (not into reverse)
+                sim.Step(Dt, car);
+                car.Step(path, input, Dt);
+                int hits = sim.CrashesWithPlayer;
+                before = other.Speed; playerBefore = car.Speed;
+                sim.HitPlayer(car);
+                if (contactAt < 0f && sim.CrashesWithPlayer > 0) contactAt = t;
+                if (other.Wrecked) wasWrecked = true;
+                spin = Mathf.Max(spin, Mathf.Abs(Mathf.DeltaAngle(startYaw * Mathf.Rad2Deg, other.Yaw * Mathf.Rad2Deg)));
+                float overS = DriveSim.CarHalfLength + other.Length / 2f - Mathf.Abs(car.S - other.S);
+                float overL = DriveSim.CarHalfWidth + other.Width / 2f - Mathf.Abs(car.Lateral - other.Lateral);
+                if (contactAt >= 0f && t > contactAt + 1.5f && overS > -.05f && overL > -.05f && Mathf.Abs(car.Speed) > 3f) touchingLate++; // still glued together while moving
+                t += Dt;
+            }
+            return FormattableString(name, contactAt, wasWrecked, spin, other, startLat, car, touchingLate);
+        }
+
+        static string FormattableString(string name, float contactAt, bool wrecked, float spin, TrafficCar o, float startLat, DriveSim car, int touchingLate) =>
+            System.FormattableString.Invariant($"{name,-36} hit={(contactAt >= 0f ? contactAt.ToString("F1") + "s" : "none")} other: wrecked={wrecked} spun={spin:F0}deg endMph={o.Speed * Mph:F0} slid={o.Lateral - startLat:F1}m | player: endMph={car.Speed * Mph:F0} damage={car.Damage * 100f:F0}% stuckFrames={touchingLate}");
+    }
+}

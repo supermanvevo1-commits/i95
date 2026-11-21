@@ -643,7 +643,9 @@ namespace SurviveI95.Sim
             float lat = LaneCenter(c.S, c.Lane) + from + drift + c.Offset;
             float side = (lat - c.Lateral) / Mathf.Max(.001f, dt);
             c.Lateral = lat;
-            c.Yaw = Mathf.Atan2(side, Mathf.Max(4f, c.Speed));
+            // A driver still in control never points more than about 25° off the lane, however hard a bump pushed them
+            // sideways; past that they'd have lost it (and be wrecked). This was the sideways snap of the second playtest.
+            c.Yaw = Mathf.Clamp(Mathf.Atan2(side, Mathf.Max(4f, c.Speed)), -.44f, .44f);
         }
 
         // --------------------------------------------------------------- contact
@@ -664,6 +666,9 @@ namespace SurviveI95.Sim
                 }
             }
         }
+
+        /// <summary>For tests: wrecks a car as a crash would, spinning at the given rate (rad/s).</summary>
+        public static void ForceWreck(TrafficCar c, float yawRate) => Wreck(c, yawRate);
 
         static void Wreck(TrafficCar c, float yawRate)
         {
@@ -701,6 +706,13 @@ namespace SurviveI95.Sim
 
                 float mp = car.Car.mass, total = mp + c.Mass;
                 bool fresh = clock - c.LastPlayerHit > .45f;
+                bool bike = c.Def.category == "motorcycle";
+                // A bike that's down is under the car, not in front of it: the car rolls over it with a jolt (6.0).
+                if (bike && c.Wrecked)
+                {
+                    if (fresh && Mathf.Abs(player.SpeedS - c.Speed) > 1.5f) { c.LastPlayerHit = clock; car.ApplyVehicleHit(0f, 0f, -Mathf.Sign(player.SpeedS) * .8f, 0f, .015f, 0f, 0f, 2.5f, -dl); }
+                    continue;
+                }
                 const float Bounce = 1.18f; // 0.18 of restitution: bodywork absorbs nearly all of it
                 float dvS = 0f, dvL = 0f, sepS = 0f, sepL = 0f, impact = 0f, damage = 0f, crush = 0f, yaw = 0f;
                 bool playerFault;
@@ -718,7 +730,14 @@ namespace SurviveI95.Sim
                     // Only the nose crumples, and only when the player drove into something.
                     if (n < 0f) crush = Mathf.Min(.5f, change * .022f);
                     yaw = Mathf.Clamp(-dl * closing * .04f, -1.6f, 1.6f);
-                    if (fresh && closing * mp / total > 3f) Wreck(c, Mathf.Clamp(dl * closing * .05f, -1.8f, 1.8f));
+                    // A bike goes down from a nudge a car would shrug off.
+                    float knock = closing * mp / total;
+                    // Hit off-center, the struck end is shoved sideways and the car spins about its middle: the further
+                    // toward the corner and the harder the hit, the more (a dead-center hit just pushes it ahead).
+                    float offCenter = Mathf.Clamp(dl / (c.Width / 2f + player.HalfWidth), -1f, 1f);
+                    float spinRate = Mathf.Clamp(offCenter * closing * .2f * Mathf.Clamp(mp / c.Mass, .25f, 1.5f), -2.6f, 2.6f);
+                    if (Mathf.Abs(spinRate) < Mathf.Abs(dl * closing * .05f)) spinRate = Mathf.Clamp(dl * closing * .05f, -1.8f, 1.8f);
+                    if (fresh && (knock > 3f || bike && closing > 1.5f || Mathf.Abs(offCenter) > .5f && closing > 4f && mp / c.Mass > .45f)) Wreck(c, -n * spinRate);
                     else if (fresh && closing > .8f) c.StartledLeft = 1.3f;
                 }
                 else
@@ -731,13 +750,21 @@ namespace SurviveI95.Sim
                     dvL = n * 1.08f * closing * c.Mass / total;
                     float push = 1.08f * closing * mp / total;
                     c.OffsetVelocity -= n * push;
-                    // Trading paint scrapes speed off both cars.
+                    // Trading paint scrapes speed off both cars, once as the contact starts; pressed together after that,
+                    // they slide apart instead of dragging each other along.
                     float rub = Mathf.Abs(player.SpeedS - c.Speed);
-                    dvS = -Mathf.Sign(player.SpeedS - c.Speed) * Mathf.Min(rub, rub * .25f + 1f) * c.Mass / total;
+                    if (fresh) dvS = -Mathf.Sign(player.SpeedS - c.Speed) * Mathf.Min(rub, rub * .25f + 1f) * c.Mass / total;
                     impact = Mathf.Max(closing, rub * .35f);
                     damage = .28f * Mathf.Pow(closing / 15f, 2f) + rub * .0016f;
                     yaw = -n * Mathf.Clamp(closing * .08f, 0f, 1.1f);
-                    if (fresh && push > 3.2f) Wreck(c, n * Mathf.Min(1.5f, push * .25f));
+                    // Hit near a corner by a faster car, a car spins: the faster car drags that end around (the same physics
+                    // as the police PIT maneuver), more the bigger the speed difference and the lighter the car. A hard
+                    // sideways bump at highway speed also takes control away from the other driver.
+                    float corner = Mathf.Clamp01((Mathf.Abs(ds) - c.Length * .2f) / (c.Length * .3f));
+                    float spinKick = (rub * .1f * corner + push * .3f) * Mathf.Clamp(mp / c.Mass, .25f, 1.5f);
+                    float end = ds >= 0f ? 1f : -1f; // which end got hit: the front of the other car or its back
+                    bool loses = push > 2.2f || (corner > .3f && rub > 5f && mp / c.Mass > .45f) || bike && (closing > 1f || rub > 2.5f);
+                    if (fresh && loses) Wreck(c, -n * end * Mathf.Clamp(spinKick, .4f, 2.6f));
                     else if (fresh && (closing > .6f || rub > 2f)) c.StartledLeft = 1.3f;
                 }
                 // Cars pressed together are one contact, not a new crash every frame.

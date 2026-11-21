@@ -206,7 +206,10 @@ namespace SurviveI95.Game
                 var v = c.View as View;
                 if (v == null) c.View = v = Acquire(c);
                 float s = Mathf.Lerp(c.PrevS, c.S, t), lat = Mathf.Lerp(c.PrevLateral, c.Lateral, t);
-                v.Root.transform.SetPositionAndRotation(road.Point(s, lat), Quaternion.LookRotation(road.Tangent(s), Vector3.up) * Quaternion.Euler(0, Mathf.LerpAngle(c.PrevYaw, c.Yaw, t) * Mathf.Rad2Deg, 0));
+                var rot = Quaternion.LookRotation(road.Tangent(s), Vector3.up) * Quaternion.Euler(0, Mathf.LerpAngle(c.PrevYaw, c.Yaw, t) * Mathf.Rad2Deg, 0);
+                // A wreck sits crooked on a broken corner (which corner and how much picked from the car itself); a bike lies on its side.
+                if (c.Wrecked) rot *= c.Def.category == "motorcycle" ? Quaternion.Euler(0f, 0f, (c.Id & 1) == 0 ? 82f : -82f) : Quaternion.Euler((c.Id % 3 - 1) * 2.5f, 0f, ((c.Id & 1) == 0 ? 1f : -1f) * 3.5f);
+                v.Root.transform.SetPositionAndRotation(road.Point(s, lat) + (c.Wrecked && c.Def.category != "motorcycle" ? Vector3.down * .06f : Vector3.zero), rot);
 
                 float distance = Mathf.Abs(s - playerS);
                 bool far = distance > TrafficSim.FarDistance;
@@ -228,6 +231,7 @@ namespace SurviveI95.Game
                 v.Lamp(v.Low, lightsOn && !c.FlashingHighBeams);
             }
             UpdateBeams(playerS, night);
+            UpdateWreckSmoke(playerS);
         }
     
         // The nearest cars with their lights on throw real light ahead of them; the rest only show their lamps.
@@ -257,6 +261,24 @@ namespace SurviveI95.Game
                 }
             }
             for (int i = n; i < beams.Length; i++) if (beams[i] != null && beams[i].enabled) beams[i].enabled = false;
+        }
+    
+        // Smoke rising from the nearest wrecked cars' engines (a few at a time: far wrecks don't need it).
+        readonly ParticleSystem[] wreckSmoke = new ParticleSystem[4];
+        void UpdateWreckSmoke(float playerS)
+        {
+            int n = 0;
+            foreach (var c in Sim.Cars)
+            {
+                if (n >= wreckSmoke.Length) break;
+                if (!c.Wrecked || c.Def.category == "motorcycle" || Mathf.Abs(c.S - playerS) > 220f || !(c.View is View v)) continue;
+                if (wreckSmoke[n] == null) wreckSmoke[n] = player.MakeWreckSmoke(root);
+                var ps = wreckSmoke[n++];
+                var t = v.Root.transform;
+                ps.transform.position = t.position + t.forward * (c.Length * .35f) + Vector3.up * 1.1f;
+                if (!ps.isEmitting) ps.Play();
+            }
+            for (int i = n; i < wreckSmoke.Length; i++) if (wreckSmoke[i] != null && wreckSmoke[i].isEmitting) wreckSmoke[i].Stop();
         }
     }
 }
