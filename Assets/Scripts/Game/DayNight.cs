@@ -54,6 +54,7 @@ namespace SurviveI95.Game
         void Start()
         {
             car = FindAnyObjectByType<PlayerCar>();
+            TestMinutes = null; StartShift = 0f; // statics outlive a play session in the editor
             sun = RenderSettings.sun;
             if (keys == null || keys.Length == 0 || skyShader == null) { enabled = false; return; }
             sky = new Material(skyShader);
@@ -62,6 +63,7 @@ namespace SurviveI95.Game
             if (vol != null && vol.profile != null) vol.profile.TryGet(out grade); // the runtime copy, so the saved look isn't touched
             BuildLampGlow();
             BuildLampLights();
+            FindWindows();
         }
 
         void Update()
@@ -83,6 +85,43 @@ namespace SurviveI95.Game
             if (Mathf.Abs(el - refreshedAt) > .7f || Time.time - refreshTime > 20f) { DynamicGI.UpdateEnvironment(); refreshedAt = el; refreshTime = Time.time; }
             RenderSettings.reflectionIntensity = Mathf.Lerp(1f, .35f, Night);
             UpdateLamps();
+            UpdateWindows();
+        }
+
+        // ---------------------------------------------------------------- lit windows
+
+        readonly System.Collections.Generic.List<Material> windows = new System.Collections.Generic.List<Material>();
+        float windowsShown = -1f;
+
+        // Every wall with a night picture (rooms lit behind about 4 in 10 windows) gets a copy of its material to brighten.
+        void FindWindows()
+        {
+            var copies = new System.Collections.Generic.Dictionary<Material, Material>();
+            foreach (var r in FindObjectsByType<MeshRenderer>(FindObjectsInactive.Exclude))
+            {
+                var mats = r.sharedMaterials; bool changed = false;
+                for (int i = 0; i < mats.Length; i++)
+                {
+                    var m = mats[i];
+                    if (m == null || !m.IsKeywordEnabled("_EMISSION") || !m.HasProperty("_EmissionMap") || m.GetTexture("_EmissionMap") == null) continue;
+                    var tex = m.GetTexture("_EmissionMap"); if (!tex.name.EndsWith("Glow")) continue;
+                    if (!copies.TryGetValue(m, out var copy)) { copy = new Material(m); copies[m] = copy; windows.Add(copy); }
+                    mats[i] = copy; changed = true;
+                }
+                if (changed) r.sharedMaterials = mats;
+            }
+        }
+
+        void UpdateWindows()
+        {
+            // People come home at dusk; by late night most have gone to bed (fewer lit, and dimmer, after about 11 PM).
+            float hour = Mathf.Repeat(Minutes / 60f, 24f);
+            float late = hour >= 23f ? Mathf.InverseLerp(23f, 26f, hour) : hour < 5f ? Mathf.InverseLerp(-1f, 2f, hour) : 0f;
+            float k = Mathf.InverseLerp(3f, -6f, SunElevation) * Mathf.Lerp(.5f, .22f, late);
+            if (Mathf.Abs(k - windowsShown) < .01f) return;
+            windowsShown = k;
+            var c = new Color(k, k, k, 1f);
+            foreach (var m in windows) m.SetColor("_EmissionColor", c);
         }
 
         public static string Clock(float m)
@@ -248,6 +287,6 @@ namespace SurviveI95.Game
 
         static float Score(Vector3 h, Vector3 p, Vector3 fwd) { var d = h - p; d.y = 0f; return d.magnitude - Vector3.Dot(d, fwd) * .4f; }
 
-        public string Status() => FormattableString.Invariant($"clock={Clock(Minutes)} sunEl={SunElevation:F1} sunAz={SunAzimuth:F0} night={Night:F2} lamps={LampsOn:F2} sun={(sun != null ? sun.intensity : 0f):F2}");
+        public string Status() => FormattableString.Invariant($"windows={windows.Count} lit={windowsShown:F2} clock={Clock(Minutes)} sunEl={SunElevation:F1} sunAz={SunAzimuth:F0} night={Night:F2} lamps={LampsOn:F2} sun={(sun != null ? sun.intensity : 0f):F2}");
     }
 }

@@ -799,6 +799,16 @@ namespace SurviveI95.EditorTools
                 int x0 = bx * cw, y0 = fy * cw;
                 float blind = rnd.NextDouble() < (kind == 0 ? .25 : .35) ? (float)rnd.NextDouble() : 0f; // blinds pulled part way down
                 var blindC = new Color(.78f, .76f, .7f) * (.9f + (float)rnd.NextDouble() * .15f);
+                // Offices: some floors still lit for cleaning crews and late workers; condos: about half the units at home.
+                if (Hash(bx, fy, seed + 31) < (kind == 0 ? .32f : kind == 1 ? .5f : .38f))
+                {
+                    var room = Hash(bx, fy, seed + 32) < .5f && kind == 0 ? new Color(.85f, .9f, 1f) : new Color(1f, .74f, .48f);
+                    room *= .55f + .45f * Hash(bx, fy, seed + 33);
+                    if (kind == 0) cv.Glow(x0 + 4, y0 + 24, x0 + cw, y0 + cw, room);
+                    else if (kind == 1) cv.Glow(x0 + 6, y0 + 53, x0 + cw - 6, y0 + cw - 6, room);
+                    else if (kind == 2) cv.Glow(x0, y0 + 44, x0 + cw, y0 + 100, room);
+                    else cv.Glow(x0 + 40, y0 + 38, x0 + 88, y0 + 100, room);
+                }
                 switch (kind)
                 {
                     case 0:
@@ -844,7 +854,18 @@ namespace SurviveI95.EditorTools
             var tex = cv.Save(name);
             var mat = Lit(name, Color.white, smooth);
             mat.SetTexture("_BaseMap", tex);
+            NightWindows(mat, name);
             return mat;
+        }
+
+        /// <summary>Gives a wall material its night picture: emission off by day (DayNight turns it up after dark).</summary>
+        static void NightWindows(Material mat, string texName)
+        {
+            if (!Glows.TryGetValue(texName, out var g)) return;
+            mat.SetTexture("_EmissionMap", g); mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", Color.black);
+            mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            EditorUtility.SetDirty(mat);
         }
 
         const int FacadeCount = 10, RoofSlot = 10, ApronSlot = 11, SlotCount = 12;

@@ -363,6 +363,7 @@ namespace SurviveI95.EditorTools
             {
                 var mt = Lit(name, Color.white, .12f); mt.SetTexture("_BaseMap", t);
                 AddDetail(mt, detail, normalSet, metersPerRepeat / detailMeters);
+                NightWindows(mt, t.name);
                 return mt;
             }
             Material Roof(string name, Texture2D t, float smooth) { var mt = Lit(name, Color.white, smooth); mt.SetTexture("_BaseMap", t); return mt; }

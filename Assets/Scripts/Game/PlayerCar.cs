@@ -716,7 +716,10 @@ namespace SurviveI95.Game
         {
             var road = Sim.Current ?? Path;
             var spot = road.Point(s, lateral);
-            if (Sim.Current == null) spot.y = Mathf.Lerp(spot.y, -0.25f, GroundDrop(s, lateral) / 0.25f);
+            // Off the pavement the car settles onto the grass, a little below the road beside it. Where the road is raised
+            // (embankments, bridges) there's no grass at road level to settle onto, only walls, so it stays up. This used to
+            // drop to a fixed height near sea level, which sank the car through raised road near ramps (creator, 2026-11-20).
+            if (Sim.Current == null && spot.y < .6f) spot.y -= GroundDrop(s, lateral);
             if (Sim.Current != null) spot = road.Point(s, lateral);
             transform.position = spot;
             var tan = road.Tangent(s);

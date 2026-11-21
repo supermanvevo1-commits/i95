@@ -31,6 +31,7 @@ namespace SurviveI95.Game
         AudioClip[] horns;
         int gear = 1, lastImpacts;
         float rpm = 890f, shiftHold, demand;
+        AudioSource title; bool titleFading;
         public float Rpm => rpm;
         public int Gear => gear;
 
@@ -63,6 +64,9 @@ namespace SurviveI95.Game
             car = GetComponent<PlayerCar>();
             // Each engine loop on its own child so a low-pass can sit on the engine only (in the cockpit it's muffled).
             BuildEngine();
+            // The title music (the creator's pick), with the title card; it fades once you're properly on your way.
+            var song = Resources.Load<AudioClip>("Music/title");
+            if (song != null) { title = gameObject.AddComponent<AudioSource>(); title.clip = song; title.spatialBlend = 0f; title.volume = .55f; title.playOnAwake = false; title.Play(); }
             road = Loop(gameObject, Load("road_roar"), 0f);
             skid = Loop(gameObject, Load("skid_loop"), 0f);
             // Rumble strips: the same tire roar, struck groove by groove (RumbleStripSound), on its own child.
@@ -105,6 +109,11 @@ namespace SurviveI95.Game
         {
             if (car == null) return;
             if (car.Sim.Car.id != engineFor) BuildEngine();
+            if (title != null)
+            {
+                if (!titleFading && (Mathf.Abs(car.Sim.Speed) > 13f || title.time > 60f)) titleFading = true; // about 30 mph, or a minute in
+                if (titleFading) { title.volume = Mathf.MoveTowards(title.volume, 0f, Time.deltaTime * .55f / 6f); if (title.volume <= 0f) { Destroy(title); title = null; } }
+            }
             var s = car.Sim; float dt = Time.deltaTime;
             float v = Mathf.Abs(s.Speed), mph = v * DriveSim.MetersPerSecondToMph;
             float throttle = Mathf.Clamp01(car.LastInput.Throttle), brake = Mathf.Clamp01(car.LastInput.Brake);

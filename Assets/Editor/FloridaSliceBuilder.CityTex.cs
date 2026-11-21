@@ -41,11 +41,25 @@ namespace SurviveI95.EditorTools
                 Rect(x0, y0, x1, y0 + t, c); Rect(x0, y1 - t, x1, y1, c); Rect(x0, y0, x0 + t, y1, c); Rect(x1 - t, y0, x1, y1, c);
             }
             public Color Get(int x, int y) => px[Mathf.Clamp(y, 0, H - 1) * W + ((x % W) + W) % W];
+            /// <summary>The night picture: light from rooms behind the windows (black everywhere else). Made only if a window lights.</summary>
+            public Color[] glow;
+            public void Glow(float x0, float y0, float x1, float y1, Color c)
+            {
+                if (glow == null) { glow = new Color[W * H]; for (int i = 0; i < glow.Length; i++) glow[i] = Color.black; }
+                int ya = Mathf.Max(0, Mathf.RoundToInt(y0)), yb = Mathf.Min(H, Mathf.RoundToInt(y1));
+                for (int y = ya; y < yb; y++) for (int x = Mathf.RoundToInt(x0); x < Mathf.RoundToInt(x1); x++) glow[y * W + ((x % W) + W) % W] = c;
+            }
             public Texture2D Save(string name)
             {
                 var tex = new Texture2D(W, H, TextureFormat.RGBA32, true);
                 for (int i = 0; i < px.Length; i++) px[i].a = 1f;
                 tex.SetPixels(px); tex.Apply();
+                if (glow != null)
+                {
+                    var g = new Texture2D(W, H, TextureFormat.RGBA32, true);
+                    g.SetPixels(glow); g.Apply();
+                    Glows[name] = SaveTexture(g, name + "Glow");
+                }
                 return SaveTexture(tex, name);
             }
         }
@@ -122,6 +136,20 @@ namespace SurviveI95.EditorTools
         }
 
         // A white-framed single-hung window with a reflection of the sky, as on most South Florida block houses.
+        /// <summary>The night pictures made alongside each texture, by texture name.</summary>
+        static readonly Dictionary<string, Texture2D> Glows = new Dictionary<string, Texture2D>();
+
+        /// <summary>A room light behind a window at night: about 4 in 10 are on, most a warm lamp, some the cool blue of a TV
+        /// or LED. Picked from the window's place, not the drawing's random numbers, so the daytime picture is unchanged.</summary>
+        static void RoomLight(Canvas cv, float x, float y, float w, float h, int seed, float share = .4f)
+        {
+            int ix = Mathf.RoundToInt(x), iy = Mathf.RoundToInt(y);
+            if (Hash(ix, iy, seed) > share) return;
+            float k = .55f + .45f * Hash(ix + 7, iy, seed + 1);
+            var c = Hash(ix, iy + 3, seed + 2) < .18f ? new Color(.55f, .66f, 1f) : new Color(1f, .7f, .42f);
+            cv.Glow(x, y, x + w, y + h, c * k);
+        }
+
         static void Window(Canvas cv, float x, float y, float w, float h, float m, System.Random r, bool bars, bool shutter, Color frame)
         {
             cv.Mul(x - m * .06f, y - m * .9f, x + w + m * .06f, y, .93f); // stain under the sill
@@ -139,6 +167,7 @@ namespace SurviveI95.EditorTools
                 var g = Color.Lerp(new Color(.13f, .17f, .21f), new Color(.42f, .5f, .58f), k * k * .8f + (float)r.NextDouble() * .02f);
                 cv.Rect(x, yy, x + w, yy + 1, g);
             }
+            RoomLight(cv, x, y, w, h, 4242);
             cv.Rect(x, y + h * .48f, x + w, y + h * .48f + m * .05f, frame); // the meeting rail
             if (bars) for (float bx = x + m * .08f; bx < x + w; bx += m * .13f) cv.Rect(bx, y, bx + m * .025f, y + h, new Color(.08f, .08f, .08f));
             if (bars) { cv.Rect(x, y + m * .1f, x + w, y + m * .13f, new Color(.08f, .08f, .08f)); cv.Rect(x, y + h - m * .13f, x + w, y + h - m * .1f, new Color(.08f, .08f, .08f)); }
