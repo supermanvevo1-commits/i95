@@ -25,6 +25,8 @@ namespace SurviveI95.Game
         float needleMph, scale;
         /// <summary>0 bottom right, 1 bottom left, 2 top right, 3 top left. F2 cycles it until the settings screen exists (M12).</summary>
         public int Corner { get; private set; }
+        /// <summary>True once the title card has come up (as you first pull away); the title music starts with it.</summary>
+        public bool TitleShown { get; private set; }
 
         public void Init(PlayerCar owner) { car = owner; }
 
@@ -75,7 +77,10 @@ namespace SurviveI95.Game
             float s = car.Sim.S;
             if (float.IsNaN(lastS))
             {
-                ShowCard("", "SURVIVE THE I-95", "MIAMI  →  HOULTON, MAINE   ·   1,908 MILES", 4.5f);
+                // The title waits for you to pull away, and comes in with the title music, like a film's opening.
+                if (Mathf.Abs(car.Sim.Speed) < 3f) return;
+                ShowCard("", "SURVIVE THE I-95", "MIAMI  →  HOULTON, MAINE   ·   1,908 MILES", 5.5f);
+                TitleShown = true;
                 shownPlace = PlaceAt(s); lastS = s; pendingPlace = shownPlace; return;
             }
             if (pendingPlace >= 0 && Time.unscaledTime > cardStart + cardLength + .3f) { var p = places[pendingPlace]; ShowCard(p.line ?? "WELCOME TO", p.name, p.sub); pendingPlace = -1; }

@@ -66,7 +66,7 @@ namespace SurviveI95.Game
             BuildEngine();
             // The title music (the creator's pick), with the title card; it fades once you're properly on your way.
             var song = Resources.Load<AudioClip>("Music/title");
-            if (song != null) { title = gameObject.AddComponent<AudioSource>(); title.clip = song; title.spatialBlend = 0f; title.volume = .55f; title.playOnAwake = false; title.Play(); }
+            if (song != null) { title = gameObject.AddComponent<AudioSource>(); title.clip = song; title.spatialBlend = 0f; title.volume = .55f; title.playOnAwake = false; }
             road = Loop(gameObject, Load("road_roar"), 0f);
             skid = Loop(gameObject, Load("skid_loop"), 0f);
             // Rumble strips: the same tire roar, struck groove by groove (RumbleStripSound), on its own child.
@@ -111,7 +111,9 @@ namespace SurviveI95.Game
             if (car.Sim.Car.id != engineFor) BuildEngine();
             if (title != null)
             {
-                if (!titleFading && (Mathf.Abs(car.Sim.Speed) > 13f || title.time > 60f)) titleFading = true; // about 30 mph, or a minute in
+                // It starts as you pull away, with the title card, plays about a minute, then fades under the road.
+                if (!title.isPlaying && !titleFading && car.Hud != null && car.Hud.TitleShown) title.Play();
+                if (!titleFading && title.time > 55f) titleFading = true;
                 if (titleFading) { title.volume = Mathf.MoveTowards(title.volume, 0f, Time.deltaTime * .55f / 6f); if (title.volume <= 0f) { Destroy(title); title = null; } }
             }
             var s = car.Sim; float dt = Time.deltaTime;
@@ -138,7 +140,8 @@ namespace SurviveI95.Game
             float shut = car.Cockpit ? (engineFor == "pickup" ? 2000f : 2600f) : 9000f;
             engineFilter.cutoffFrequency = Mathf.Lerp(engineFilter.cutoffFrequency, shut, dt * 4f);
             // Tire roar and wind grow faster than speed; at 120+ the wind takes over.
-            float roar = Mathf.Pow(Mathf.Clamp01(mph / 75f), 1.4f) * .42f + Mathf.Pow(Mathf.Clamp01((mph - 75f) / 70f), 1.5f) * .3f;
+            float roar = Mathf.Pow(Mathf.Clamp01(mph / 75f), 1.4f) * .42f + Mathf.Pow(Mathf.Clamp01((mph - 75f) / 70f), 1.5f) * .3f
+                + Mathf.Pow(Mathf.Clamp01((mph - 115f) / 60f), 1.3f) * .22f; // past 115 the wind keeps building: louder, not just faster
             bool off = s.OffRoad && v > 1f;
             road.volume = Mathf.MoveTowards(road.volume, roar * (car.Cockpit ? .85f : 1f) * (off ? .45f : 1f), dt * (off ? 3f : 1f));
             // Rumble strips: a hard low buzz the moment the tires touch them, at the rate they hit the grooves.

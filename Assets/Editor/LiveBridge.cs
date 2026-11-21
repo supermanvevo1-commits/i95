@@ -157,6 +157,7 @@ namespace SurviveI95.EditorTools
                 case "clock": // HH:MM sets the clock for tests, off gives it back to the trip
                     if (a[2] == "off") SurviveI95.Game.DayNight.TestMinutes = null; else { var clk = a[2].Split(':'); SurviveI95.Game.DayNight.TestMinutes = int.Parse(clk[0]) * 60 + int.Parse(clk[1]); }
                     return "clock " + a[2];
+                case "swishes": { var pb = car.GetComponent<SurviveI95.Game.PassBy>(); return pb == null ? "no pass-by" : "swishes " + pb.Swishes; }
                 case "nightlamps": { int tails = 0, lows = 0, cars = 0; foreach (var tf in UnityEngine.Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)) { if (tf.name == "Tail" && tf.gameObject.activeInHierarchy) tails++; if (tf.name == "Low" && tf.gameObject.activeInHierarchy) lows++; if (tf.name == "Brake") cars++; } return $"traffic cars {cars}, tail lamps lit {tails}, headlights lit {lows}, player lights {car.LightsOn}"; }
                 case "daynight": { var dn = UnityEngine.Object.FindAnyObjectByType<SurviveI95.Game.DayNight>(); return dn == null ? "no day-night" : dn.Status(); }
                 case "trip": if (a.Length > 2 && a[2] == "begin") car.Trip.Begin(); return car.Trip.Status(); // [begin]: the first trip, from the start
