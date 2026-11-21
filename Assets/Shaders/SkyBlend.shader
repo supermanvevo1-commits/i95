@@ -51,8 +51,15 @@ Shader "SurviveI95/SkyBlend"
                 half3 b = tex2Dlod(_TexB, float4(ub, 0, 0)).rgb * _ExpB;
                 // City light glowing up from below the horizon, fading with height.
                 float3 d = normalize(i.dir);
-                half3 glow = _Glow.rgb * exp(-max(d.y, 0.0) * 6.0) * _Glow.a;
-                return half4(lerp(a, b, _Blend) + glow, 1);
+                // A city lights its own sky: a warm dome strongest low over the horizon, and clouds lit from below, their
+                // brightness in the photo standing for how much cloud is there to catch the light.
+                half3 sky = lerp(a, b, _Blend);
+                float low = exp(-max(d.y, 0.0) * 4.0);
+                float cloud = saturate(dot(sky, half3(0.3, 0.5, 0.2)) * 40.0) * saturate(1.0 - d.y * 1.4);
+                half3 glow = _Glow.rgb * (low + cloud * 0.9) * _Glow.a;
+                // Under the glow the night's cold blue-green cast warms over.
+                sky = lerp(sky, dot(sky, half3(0.3, 0.5, 0.2)) * half3(1.2, 0.9, 0.75), _Glow.a * low * 0.6);
+                return half4(sky + glow, 1);
             }
             ENDCG
         }

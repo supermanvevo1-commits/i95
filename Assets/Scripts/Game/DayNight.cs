@@ -36,7 +36,7 @@ namespace SurviveI95.Game
         public float lampKelvin = 3000f;
         public Shader skyShader;
         /// <summary>The light a big city throws up into its night sky (linear).</summary>
-        public Color CityGlow = new Color(.034f, .022f, .016f);
+        public Color CityGlow = new Color(.06f, .034f, .022f);
 
         // Miami, mid-March, Eastern Daylight Time.
         const float Latitude = 25.8f, Longitude = -80.2f, DayOfYear = 74f, UtcOffset = -4f;
@@ -164,7 +164,7 @@ namespace SurviveI95.Game
             sky.SetTexture("_TexA", a.tex); sky.SetTexture("_TexB", b.tex);
             sky.SetFloat("_RotA", Rotation(a, az)); sky.SetFloat("_RotB", Rotation(b, az));
             sky.SetFloat("_ExpA", a.exposure); sky.SetFloat("_ExpB", b.exposure); sky.SetFloat("_Blend", t);
-            var g = CityGlow * 2.2f; g.a = Mathf.InverseLerp(-2f, -12f, el); sky.SetColor("_Glow", g);
+            var g = CityGlow * 3f; g.a = Mathf.InverseLerp(-2f, -12f, el); sky.SetColor("_Glow", g);
             // Light in shade and the haze: the photos' own measured colors, as for the day look.
             var horizon = Color.Lerp(a.horizon * a.exposure, b.horizon * b.exposure, t);
             var overhead = Color.Lerp(a.overhead * a.exposure, b.overhead * b.exposure, t);

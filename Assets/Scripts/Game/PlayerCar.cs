@@ -733,7 +733,7 @@ namespace SurviveI95.Game
             camYaw = Mathf.LerpAngle(camYaw, yaw, 1f - Mathf.Exp(-Time.deltaTime * 7f));
             ApplyCamera();
             float ratio = Mathf.Clamp01(Sim.Speed / Sim.TopSpeed);
-            float fov = Cockpit ? BaseFov + 4f * ratio : BaseFov - 6f + 10f * ratio * ratio;
+            float fov = Cockpit ? BaseFov + 4f * ratio : BaseFov - 3f + 11f * ratio * ratio; // the chase view: a bit wider at rest, widening with speed
             fovSmooth = Mathf.Lerp(fovSmooth, fov, 1f - Mathf.Exp(-Time.deltaTime * 4f));
             float g = Mathf.SmoothStep(0f, 1f, Glance);
             chaseCamera.fieldOfView = lookingBack ? BaseFov : Mathf.Lerp(fovSmooth, glanceFov, g);
@@ -749,7 +749,7 @@ namespace SurviveI95.Game
             if (chaseCamera != null) chaseCamera.nearClipPlane = on ? 0.04f : 0.3f;
             EnsureCabinLight();
             // The mouse steers the view in both cameras now (cockpit look, chase orbit), so it's captured in both.
-            orbitYaw = 0f; orbitPitch = 0f; mouseSettle = 0.3f;
+            orbitYaw = orbitYawTarget = 0f; orbitPitch = orbitPitchTarget = 0f; mouseSettle = 0.3f;
             if (Application.isPlaying) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
             SnapCamera();
         }
@@ -821,8 +821,9 @@ namespace SurviveI95.Game
             pos.y = Mathf.Max(pos.y, transform.position.y + 0.5f);
             chaseCamera.transform.position = pos;
             // Straight behind, aim down the road ahead; swung round to the side, aim at the car itself.
-            float aside = Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(0f, orbitYaw)) / 35f);
-            var target = transform.position + Vector3.up * 1.05f + dir * Mathf.Lerp(12f, 0f, aside);
+            // The aim slides evenly over the whole swing, not all at once in the first few degrees.
+            float aside = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(Mathf.Abs(Mathf.DeltaAngle(0f, orbitYaw)) / 75f));
+            var target = transform.position + Vector3.up * 1.05f + dir * Mathf.Lerp(12f, 0f, aside) * Mathf.Lerp(1f, .4f, Mathf.Clamp01(orbitPitch / 40f));
             chaseCamera.transform.rotation = Quaternion.LookRotation(target - pos);
             // The camera sways a little with the body's lean, so the weight is felt, not just seen.
             if (!OldBody) chaseCamera.transform.rotation *= Quaternion.Euler(0f, 0f, roll * .2f);
@@ -861,10 +862,10 @@ namespace SurviveI95.Game
             if (hum > 0f) chaseCamera.transform.rotation *= Quaternion.Euler(0f, 0f, (Mathf.PerlinNoise(t * 1.7f, 3.3f) - .5f) * 1.2f * hum * scale);
         }
 
-        float orbitYaw, orbitPitch, orbitIdle;
+        float orbitYaw, orbitPitch, orbitIdle, orbitYawTarget, orbitPitchTarget, orbitYawVel, orbitPitchVel, returnYawVel, returnPitchVel;
 
         /// <summary>For tests: swings the chase camera as if the mouse had moved, then lets it return as a player's would.</summary>
-        public void TestOrbit(float yaw, float pitchDeg) { orbitYaw = yaw; orbitPitch = pitchDeg; orbitIdle = 0f; }
+        public void TestOrbit(float yaw, float pitchDeg) { orbitYaw = orbitYawTarget = yaw; orbitPitch = orbitPitchTarget = pitchDeg; orbitIdle = 0f; }
         public float OrbitYaw => orbitYaw;
 
         /// <summary>
@@ -878,13 +879,19 @@ namespace SurviveI95.Game
             Vector2 delta = mouse != null && mouseSettle <= 0 && Cursor.lockState == CursorLockMode.Locked ? mouse.delta.ReadValue() * 0.12f : Vector2.zero;
             if (pad != null) delta += pad.rightStick.ReadValue() * 160f * Time.deltaTime;
             if (delta.sqrMagnitude > 0.0004f) orbitIdle = 0f; else orbitIdle += Time.deltaTime;
-            orbitYaw = Mathf.Repeat(orbitYaw + delta.x + 180f, 360f) - 180f;
-            orbitPitch = Mathf.Clamp(orbitPitch - delta.y * .6f, -8f, 50f);
+            // The mouse moves where the camera is headed; the camera glides there (about a tenth of a second), so a hand's
+            // small jitters and uneven frames don't shake the view, and it has a little weight, as in GTA.
+            orbitYawTarget = Mathf.Repeat(orbitYawTarget + delta.x + 180f, 360f) - 180f;
+            orbitPitchTarget = Mathf.Clamp(orbitPitchTarget - delta.y * .6f, -8f, 50f);
+            // Left alone while driving, it eases back behind the car: a slow start and a soft landing.
             if (orbitIdle > 1.4f && Mathf.Abs(Sim.Speed) > 3f)
             {
-                float k = 1f - Mathf.Exp(-Time.deltaTime * 2.5f);
-                orbitYaw = Mathf.LerpAngle(orbitYaw, 0f, k); orbitPitch = Mathf.Lerp(orbitPitch, 0f, k);
+                orbitYawTarget = Mathf.SmoothDampAngle(orbitYawTarget, 0f, ref returnYawVel, .55f);
+                orbitPitchTarget = Mathf.SmoothDamp(orbitPitchTarget, 0f, ref returnPitchVel, .55f);
             }
+            else { returnYawVel = returnPitchVel = 0f; }
+            orbitYaw = Mathf.SmoothDampAngle(orbitYaw, orbitYawTarget, ref orbitYawVel, .09f);
+            orbitPitch = Mathf.SmoothDamp(orbitPitch, orbitPitchTarget, ref orbitPitchVel, .09f);
         }
 
         public void SnapCamera()
